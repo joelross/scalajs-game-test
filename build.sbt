@@ -1,0 +1,42 @@
+lazy val demo = crossProject
+    .crossType(CrossType.Full)
+    .in(file("demo"))
+    
+    /* Common settings */
+    
+    .settings(
+        version := "0.1-SNAPSHOT",
+        scalaVersion := "2.11.5",
+        persistLauncher in Compile := true,
+        persistLauncher in Test := false,
+        testFrameworks += new TestFramework("utest.runner.Framework"),
+        resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+        libraryDependencies ++= Seq(
+            "com.github.olivierblanvillain" %%% "transport-core" % "0.1-SNAPSHOT",
+            "com.lihaoyi" %%% "utest" % "0.3.0" % "test"
+        )
+    )
+    
+    /* JavaScript settings */
+    
+    .jsSettings(
+        skip in packageJSDependencies := false,
+        libraryDependencies ++= Seq(
+            "org.scala-js" %%% "scalajs-dom" % "0.8.0",
+            "com.github.olivierblanvillain" %%% "transport-javascript" % "0.1-SNAPSHOT"
+        )
+    )
+    
+    /* Standard JVM settings */
+    
+    .jvmSettings(
+        LWJGLPlugin.lwjglSettings: _*
+    )
+    .jvmSettings(
+        libraryDependencies ++= Seq(
+            "com.github.olivierblanvillain" %%% "transport-tyrus" % "0.1-SNAPSHOT"
+        )
+    )
+    
+lazy val demoJVM = demo.jvm
+lazy val demoJS = demo.js
