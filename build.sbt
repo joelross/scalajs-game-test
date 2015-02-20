@@ -65,6 +65,8 @@ lazy val demoAndroid = project
             "-ignorewarnings",
             "-keep class scala.Dynamic"
         ),
+        unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "scala",
+        unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared" / "src" / "test" / "scala",
         libraryDependencies ++= Seq(
             aar("com.google.android.gms" % "play-services" % "4.0.30"),
             aar("com.android.support" % "support-v4" % "r7")
