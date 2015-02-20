@@ -1,0 +1,24 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.demoAndroid"
+    android:versionCode="0"
+    android:versionName="0.1">
+
+    <uses-sdk
+        android:minSdkVersion="9"
+        android:targetSdkVersion="19"/>
+
+    <application
+        android:label="Demo for Scala.js-games"
+        android:icon="@drawable/android:star_big_on">
+
+        <activity
+          android:label="Demo for Scala.js-games"
+          android:name=".Launcher">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+    </application>
+</manifest>
