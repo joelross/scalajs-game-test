@@ -1,8 +1,8 @@
-package demoJS
+package games.demoJS
 
 import scala.scalajs.js
 import org.scalajs.dom
-import demo.Stub
+import games.demo.Stub
 
 object Launcher extends js.JSApp {
   def main(): Unit = {

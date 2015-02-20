@@ -1,6 +1,6 @@
-package demoJVM
+package games.demoJVM
 
-import demo.Stub
+import games.demo.Stub
 
 object Launcher {
 
