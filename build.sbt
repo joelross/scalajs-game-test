@@ -1,9 +1,12 @@
 import android.Keys._
-import android.Dependencies.{LibraryDependency, aar}
+import android.Dependencies.aar
 
 lazy val commonSettings = Seq(
         version := "0.1-SNAPSHOT",
-        scalaVersion := "2.11.5"
+        scalaVersion := "2.11.5",
+        persistLauncher in Compile := true,
+        persistLauncher in Test := false,
+        resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
     )
 
 lazy val demo = crossProject
@@ -16,10 +19,7 @@ lazy val demo = crossProject
         commonSettings: _*
     )
     .settings(        
-        persistLauncher in Compile := true,
-        persistLauncher in Test := false,
         testFrameworks += new TestFramework("utest.runner.Framework"),
-        resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %%% "transport-core" % "0.1-SNAPSHOT",
             "com.lihaoyi" %%% "utest" % "0.3.0" % "test"
@@ -68,6 +68,8 @@ lazy val demoAndroid = project
         unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "scala",
         unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared" / "src" / "test" / "scala",
         libraryDependencies ++= Seq(
+            "com.github.olivierblanvillain" %%% "transport-core" % "0.1-SNAPSHOT",
+            "com.github.olivierblanvillain" %%% "transport-tyrus" % "0.1-SNAPSHOT",
             aar("com.google.android.gms" % "play-services" % "4.0.30"),
             aar("com.android.support" % "support-v4" % "r7")
         )
