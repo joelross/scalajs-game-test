@@ -10,7 +10,7 @@ object Launcher {
   def main(args: Array[String]): Unit = {
     println("JVM " + Data.text)
     
-    this.println("Connecting to " + Data.server)
+    println("Connecting to " + Data.server)
 
     val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
     futureConnection.foreach { connection =>

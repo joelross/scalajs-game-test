@@ -11,10 +11,10 @@ object ServerLauncher extends App {
     val netty = new WebSocketServer(8080, "/ws")
     netty.listen().foreach { promise =>
         promise.success { connection =>
-            println("Client connected: " + connection)
+            println("New client connected")
             
             connection.handlerPromise.success { m =>
-                println("Message received from " + connection + ": " + m)
+                println("Message received from client: " + m)
                 connection.write("Hello from server")
             }
         }
