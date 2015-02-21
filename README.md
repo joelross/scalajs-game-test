@@ -5,6 +5,7 @@ Library for graphics/audio/inputs for Scala.js
 ## How to launch the demo
 
 Change the address of the server in the file ```demo/shared/src/main/scala/games/demo/Data.scala```
+
 (It may be a good idea to avoid starting the server and client in the same directory)
 
 ### Server
