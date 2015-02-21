@@ -59,7 +59,7 @@ lazy val demoAndroid = project
         android.Plugin.androidBuild: _*
     )
     .settings(
-        platformTarget in Android := "android-19",
+        platformTarget in Android := "android-14",
         proguardScala in Android := true,
         proguardOptions in Android ++= Seq(
             "-ignorewarnings",
