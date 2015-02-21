@@ -7,6 +7,7 @@
 .lib/
 dist/*
 target/
+bin/
 lib_managed/
 src_managed/
 project/boot/
@@ -19,3 +20,6 @@ project/plugins/project/
 .classpath
 .project
 .settings/
+
+.cache
+*.sjsir
