@@ -60,15 +60,9 @@ lazy val demoAndroid = project
     .settings(
         platformTarget in Android := "android-14",
         proguardScala in Android := true,
-        //dexMulti in Android := true,
         proguardOptions in Android ++= Seq(
             "-ignorewarnings",
-            /*"-dontoptimize",
-            "-dontobfuscate",
-            "-dontshrink",
-            "-dontpreverify",*/
-            "-keep class org.glassfish.**",
-            "-keep class org.osgi.**",
+            "-keep class org.glassfish.tyrus.**", // Somehow, tyrus doesn't seem to like proguard
             "-keep class scala.Dynamic"
         ),
         unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "scala",
@@ -76,7 +70,6 @@ lazy val demoAndroid = project
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %% "transport-core" % "0.1-SNAPSHOT",
             "com.github.olivierblanvillain" %% "transport-tyrus" % "0.1-SNAPSHOT",
-            //aar("com.google.android" % "multidex" % "0.1"),
             aar("com.google.android.gms" % "play-services" % "4.0.30"),
             aar("com.android.support" % "support-v4" % "r7")
         )

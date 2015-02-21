@@ -11,6 +11,8 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 object Launcher extends js.JSApp {
   def main(): Unit = {
     this.println("JS " + Data.text)
+    
+    this.println("Connecting to " + Data.server)
 
     val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
     futureConnection.foreach { connection =>
