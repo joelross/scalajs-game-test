@@ -17,12 +17,12 @@ class Launcher extends Activity {
     super.onCreate(savedInstanceState)
     val tv = new TextView(this)
     setContentView(tv)
-    var text = ""
+    var text: List[String] = Nil
     def printTextViewLine(s: String) {
         runOnUiThread(new Runnable {
             @Override def run(): Unit = {
-                text += s + "\n"
-                tv.setText(text)
+                text = s :: text
+                tv.setText(text.reverse.mkString("\n"))
             }
         })
     }
