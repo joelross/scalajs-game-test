@@ -2,6 +2,9 @@ package games.demoAndroid
 
 import android.os.Bundle
 import android.app.Activity
+import android.widget.TextView
+
+import java.lang.Runnable
 
 import games.demo.Data
 import transport.tyrus.WebSocketClient
@@ -12,16 +15,28 @@ import transport.WebSocketUrl
 class Launcher extends Activity {
   override def onCreate(savedInstanceState: Bundle) = {
     super.onCreate(savedInstanceState)
-    println("Android " + Data.text)  
+    val tv = new TextView(this)
+    setContentView(tv)
+    var text = ""
+    def printTextViewLine(s: String) {
+        runOnUiThread(new Runnable {
+            @Override def run(): Unit = {
+                text += s + "\n"
+                tv.setText(text)
+            }
+        })
+    }
+    
+    printTextViewLine("Android " + Data.text)
     
     Future { // Android does not like IO on the UI thread
-      println("Connecting to " + Data.server)
+      printTextViewLine("Connecting to " + Data.server)
       
       val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
       futureConnection.foreach { connection =>
         connection.write("Hello from Android client")
         connection.handlerPromise.success { m =>
-          println("Message received from server: " + m)
+          printTextViewLine("Message received from server: " + m)
         }
       }
     }
