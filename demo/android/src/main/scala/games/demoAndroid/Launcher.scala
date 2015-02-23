@@ -6,11 +6,9 @@ import android.widget.TextView
 
 import java.lang.Runnable
 
-import games.demo.Data
-import transport.tyrus.WebSocketClient
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import transport.WebSocketUrl
+import scala.concurrent.Future
+import games.demo.Engine
 
 class Launcher extends Activity {
   override def onCreate(savedInstanceState: Bundle) = {
@@ -27,8 +25,6 @@ class Launcher extends Activity {
         })
     }
     
-    printTextViewLine("Android " + Data.text)
-    
     val jni = new HelloJni
     printTextViewLine("Test jni: " + jni.stringFromJNI())
     
@@ -36,15 +32,8 @@ class Launcher extends Activity {
     printTextViewLine("Test precompiled jni: " + prejni.precompiledStringFromJNI())
     
     Future { // Android does not like IO on the UI thread
-      printTextViewLine("Connecting to " + Data.server)
-      
-      val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
-      futureConnection.foreach { connection =>
-        connection.write("Hello from Android client")
-        connection.handlerPromise.success { m =>
-          printTextViewLine("Message received from server: " + m)
-        }
-      }
+      val engine = new Engine(printTextViewLine)
+      engine.start()
     }
   }
 }
