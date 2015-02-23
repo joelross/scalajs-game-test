@@ -29,6 +29,9 @@ class Launcher extends Activity {
     
     printTextViewLine("Android " + Data.text)
     
+    val jni = new HelloJni
+    printTextViewLine("Test jni: " + jni.stringFromJNI())
+    
     val prejni = new PrecompiledJni
     printTextViewLine("Test precompiled jni: " + prejni.precompiledStringFromJNI())
     
