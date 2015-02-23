@@ -24,4 +24,4 @@ Run ```sbt "demoJS/fastOptJS"``` and open the file ```demoJS-launcher/index-fast
 
 #### Android
 
-Run ```sbt "demoAndroid/android:run"``` after having installed the SDK with the appropriate packages and connected your device
+Run ```sbt "demoAndroid/android:run"``` after having installed the Android SDK and NDK with the appropriate packages and connected your device
