@@ -16,13 +16,13 @@
 package games.demoAndroid;
 
 
-public class HelloJni
+public class PrecompiledJni
 {
     /* A native method that is implemented by the
      * 'hello-jni' native library, which is packaged
      * with this application.
      */
-    public native String  stringFromJNI();
+    public native String  precompiledStringFromJNI();
 
     /* This is another native method declaration that is *not*
      * implemented by 'hello-jni'. This is simply to show that
@@ -42,7 +42,7 @@ public class HelloJni
      * installation time by the package manager.
      */
     static {
-        System.loadLibrary("hello-jni");
+        System.loadLibrary("precompiled-jni");
     }
 }
 

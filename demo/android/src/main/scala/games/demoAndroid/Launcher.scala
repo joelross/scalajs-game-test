@@ -29,8 +29,8 @@ class Launcher extends Activity {
     
     printTextViewLine("Android " + Data.text)
     
-    val jni = new HelloJni
-    printTextViewLine("Test jni: " + jni.stringFromJNI())
+    val prejni = new PrecompiledJni
+    printTextViewLine("Test precompiled jni: " + prejni.precompiledStringFromJNI())
     
     Future { // Android does not like IO on the UI thread
       printTextViewLine("Connecting to " + Data.server)
