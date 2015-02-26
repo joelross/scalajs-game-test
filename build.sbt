@@ -6,7 +6,10 @@ lazy val commonSettings = Seq(
         scalaVersion := "2.11.5",
         persistLauncher in Compile := true,
         persistLauncher in Test := true,
-        resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
+        resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+        scalacOptions ++= Seq(
+          "-deprecation"
+        )
     )
 
 lazy val demo = crossProject
@@ -18,7 +21,7 @@ lazy val demo = crossProject
     .settings(
         commonSettings: _*
     )
-    .settings(        
+    .settings(
         testFrameworks += new TestFramework("utest.runner.Framework"),
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %%% "transport-core" % "0.1-SNAPSHOT",
@@ -43,7 +46,8 @@ lazy val demo = crossProject
     )
     .jvmSettings(
         libraryDependencies ++= Seq(
-            "com.github.olivierblanvillain" %%% "transport-tyrus" % "0.1-SNAPSHOT"
+            "com.github.olivierblanvillain" %%% "transport-tyrus" % "0.1-SNAPSHOT",
+            "org.jcraft" % "jorbis" % "0.0.17"
         )
     )
     
