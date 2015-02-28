@@ -45,6 +45,8 @@ lazy val demo = crossProject
         LWJGLPlugin.lwjglSettings: _*
     )
     .jvmSettings(
+        connectInput in run := true,
+        resourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %%% "transport-tyrus" % "0.1-SNAPSHOT",
             "org.jcraft" % "jorbis" % "0.0.17"
