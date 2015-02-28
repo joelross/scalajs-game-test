@@ -10,8 +10,10 @@ import com.jcraft.jorbis.Block
 import com.jcraft.jorbis.Info
 import com.jcraft.jorbis.Comment
 import java.io.EOFException
+import java.io.FilterInputStream
+import java.io.IOException
 
-class VorbisDecoder private[games] (in: InputStream) {
+class VorbisDecoder private[games] (in: InputStream) extends FilterInputStream(in) {
   private val packet = new Packet
   private val page = new Page
   private val streamState = new StreamState
@@ -20,11 +22,9 @@ class VorbisDecoder private[games] (in: InputStream) {
   private val dspState = new DspState
   private val block = new Block(dspState)
   private val comment = new Comment
-  val info = new Info
+  private val info = new Info
 
-  private val bufferSize = 256
-
-  syncState.init()
+  private val bufferSize = 4096
 
   private var firstPage = true
 
@@ -38,7 +38,7 @@ class VorbisDecoder private[games] (in: InputStream) {
       if (code < 0) throw new RuntimeException("Could not load the buffer. Code " + code)
       else getNextPage() // once the buffer is loaded successfully, try again
     }
-    case 1 => {
+    case 1 => { // page ok
       if (firstPage) {
         firstPage = false
         streamState.init(page.serialno())
@@ -67,59 +67,30 @@ class VorbisDecoder private[games] (in: InputStream) {
 
   private def init() {
     try {
-      for (i <- 1 to 3) {
+      syncState.init()
+
+      for (i <- 1 to 3) { // Decode the three header packets
         val code = info.synthesis_headerin(comment, getNextPacket())
         if (code < 0) throw new RuntimeException("Could not synthesize the info. Code " + code)
       }
+
+      if (dspState.synthesis_init(info) < 0) throw new RuntimeException("Could not init DspState")
+      block.init(dspState)
     } catch {
-      case t => throw new RuntimeException("Could not init the decoder", t)
+      case e: Exception => throw new RuntimeException("Could not init the decoder", e)
     }
   }
 
-  //  init()
-  //  
-  //  private def init() {
-  //    // init JOrbis
-  //    val bufferSize = 2048
-  //    
-  //    syncState.init()
-  //    syncState.buffer(bufferSize)
-  //    val buffer = syncState.data
-  //    
-  //    // read header
-  //    var needMoreData = true
-  //    var packetNo = 1
-  //    var count = 0
-  //    var index = 0
-  //    
-  //    def readPage() {
-  //      
-  //    }
-  //    
-  //    while(needMoreData) {
-  //      count = in.read(buffer, index, bufferSize)
-  //      syncState.wrote(count)
-  //      packetNo match {
-  //        case 1 => {
-  //          syncState.pageout(page) match {
-  //            case -1 => throw new RuntimeException("There is a hole in the first packet data")
-  //            case 0 => // need more data (do nothing?)
-  //            case 1 => {
-  //              streamState.init(page.serialno())
-  //              streamState.reset()
-  //              
-  //              info.init()
-  //              comment.init()
-  //              
-  //              if(streamState.pagein(page) == -1 || streamState.packetout(packet) != 1 || info.synthesis_headerin(comment, packet) < 0) {
-  //                throw new RuntimeException("Error while reading the first header page")
-  //              }
-  //              
-  //              packetNo += 1
-  //            }
-  //          }
-  //        }
-  //      }
-  //    }
-  //  }
+  def rate: Int = info.rate
+  def channels: Int = info.channels
+  
+  override def available(): Int = ???
+  override def close(): Unit = ???
+  override def mark(readLimit: Int): Unit = throw new IOException("Mark not supported")
+  override def markSupported(): Boolean = false
+  override def read(): Int = ???
+  override def read(b: Array[Byte]): Int = this.read(b, 0, b.length)
+  override def read(b: Array[Byte], off: Int, len: Int): Int = ???
+  override def reset(): Unit = throw new IOException("Reset not supported")
+  override def skip(n: Long): Long = ???
 }

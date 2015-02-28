@@ -5,6 +5,7 @@ import games.demo.Engine
 import java.io.FileInputStream
 import java.io.File
 import games.audio.VorbisDecoder
+import java.io.EOFException
 
 object Launcher {
 
@@ -19,10 +20,9 @@ object Launcher {
     val in = new FileInputStream(new File("/home/joel/project-git/scalajs-games/demo/shared/src/main/resources/games/demo/test.ogg"))
 
     val decoder = new VorbisDecoder(in)
-    
-    println("version: " + decoder.info.version)
-    println("channels: " + decoder.info.channels)
-    println("rate: " + decoder.info.rate)
+
+    println("channels: " + decoder.channels)
+    println("rate: " + decoder.rate)
 
     var count = 0
     try {
@@ -31,13 +31,14 @@ object Launcher {
         count += 1
       }
     } catch {
-      case t => t.printStackTrace()
+      case eof: EOFException =>
+      case e: Exception      => e.printStackTrace()
     }
-    
+
     println("Retrieved " + count + " packets")
 
-    println("Press enter to exit")
-    System.in.read()
-    println("Client closing...")
+//    println("Press enter to exit")
+//    System.in.read()
+//    println("Client closing...")
   }
 }
