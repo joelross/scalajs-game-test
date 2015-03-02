@@ -14,8 +14,9 @@ import java.io.FilterInputStream
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.io.Closeable
 
-class VorbisDecoder private[games] (in: InputStream, conv: Converter) {
+class VorbisDecoder private[games] (in: InputStream, conv: Converter) extends Closeable {
   private val packet = new Packet
   private val page = new Page
   private val streamState = new StreamState
@@ -157,5 +158,15 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) {
     }
 
     total
+  }
+
+  def close(): Unit = {
+    streamState.clear()
+    block.clear()
+    dspState.clear()
+    info.clear()
+    syncState.clear()
+
+    in.close()
   }
 }
