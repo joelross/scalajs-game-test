@@ -91,7 +91,6 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) {
       pcmIn = new Array[Array[Array[Float]]](1)
       indexIn = new Array[Int](info.channels)
       sampleTmp = new Array[Float](info.channels)
-      //convBuffer = ByteBuffer.allocate(convBufferSize).order(ByteOrder.nativeOrder())
     } catch {
       case e: Exception => throw new RuntimeException("Could not init the decoder", e)
     }
@@ -102,7 +101,6 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) {
 
   private var pcmIn: Array[Array[Array[Float]]] = _
   private var indexIn: Array[Int] = _
-  //private var convBuffer: ByteBuffer = _
   private var remainingSamples = 0
   private var samplesRead = 0
 
@@ -117,7 +115,7 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) {
 
     val availableSamples = dspState.synthesis_pcmout(pcmIn, indexIn)
     if (availableSamples < 0) throw new RuntimeException("Could not decode the block")
-    else if (availableSamples == 0) System.err.println("Warning: 0 samples decoded")
+    //else if (availableSamples == 0) System.err.println("Warning: 0 samples decoded")
 
     remainingSamples = availableSamples
   }
@@ -150,7 +148,7 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) {
   }
 
   def readFully(out: ByteBuffer): Int = {
-    if (out.remaining() % (info.channels * conv.bytePerValue) != 0) throw new RuntimeException("Buffer capacity not aligned (remaining " + out.remaining() + ", required multiple of " + (info.channels * conv.bytePerValue) + ")")
+    if (out.remaining() % (info.channels * conv.bytePerValue) != 0) throw new RuntimeException("Buffer capacity incorrect (remaining " + out.remaining() + ", required multiple of " + (info.channels * conv.bytePerValue) + ")")
 
     var total = 0
 
