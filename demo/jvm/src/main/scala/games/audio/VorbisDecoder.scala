@@ -12,8 +12,10 @@ import com.jcraft.jorbis.Comment
 import java.io.EOFException
 import java.io.FilterInputStream
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
-class VorbisDecoder private[games] (in: InputStream) extends FilterInputStream(in) {
+class VorbisDecoder private[games] (in: InputStream, conv: Converter) {
   private val packet = new Packet
   private val page = new Page
   private val streamState = new StreamState
@@ -24,33 +26,42 @@ class VorbisDecoder private[games] (in: InputStream) extends FilterInputStream(i
   private val comment = new Comment
   private val info = new Info
 
-  private val bufferSize = 4096
-
   private var firstPage = true
+  private var lastPage = false
 
-  private def getNextPage(): Page = syncState.pageout(page) match {
-    case 0 => { // need more data
-      val index = syncState.buffer(bufferSize)
-      val buffer = syncState.data
-      var read = in.read(buffer, index, bufferSize)
-      if (read < 0) throw new EOFException()
-      val code = syncState.wrote(read)
-      if (code < 0) throw new RuntimeException("Could not load the buffer. Code " + code)
-      else getNextPage() // once the buffer is loaded successfully, try again
-    }
-    case 1 => { // page ok
-      if (firstPage) {
-        firstPage = false
-        streamState.init(page.serialno())
-        val code = streamState.reset()
-        if (code < 0) throw new RuntimeException("Could not reset streamState. Code " + code)
+  private val readBufferSize = 4096
+  //private val convBufferSize = 4096
 
-        info.init()
-        comment.init()
+  private def getNextPage(): Page = {
+    syncState.pageout(page) match {
+      case 0 => { // need more data
+        val index = syncState.buffer(readBufferSize)
+        val buffer = syncState.data
+        var read = in.read(buffer, index, readBufferSize)
+        if (read < 0) {
+          if (!lastPage) { System.err.println("Warning: End of stream reached before EOS page") }
+          throw new EOFException()
+        }
+        val code = syncState.wrote(read)
+        if (code < 0) throw new RuntimeException("Could not load the buffer. Code " + code)
+        else getNextPage() // once the buffer is loaded successfully, try again
       }
-      page
+      case 1 => { // page ok
+        if (firstPage) {
+          firstPage = false
+          streamState.init(page.serialno())
+          val code = streamState.reset()
+          if (code < 0) throw new RuntimeException("Could not reset streamState. Code " + code)
+
+          info.init()
+          comment.init()
+        }
+        if (lastPage) System.err.println("Warning: EOS page already reached")
+        else lastPage = page.eos() != 0
+        page
+      }
+      case x => throw new RuntimeException("Could not retrieve page from buffer. Code " + x)
     }
-    case x => throw new RuntimeException("Could not retrieve page from buffer. Code " + x)
   }
 
   def getNextPacket(): Packet = streamState.packetout(packet) match {
@@ -76,6 +87,11 @@ class VorbisDecoder private[games] (in: InputStream) extends FilterInputStream(i
 
       if (dspState.synthesis_init(info) < 0) throw new RuntimeException("Could not init DspState")
       block.init(dspState)
+
+      pcmIn = new Array[Array[Array[Float]]](1)
+      indexIn = new Array[Int](info.channels)
+      sampleTmp = new Array[Float](info.channels)
+      //convBuffer = ByteBuffer.allocate(convBufferSize).order(ByteOrder.nativeOrder())
     } catch {
       case e: Exception => throw new RuntimeException("Could not init the decoder", e)
     }
@@ -83,14 +99,71 @@ class VorbisDecoder private[games] (in: InputStream) extends FilterInputStream(i
 
   def rate: Int = info.rate
   def channels: Int = info.channels
-  
-  override def available(): Int = ???
-  override def close(): Unit = ???
-  override def mark(readLimit: Int): Unit = throw new IOException("Mark not supported")
-  override def markSupported(): Boolean = false
-  override def read(): Int = ???
-  override def read(b: Array[Byte]): Int = this.read(b, 0, b.length)
-  override def read(b: Array[Byte], off: Int, len: Int): Int = ???
-  override def reset(): Unit = throw new IOException("Reset not supported")
-  override def skip(n: Long): Long = ???
+
+  private var pcmIn: Array[Array[Array[Float]]] = _
+  private var indexIn: Array[Int] = _
+  //private var convBuffer: ByteBuffer = _
+  private var remainingSamples = 0
+  private var samplesRead = 0
+
+  private var sampleTmp: Array[Float] = _
+
+  private def decodeNextPacket(): Unit = {
+    if (dspState.synthesis_read(samplesRead) < 0) throw new RuntimeException("Could not acknowledge read samples")
+    samplesRead = 0
+
+    if (block.synthesis(this.getNextPacket()) < 0) throw new RuntimeException("Could not synthesize the block from packet")
+    if (dspState.synthesis_blockin(block) < 0) throw new RuntimeException("Could not synthesize dspState from block")
+
+    val availableSamples = dspState.synthesis_pcmout(pcmIn, indexIn)
+    if (availableSamples < 0) throw new RuntimeException("Could not decode the block")
+    else if (availableSamples == 0) System.err.println("Warning: 0 samples decoded")
+
+    remainingSamples = availableSamples
+  }
+
+  def read(out: ByteBuffer): Int = {
+    if (remainingSamples <= 0) {
+      decodeNextPacket()
+    }
+
+    var total = 0
+
+    while (true) {
+      if (remainingSamples <= 0 || !conv.hasEnoughSpace(info.channels, out)) return total
+
+      var channelNo = 0
+      while (channelNo < info.channels) {
+        sampleTmp(channelNo) = pcmIn(0)(channelNo)(indexIn(channelNo) + samplesRead)
+        channelNo += 1
+      }
+
+      conv(sampleTmp, out)
+
+      samplesRead += 1
+      remainingSamples -= 1
+
+      total += 1
+    }
+
+    ???
+  }
+
+  def readFully(out: ByteBuffer): Int = {
+    val cap = out.remaining()
+
+    if (out.remaining() % (info.channels * conv.bytePerValue) != 0) throw new RuntimeException("Buffer capacity not aligned (remaining " + out.remaining() + ", required multiple of " + (info.channels * conv.bytePerValue) + ")")
+
+    var total = 0
+
+    while (out.remaining() > 0) {
+      total += read(out)
+    }
+
+    if (cap != total * conv.bytePerValue * info.channels) {
+      System.err.println("Warning: amount of read data does not match (internal error)")
+    }
+
+    total
+  }
 }

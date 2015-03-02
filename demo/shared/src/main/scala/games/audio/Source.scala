@@ -1,7 +1,5 @@
 package games.audio
 
-import scala.concurrent.Future
-
 abstract sealed class AbstractSource {
   def play: Unit
   def pause: Unit
@@ -16,10 +14,8 @@ abstract sealed class AbstractSource {
   def playbackRate_=(playbackRate: Float)
 }
 
-abstract class Source extends AbstractSource {
-  
-}
+abstract class Source extends AbstractSource
 
 abstract class Source3D extends AbstractSource {
-  
+  // TODO 3d positioning
 }

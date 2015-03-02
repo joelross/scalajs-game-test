@@ -6,6 +6,7 @@ import java.io.FileInputStream
 import java.io.File
 import games.audio.VorbisDecoder
 import java.io.EOFException
+import games.audio.Fixed16Converter
 
 object Launcher {
 
@@ -19,7 +20,7 @@ object Launcher {
 
     val in = new FileInputStream(new File("/home/joel/project-git/scalajs-games/demo/shared/src/main/resources/games/demo/test.ogg"))
 
-    val decoder = new VorbisDecoder(in)
+    val decoder = new VorbisDecoder(in, new Fixed16Converter)
 
     println("channels: " + decoder.channels)
     println("rate: " + decoder.rate)
@@ -37,8 +38,8 @@ object Launcher {
 
     println("Retrieved " + count + " packets")
 
-//    println("Press enter to exit")
-//    System.in.read()
-//    println("Client closing...")
+    //    println("Press enter to exit")
+    //    System.in.read()
+    //    println("Client closing...")
   }
 }

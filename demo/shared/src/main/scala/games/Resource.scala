@@ -1,3 +1,3 @@
 package games
 
-case class Resource(name: String);
+case class Resource(name: String)
