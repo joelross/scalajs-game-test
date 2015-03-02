@@ -123,45 +123,39 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) {
   }
 
   def read(out: ByteBuffer): Int = {
-    if (remainingSamples <= 0) {
+    while (remainingSamples <= 0) {
       decodeNextPacket()
     }
 
-    var total = 0
+    def loop(count: Int): Int = {
+      if (remainingSamples <= 0 || !conv.hasEnoughSpace(info.channels, out)) {
+        count
+      } else {
+        var channelNo = 0
+        while (channelNo < info.channels) {
+          sampleTmp(channelNo) = pcmIn(0)(channelNo)(indexIn(channelNo) + samplesRead)
+          channelNo += 1
+        }
 
-    while (true) {
-      if (remainingSamples <= 0 || !conv.hasEnoughSpace(info.channels, out)) return total
+        conv(sampleTmp, out)
 
-      var channelNo = 0
-      while (channelNo < info.channels) {
-        sampleTmp(channelNo) = pcmIn(0)(channelNo)(indexIn(channelNo) + samplesRead)
-        channelNo += 1
+        samplesRead += 1
+        remainingSamples -= 1
+
+        loop(count + 1)
       }
-
-      conv(sampleTmp, out)
-
-      samplesRead += 1
-      remainingSamples -= 1
-
-      total += 1
     }
 
-    ???
+    loop(0) * conv.bytePerValue * info.channels
   }
 
   def readFully(out: ByteBuffer): Int = {
-    val cap = out.remaining()
-
     if (out.remaining() % (info.channels * conv.bytePerValue) != 0) throw new RuntimeException("Buffer capacity not aligned (remaining " + out.remaining() + ", required multiple of " + (info.channels * conv.bytePerValue) + ")")
 
     var total = 0
 
     while (out.remaining() > 0) {
       total += read(out)
-    }
-
-    if (cap != total * conv.bytePerValue * info.channels) {
-      System.err.println("Warning: amount of read data does not match (internal error)")
     }
 
     total
