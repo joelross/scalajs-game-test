@@ -13,7 +13,7 @@ abstract class Converter {
   def hasEnoughSpace(channels: Int, dst: ByteBuffer): Boolean = (dst.remaining() >= (channels * this.bytePerValue))
 
   def convertValue(value: Float, dst: ByteBuffer): Unit
-  def bytePerValue: Int
+  val bytePerValue: Int
 }
 
 class FixedSigned8Converter extends Converter {
