@@ -5,8 +5,8 @@ class ALBufferedSource private[games] () extends Source {
   def loop_=(loop: Boolean): Unit = ???
   def pause: Unit = ???
   def play: Unit = ???
-  def playbackRate: Float = ???
-  def playbackRate_=(playbackRate: Float): Unit = ???
+  def pitch: Float = ???
+  def pitch_=(pitch: Float): Unit = ???
   def volume: Float = ???
   def volume_=(volume: Float): Unit = ???
 }
@@ -16,8 +16,8 @@ class ALStreamingSource private[games] () extends Source {
   def loop_=(loop: Boolean): Unit = ???
   def pause: Unit = ???
   def play: Unit = ???
-  def playbackRate: Float = ???
-  def playbackRate_=(playbackRate: Float): Unit = ???
+  def pitch: Float = ???
+  def pitch_=(pitch: Float): Unit = ???
   def volume: Float = ???
   def volume_=(volume: Float): Unit = ???
 }

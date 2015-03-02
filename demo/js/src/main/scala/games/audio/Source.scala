@@ -49,10 +49,10 @@ class JsBufferedSource private[games] (ctx: JsContext, bufferFuture: Future[js.t
     sourceNode.loop = loop
   }
 
-  def playbackRate: Float = sourceNode.playbackRate.value.asInstanceOf[Double].toFloat
+  def pitch: Float = sourceNode.playbackRate.value.asInstanceOf[Double].toFloat
 
-  def playbackRate_=(playbackRate: Float): Unit = {
-    sourceNode.playbackRate.value = playbackRate.toDouble
+  def pitch_=(pitch: Float): Unit = {
+    sourceNode.playbackRate.value = pitch.toDouble
   }
 
   private[games] def ready: Future[Unit] = promiseReady.future
@@ -99,10 +99,10 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
     audio.play()
   }
 
-  def playbackRate: Float = audio.playbackRate.asInstanceOf[Double].toFloat
+  def pitch: Float = audio.playbackRate.asInstanceOf[Double].toFloat
 
-  def playbackRate_=(playbackRate: Float): Unit = {
-    audio.playbackRate = playbackRate.toDouble
+  def pitch_=(pitch: Float): Unit = {
+    audio.playbackRate = pitch.toDouble
   }
 
   def volume: Float = audio.volume.asInstanceOf[Double].toFloat

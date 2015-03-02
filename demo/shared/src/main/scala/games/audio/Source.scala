@@ -10,8 +10,8 @@ abstract sealed class AbstractSource {
   def loop: Boolean
   def loop_=(loop: Boolean)
   
-  def playbackRate: Float
-  def playbackRate_=(playbackRate: Float)
+  def pitch: Float
+  def pitch_=(pitch: Float)
 }
 
 abstract class Source extends AbstractSource
