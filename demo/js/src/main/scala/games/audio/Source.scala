@@ -22,7 +22,7 @@ class JsBufferedSource private[games] (ctx: JsContext, bufferFuture: Future[js.t
   bufferFuture.onSuccess {
     case buffer =>
       sourceNode.buffer = buffer
-      promiseReady.success()
+      promiseReady.success((): Unit)
   }
   bufferFuture.onFailure {
     case t =>
@@ -75,7 +75,7 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
   }
 
   audio.oncanplay = (e: dom.Event) => {
-    promiseReady.success()
+    promiseReady.success((): Unit)
   }
 
   audio.onerror = (e: dom.Event) => {
