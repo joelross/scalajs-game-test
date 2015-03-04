@@ -32,6 +32,7 @@ lazy val demo = crossProject
     /* JavaScript settings */
     
     .jsSettings(
+        name := "demoJS",
         skip in packageJSDependencies := false,
         libraryDependencies ++= Seq(
             "org.scala-js" %%% "scalajs-dom" % "0.8.0",
@@ -45,6 +46,7 @@ lazy val demo = crossProject
         LWJGLPlugin.lwjglSettings: _*
     )
     .jvmSettings(
+        name := "demoJVM",
         connectInput in run := true,
         resourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
         libraryDependencies ++= Seq(
@@ -64,6 +66,7 @@ lazy val demoAndroid = project
         android.Plugin.androidBuild: _*
     )
     .settings(
+        name := "demoAndroid",
         platformTarget in Android := "android-14",
         proguardScala in Android := true,
         proguardOptions in Android ++= Seq(
