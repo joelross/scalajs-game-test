@@ -11,7 +11,7 @@ import games.audio.Context
 
 object Launcher extends js.JSApp {
   def main(): Unit = {
-    JsResourceUtil.setRelativePath("/demo/shared/src/main/resources")
+    JsResourceUtil.setResourcePath("/demo/shared/src/main/resources")
 
     val output = dom.document.getElementById("demo-output")
     def printLine(msg: String): Unit = {
@@ -31,8 +31,15 @@ object Launcher extends js.JSApp {
 
     val testData = audioContext.createBufferedData(testResource)
     val s = testData.createSource
-    s.onSuccess { case s => printLine("Resource ready"); s.play }
-    s.onFailure { case t => printLine("Error: " + t.getMessage) }
+    s.onSuccess {
+      case s =>
+        printLine("Resource ready")
+        s.play
+    }
+    s.onFailure {
+      case t =>
+        printLine("Error: " + t.getMessage)
+    }
   }
 
 }

@@ -8,7 +8,7 @@ object JsResourceUtil {
     case None       => throw new RuntimeException("Relative path must be defined before calling pathForResource")
   }
 
-  def setRelativePath(path: String): Unit = {
+  def setResourcePath(path: String): Unit = {
     relativeResourcePath = Some(path)
   }
 }

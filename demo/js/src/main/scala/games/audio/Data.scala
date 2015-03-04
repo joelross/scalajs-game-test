@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class JsBufferedData private[games] (ctx: JsContext, res: Resource) extends BufferedData {
-  private[games] val decodedDataReady = Promise[js.typedarray.ArrayBuffer]
+  private val decodedDataReady = Promise[js.typedarray.ArrayBuffer]
 
   private val request = new dom.XMLHttpRequest()
   request.open("GET", JsResourceUtil.pathForResource(res), true)
@@ -47,7 +47,7 @@ class JsBufferedData private[games] (ctx: JsContext, res: Resource) extends Buff
 }
 
 class JsStreamingData private[games] (ctx: JsContext, res: Resource) extends StreamingData {
-  private[games] val streamReady = Promise[String]
+  private val streamReady = Promise[String]
 
   private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
   private val path = JsResourceUtil.pathForResource(res)
