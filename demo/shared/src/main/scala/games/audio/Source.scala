@@ -1,6 +1,8 @@
 package games.audio
 
-abstract sealed class AbstractSource {
+import java.io.Closeable
+
+abstract sealed class AbstractSource extends Closeable {
   def play: Unit
   def pause: Unit
   
@@ -12,6 +14,8 @@ abstract sealed class AbstractSource {
   
   def pitch: Float
   def pitch_=(pitch: Float)
+  
+  def close(): Unit = {}
 }
 
 abstract class Source extends AbstractSource

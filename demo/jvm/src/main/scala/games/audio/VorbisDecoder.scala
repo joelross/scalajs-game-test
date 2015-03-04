@@ -31,7 +31,6 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) extends Cl
   private var lastPage = false
 
   private val readBufferSize = 4096
-  //private val convBufferSize = 4096
 
   private def getNextPage(): Page = {
     syncState.pageout(page) match {

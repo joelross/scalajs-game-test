@@ -26,6 +26,10 @@ class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends So
   def pitch_=(pitch: Float): Unit = AL10.alSourcef(alSource, AL10.AL_PITCH, pitch)
   def volume: Float = AL10.alGetSourcef(alSource, AL10.AL_GAIN)
   def volume_=(volume: Float): Unit = AL10.alSourcef(alSource, AL10.AL_GAIN, volume)
+
+  override def close(): Unit = {
+    AL10.alDeleteSources(alSource)
+  }
 }
 
 class ALStreamingSource private[games] () extends Source {

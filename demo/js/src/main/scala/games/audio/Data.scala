@@ -35,13 +35,7 @@ class JsBufferedData private[games] (ctx: JsContext, res: Resource) extends Buff
   request.send()
 
   def createSource: Future[Source] = {
-    val source = new JsBufferedSource(ctx, decodedDataReady.future)
-    val promise = Promise[Source]
-
-    source.ready.onSuccess { case _ => promise.success(source) }
-    source.ready.onFailure { case t => promise.failure(t) }
-
-    promise.future
+    decodedDataReady.future.map { case arrayBuffer => new JsBufferedSource(ctx, arrayBuffer) }
   }
   def createSource3D: Future[Source3D] = ???
 }

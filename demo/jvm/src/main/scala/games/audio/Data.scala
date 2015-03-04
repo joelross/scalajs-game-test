@@ -41,7 +41,7 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
     }
 
     val dataArray = dataStream.toByteArray()
-    require(totalDataLength == dataArray.length) // sanity check
+    require(totalDataLength == dataArray.length) // TODO remove later, sanity check
     val dataBuffer = ByteBuffer.allocateDirect(dataArray.length).order(ByteOrder.nativeOrder())
 
     dataBuffer.put(dataArray)
@@ -60,8 +60,14 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
     alBuffer
   }
 
-  def createSource: scala.concurrent.Future[games.audio.Source] = bufferReady.map { case alBuffer => new ALBufferedSource(ctx, alBuffer) }
+  def createSource: scala.concurrent.Future[games.audio.Source] = {
+    bufferReady.map { case alBuffer => new ALBufferedSource(ctx, alBuffer) }
+  }
   def createSource3D: scala.concurrent.Future[games.audio.Source3D] = ???
+
+  override def close(): Unit = {
+    bufferReady.onSuccess { case alBuffer => AL10.alDeleteBuffers(alBuffer) }
+  }
 }
 
 class ALStreamingData private[games] (ctx: ALContext, res: Resource) extends StreamingData {

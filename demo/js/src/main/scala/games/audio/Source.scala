@@ -3,13 +3,13 @@ package games.audio
 import scala.scalajs.js
 import org.scalajs.dom
 
-import scala.concurrent._
+import scala.concurrent.Future
+import scala.concurrent.Promise
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class JsBufferedSource private[games] (ctx: JsContext, bufferFuture: Future[js.typedarray.ArrayBuffer]) extends Source {
-  private val promiseReady = Promise[Unit]
-
+class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.ArrayBuffer) extends Source {
   private val sourceNode = ctx.webApi.createBufferSource()
+  sourceNode.buffer = buffer
   sourceNode.loop = false
 
   private val gainNode = ctx.webApi.createGain()
@@ -18,16 +18,6 @@ class JsBufferedSource private[games] (ctx: JsContext, bufferFuture: Future[js.t
   gainNode.gain.value = 1.0
 
   gainNode.connect(ctx.webApi.destination)
-
-  bufferFuture.onSuccess {
-    case buffer =>
-      sourceNode.buffer = buffer
-      promiseReady.success((): Unit)
-  }
-  bufferFuture.onFailure {
-    case t =>
-      promiseReady.failure(t)
-  }
 
   def pause: Unit = {
     sourceNode.stop() // TODO check position for start & pause (beginning or where it was left?)
@@ -54,8 +44,6 @@ class JsBufferedSource private[games] (ctx: JsContext, bufferFuture: Future[js.t
   def pitch_=(pitch: Float): Unit = {
     sourceNode.playbackRate.value = pitch.toDouble
   }
-
-  private[games] def ready: Future[Unit] = promiseReady.future
 }
 
 class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[String]) extends Source {
