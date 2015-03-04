@@ -61,7 +61,7 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
   }
 
   def createSource: scala.concurrent.Future[games.audio.Source] = {
-    bufferReady.map { case alBuffer => new ALBufferedSource(ctx, alBuffer) }
+    bufferReady.map { alBuffer => new ALBufferedSource(ctx, alBuffer) }
   }
   def createSource3D: scala.concurrent.Future[games.audio.Source3D] = ???
 

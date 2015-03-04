@@ -35,7 +35,7 @@ class JsBufferedData private[games] (ctx: JsContext, res: Resource) extends Buff
   request.send()
 
   def createSource: Future[Source] = {
-    decodedDataReady.future.map { case arrayBuffer => new JsBufferedSource(ctx, arrayBuffer) }
+    decodedDataReady.future.map { arrayBuffer => new JsBufferedSource(ctx, arrayBuffer) }
   }
   def createSource3D: Future[Source3D] = ???
 }
@@ -67,12 +67,7 @@ class JsStreamingData private[games] (ctx: JsContext, res: Resource) extends Str
 
   def createSource: Future[Source] = {
     val source = new JsStreamingSource(ctx, streamReady.future)
-    val promise = Promise[Source]
-
-    source.ready.onSuccess { case _ => promise.success(source) }
-    source.ready.onFailure { case t => promise.failure(t) }
-
-    promise.future
+    source.ready.map { x => source }
   }
   def createSource3D: Future[Source3D] = ???
 }
