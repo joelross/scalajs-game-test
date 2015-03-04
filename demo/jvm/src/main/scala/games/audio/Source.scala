@@ -3,17 +3,21 @@ package games.audio
 import scala.concurrent._
 
 import org.lwjgl.openal.AL10
+import org.lwjgl.openal.Util
 
 class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends Source {
-  
+
   private def init() = {
     val alSource = AL10.alGenSources()
     AL10.alSourcei(alSource, AL10.AL_BUFFER, alBuffer)
+
+    Util.checkALError()
+
     alSource
   }
-  
+
   private val alSource = init()
-  
+
   def loop: Boolean = AL10.alGetSourcei(alSource, AL10.AL_LOOPING) == AL10.AL_TRUE
   def loop_=(loop: Boolean): Unit = AL10.alSourcei(alSource, AL10.AL_LOOPING, if (loop) AL10.AL_TRUE else AL10.AL_FALSE)
   def pause: Unit = AL10.alSourcePause(alSource)

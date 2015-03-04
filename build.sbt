@@ -22,7 +22,6 @@ lazy val demo = crossProject
         commonSettings: _*
     )
     .settings(
-        resourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
         testFrameworks += new TestFramework("utest.runner.Framework"),
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %%% "transport-core" % "0.1-SNAPSHOT",
