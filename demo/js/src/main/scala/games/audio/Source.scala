@@ -26,8 +26,6 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
 
   def pause: Unit = {
     sourceNode.stop()
-    needRestarting = true
-    nextStartTime = (now() - lastStartDate) / 1000.0 // msec -> sec
   }
 
   def play: Unit = {
@@ -44,6 +42,11 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
 
     sourceNode.start(0, nextStartTime)
     lastStartDate = now()
+
+    sourceNode.onended = () => {
+      needRestarting = true
+      nextStartTime = (now() - lastStartDate) / 1000.0 // msec -> sec
+    }
   }
 
   def volume: Float = gainNode.gain.value.asInstanceOf[Double].toFloat
