@@ -35,6 +35,14 @@ object Launcher extends js.JSApp {
       case s =>
         printLine("Resource ready")
         s.play
+
+        js.Dynamic.global.setTimeout(() => {
+          s.pause
+
+          js.Dynamic.global.setTimeout(() => {
+            s.play
+          }, 10000)
+        }, 10000)
     }
     s.onFailure {
       case t =>

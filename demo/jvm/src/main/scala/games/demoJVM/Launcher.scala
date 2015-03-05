@@ -20,11 +20,19 @@ object Launcher {
 
     val testResource = new Resource("/games/demo/test.ogg")
 
-    val testData = audioContext.createStreamingData(testResource)
+    val testData = audioContext.createBufferedData(testResource)
     val s = testData.createSource
     s.onSuccess {
       case s =>
         printLine("Resource ready")
+        s.play
+
+        Thread.sleep(10000)
+
+        s.pause
+
+        Thread.sleep(10000)
+
         s.play
     }
     s.onFailure {

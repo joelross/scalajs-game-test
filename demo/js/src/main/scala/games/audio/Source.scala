@@ -8,9 +8,8 @@ import scala.concurrent.Promise
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.ArrayBuffer) extends Source {
-  private val sourceNode = ctx.webApi.createBufferSource()
+  private var sourceNode = ctx.webApi.createBufferSource()
   sourceNode.buffer = buffer
-  sourceNode.loop = false
 
   private val gainNode = ctx.webApi.createGain()
   sourceNode.connect(gainNode)
@@ -19,12 +18,32 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
 
   gainNode.connect(ctx.webApi.destination)
 
+  private var needRestarting = false
+  private var nextStartTime = 0.0
+  private var lastStartDate = 0.0
+
+  private def now(): Double = js.Dynamic.global.Date.now().asInstanceOf[Double]
+
   def pause: Unit = {
-    sourceNode.stop() // TODO check position for start & pause (beginning or where it was left?)
+    sourceNode.stop()
+    needRestarting = true
+    nextStartTime = (now() - lastStartDate) / 1000.0 // msec -> sec
   }
 
   def play: Unit = {
-    sourceNode.start()
+    if (needRestarting) { // a SourceNode can only be started once, need to create a new one
+      val oldNode = sourceNode
+      oldNode.disconnect() // disconnect the old node
+
+      sourceNode = ctx.webApi.createBufferSource()
+      sourceNode.loop = oldNode.loop
+      sourceNode.buffer = oldNode.buffer
+      sourceNode.playbackRate.value = oldNode.playbackRate.value
+      sourceNode.connect(gainNode)
+    }
+
+    sourceNode.start(0, nextStartTime)
+    lastStartDate = now()
   }
 
   def volume: Float = gainNode.gain.value.asInstanceOf[Double].toFloat
