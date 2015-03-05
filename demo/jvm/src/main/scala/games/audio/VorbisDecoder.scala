@@ -16,7 +16,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.io.Closeable
 
-class VorbisDecoder private[games] (in: InputStream, conv: Converter) extends Closeable {
+class VorbisDecoder private[games] (var in: InputStream, conv: Converter) extends Closeable {
   private val packet = new Packet
   private val page = new Page
   private val streamState = new StreamState

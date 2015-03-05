@@ -55,6 +55,8 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
 
     AL10.alBufferData(alBuffer, format, dataBuffer, decoder.rate)
 
+    decoder.close()
+
     Util.checkALError()
 
     alBuffer
