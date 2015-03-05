@@ -66,11 +66,18 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
   def createSource3D: scala.concurrent.Future[games.audio.Source3D] = ???
 
   override def close(): Unit = {
-    bufferReady.onSuccess { case alBuffer => AL10.alDeleteBuffers(alBuffer) }
+    bufferReady.onSuccess {
+      case alBuffer =>
+        AL10.alDeleteBuffers(alBuffer)
+        Util.checkALError()
+    }
   }
 }
 
 class ALStreamingData private[games] (ctx: ALContext, res: Resource) extends StreamingData {
-  def createSource: scala.concurrent.Future[games.audio.Source] = ???
+  def createSource: scala.concurrent.Future[games.audio.Source] = {
+    val source = new ALStreamingSource(ctx, res)
+    source.ready.map { x => source }
+  }
   def createSource3D: scala.concurrent.Future[games.audio.Source3D] = ???
 }

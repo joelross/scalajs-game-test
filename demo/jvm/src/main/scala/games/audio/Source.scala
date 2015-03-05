@@ -1,9 +1,10 @@
 package games.audio
 
 import scala.concurrent._
-
 import org.lwjgl.openal.AL10
 import org.lwjgl.openal.Util
+
+import games.Resource
 
 class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends Source {
 
@@ -29,10 +30,11 @@ class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends So
 
   override def close(): Unit = {
     AL10.alDeleteSources(alSource)
+    Util.checkALError()
   }
 }
 
-class ALStreamingSource private[games] () extends Source {
+class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends Source {
   def loop: Boolean = ???
   def loop_=(loop: Boolean): Unit = ???
   def pause: Unit = ???
@@ -41,5 +43,8 @@ class ALStreamingSource private[games] () extends Source {
   def pitch_=(pitch: Float): Unit = ???
   def volume: Float = ???
   def volume_=(volume: Float): Unit = ???
+
+  private val promiseReady = Promise[Unit]
+  private[games] val ready = promiseReady.future
 }
 

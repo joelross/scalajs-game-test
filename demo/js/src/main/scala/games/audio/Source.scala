@@ -99,5 +99,5 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
     audio.volume = volume.toDouble
   }
 
-  private[games] def ready: Future[Unit] = promiseReady.future
+  private[games] val ready = promiseReady.future
 }
