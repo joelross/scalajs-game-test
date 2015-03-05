@@ -43,6 +43,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
 
   private def init() = {
     val alSource = AL10.alGenSources()
+    Util.checkALError()
 
     val streamingThread = new Thread(new Runnable() {
       def run(): Unit = {
@@ -53,7 +54,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
         val numBuffers = 8 // buffers
         val streamingInterval = 1.0f // check for buffer every second
 
-        require(streamingInterval < bufferedTime) // sanity check, buffer will go empty before we can feed them else (beware of the pitch!)
+        require(streamingInterval < bufferedTime) // TODO remove later, sanity check, buffer will go empty before we can feed them else (beware of the pitch!)
 
         val bufferSampleSize = ((bufferedTime * decoder.rate) / numBuffers).toInt
         val bufferSize = bufferSampleSize * decoder.channels * converter.bytePerValue
@@ -75,6 +76,10 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
 
         var buffersReady: List[Int] = alBuffers.toList
 
+        /**
+         * Fill the buffer with the data from the decoder
+         * Returns false if the end of the stream has been reached (but the data in the buffer are still valid up to the limit), true else
+         */
         def fillBuffer(buffer: ByteBuffer): Boolean = {
           buffer.clear()
 
@@ -92,7 +97,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
 
         var running = true
 
-        // Loop
+        // Main thread loop
         while (threadRunning) {
           // if we are using this streaming thread...
           if (running) {
@@ -104,7 +109,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
               processed -= 1
             }
 
-            // Fill the buffer and enqueue them again
+            // Fill the buffer and send them to OpenAL again
             while (running && !buffersReady.isEmpty) {
               val alBuffer = buffersReady.head
               buffersReady = buffersReady.tail
@@ -122,12 +127,13 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
               }
             }
 
+            // We should have enough data to start the playback at this point
             if (!promiseReady.isCompleted) promiseReady.success((): Unit)
           }
 
           // Sleep a while, adjust for pitch (playback rate)
-          val sleepingTime = (streamingInterval / pitchCache * 1000).toLong
           try {
+            val sleepingTime = (streamingInterval / pitchCache * 1000).toLong
             Thread.sleep(sleepingTime)
           } catch {
             case e: InterruptedException => // just wake up and do your thing
@@ -141,10 +147,11 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
         buffersReady.foreach { alBuffer => AL10.alDeleteBuffers(alBuffer) }
 
         // destroy the buffers still in use
-        val queuedBuffers = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED)
+        var queuedBuffers = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED)
         while (queuedBuffers > 0) {
           val alBuffer = AL10.alSourceUnqueueBuffers(alSource)
           AL10.alDeleteBuffers(alBuffer)
+          queuedBuffers -= 1
         }
 
         AL10.alDeleteSources(alSource)
@@ -157,8 +164,6 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
     })
 
     streamingThread.start()
-
-    Util.checkALError()
 
     (alSource, streamingThread)
   }
