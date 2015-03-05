@@ -90,7 +90,6 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) extends Cl
 
       pcmIn = new Array[Array[Array[Float]]](1)
       indexIn = new Array[Int](info.channels)
-      sampleTmp = new Array[Float](info.channels)
     } catch {
       case e: Exception => throw new RuntimeException("Could not init the decoder", e)
     }
@@ -103,8 +102,6 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) extends Cl
   private var indexIn: Array[Int] = _
   private var remainingSamples = 0
   private var samplesRead = 0
-
-  private var sampleTmp: Array[Float] = _
 
   private def decodeNextPacket(): Unit = {
     if (dspState.synthesis_read(samplesRead) < 0) throw new RuntimeException("Could not acknowledge read samples")
@@ -126,16 +123,15 @@ class VorbisDecoder private[games] (in: InputStream, conv: Converter) extends Cl
     }
 
     def loop(count: Int): Int = {
-      if (remainingSamples <= 0 || !conv.hasEnoughSpace(info.channels, out)) {
+      if (remainingSamples <= 0 || !(out.remaining() >= info.channels * conv.bytePerValue)) {
         count
       } else {
         var channelNo = 0
         while (channelNo < info.channels) {
-          sampleTmp(channelNo) = pcmIn(0)(channelNo)(indexIn(channelNo) + samplesRead)
+          val value = pcmIn(0)(channelNo)(indexIn(channelNo) + samplesRead)
+          conv(value, out)
           channelNo += 1
         }
-
-        conv(sampleTmp, out)
 
         samplesRead += 1
         remainingSamples -= 1
