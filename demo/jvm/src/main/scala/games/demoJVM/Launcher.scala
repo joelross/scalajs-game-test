@@ -27,7 +27,7 @@ object Launcher {
     s.onSuccess {
       case s =>
         printLine("Resource ready")
-        s.position = new Vector3f(-10, 0, 0)
+        s.position = new Vector3f(10, 0, 0)
         s.play
     }
     s.onFailure {
