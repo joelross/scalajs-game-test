@@ -94,11 +94,11 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
       promiseReady.failure(t)
   }
 
-  audio.oncanplay = (e: dom.Event) => {
+  audio.oncanplay = () => {
     promiseReady.success((): Unit)
   }
 
-  audio.onerror = (e: dom.Event) => {
+  audio.onerror = () => {
     val msg = "Failure of streaming"
 
     if (!promiseReady.isCompleted) promiseReady.failure(new RuntimeException(msg))

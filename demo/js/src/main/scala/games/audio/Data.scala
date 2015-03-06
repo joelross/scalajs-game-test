@@ -54,11 +54,11 @@ class JsStreamingData private[games] (ctx: JsContext, res: Resource) extends Str
   private val path = JsResourceUtil.pathForResource(res)
   audio.src = path
 
-  audio.oncanplay = (e: dom.Event) => {
+  audio.oncanplay = () => {
     streamReady.success(path)
   }
 
-  audio.onerror = (e: dom.Event) => {
+  audio.onerror = () => {
     val errorCode = audio.error.code.asInstanceOf[Int]
 
     val errorMessage = errorCode match {
