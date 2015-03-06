@@ -6,16 +6,18 @@ import games.math.Vector3f
 abstract class AbstractSource extends Closeable {
   def play: Unit
   def pause: Unit
-  
+
+  def playing: Boolean
+
   def volume: Float
   def volume_=(volume: Float)
-  
+
   def loop: Boolean
   def loop_=(loop: Boolean)
-  
+
   def pitch: Float
   def pitch_=(pitch: Float)
-  
+
   def close(): Unit = {}
 }
 

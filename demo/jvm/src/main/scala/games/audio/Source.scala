@@ -36,6 +36,7 @@ class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends So
   def pitch_=(pitch: Float): Unit = AL10.alSourcef(alSource, AL10.AL_PITCH, pitch)
   def volume: Float = AL10.alGetSourcef(alSource, AL10.AL_GAIN)
   def volume_=(volume: Float): Unit = AL10.alSourcef(alSource, AL10.AL_GAIN, volume)
+  def playing: Boolean = AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING
 
   override def close(): Unit = {
     AL10.alDeleteSources(alSource)
@@ -203,6 +204,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
   }
   def volume: Float = AL10.alGetSourcef(alSource, AL10.AL_GAIN)
   def volume_=(volume: Float): Unit = AL10.alSourcef(alSource, AL10.AL_GAIN, volume)
+  def playing: Boolean = AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING
 
   override def close(): Unit = {
     threadRunning = false
@@ -230,6 +232,7 @@ class ALSource3D private[games] (ctx: ALContext, source: ALSource) extends Sourc
   def play: Unit = source.play
   def volume: Float = source.volume
   def volume_=(volume: Float): Unit = source.volume_=(volume)
+  def playing: Boolean = source.playing
 
   def position: games.math.Vector3f = {
     positionBuffer.rewind()

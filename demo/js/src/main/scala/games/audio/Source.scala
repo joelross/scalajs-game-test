@@ -20,6 +20,8 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
 
   gainNode.connect(outputNode)
 
+  private var isPlaying = false
+
   private var needRestarting = false
   private var nextStartTime = 0.0
   private var lastStartDate = 0.0
@@ -44,8 +46,10 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
 
     sourceNode.start(0, nextStartTime)
     lastStartDate = now()
+    isPlaying = true
 
     sourceNode.onended = () => {
+      isPlaying = false
       needRestarting = true
       nextStartTime = (now() - lastStartDate) / 1000.0 // msec -> sec
     }
@@ -68,6 +72,8 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
   def pitch_=(pitch: Float): Unit = {
     sourceNode.playbackRate.value = pitch.toDouble
   }
+
+  def playing: Boolean = isPlaying
 }
 
 class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[String], outputNode: js.Dynamic) extends Source {
@@ -76,6 +82,8 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
   private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
   private val sourceNode = ctx.webApi.createMediaElementSource(audio)
   sourceNode.connect(outputNode)
+
+  private var isPlaying = false
 
   pathFuture.onSuccess {
     case path =>
@@ -97,6 +105,10 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
     else println(msg)
   }
 
+  audio.onpause = audio.onended = () => {
+    isPlaying = false
+  }
+
   def loop: Boolean = audio.loop.asInstanceOf[Boolean]
 
   def loop_=(loop: Boolean): Unit = {
@@ -109,6 +121,7 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
 
   def play: Unit = {
     audio.play()
+    isPlaying = true
   }
 
   def pitch: Float = audio.playbackRate.asInstanceOf[Double].toFloat
@@ -122,6 +135,8 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
   def volume_=(volume: Float): Unit = {
     audio.volume = volume.toDouble
   }
+
+  def playing: Boolean = isPlaying
 
   private[games] val ready = promiseReady.future
 }
@@ -140,6 +155,7 @@ class JsSource3D private[games] (ctx: JsContext, source: AbstractSource, pannerN
   def play: Unit = source.play
   def volume: Float = source.volume
   def volume_=(volume: Float): Unit = source.volume_=(volume)
+  def playing: Boolean = source.playing
 
   def position: games.math.Vector3f = positionData.copy()
   def position_=(position: games.math.Vector3f): Unit = {

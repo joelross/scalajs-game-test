@@ -31,7 +31,7 @@ object Launcher extends js.JSApp {
 
     val testResource = new Resource("/games/demo/test_mono.ogg")
 
-    val testData = audioContext.createBufferedData(testResource)
+    val testData = audioContext.createStreamingData(testResource)
     val s = testData.createSource3D
     s.onSuccess {
       case s =>
