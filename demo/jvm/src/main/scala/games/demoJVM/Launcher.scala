@@ -26,10 +26,6 @@ object Launcher {
       case s =>
         printLine("Resource ready")
         s.play
-
-        Thread.sleep(30000)
-
-        s.play
     }
     s.onFailure {
       case t => printLine("Error: " + t.getMessage)
