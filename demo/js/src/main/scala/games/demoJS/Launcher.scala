@@ -37,12 +37,8 @@ object Launcher extends js.JSApp {
         s.play
 
         js.Dynamic.global.setTimeout(() => {
-          s.pause
-
-          js.Dynamic.global.setTimeout(() => {
-            s.play
-          }, 10000)
-        }, 10000)
+          s.play
+        }, 30000)
     }
     s.onFailure {
       case t =>

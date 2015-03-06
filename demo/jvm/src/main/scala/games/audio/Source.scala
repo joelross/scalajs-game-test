@@ -45,8 +45,8 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
     val alSource = AL10.alGenSources()
     Util.checkALError()
 
-    val streamingThread = new Thread(new Runnable() {
-      def run(): Unit = {
+    val streamingThread = new Thread() {
+      override def run(): Unit = {
         // Init
         var decoder = new VorbisDecoder(JvmResourceUtil.streamForResource(res), converter)
 
@@ -96,6 +96,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
         }
 
         var running = true
+        var last = System.currentTimeMillis()
 
         // Main thread loop
         while (threadRunning) {
@@ -133,8 +134,14 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
 
           // Sleep a while, adjust for pitch (playback rate)
           try {
-            val sleepingTime = (streamingInterval / pitchCache * 1000).toLong
-            Thread.sleep(sleepingTime)
+            val now = System.currentTimeMillis()
+            val elapsedTime = now - last
+            last = System.currentTimeMillis()
+            val remainingTime = streamingInterval - elapsedTime
+            if (remainingTime > 0) { // Sleep only 
+              val sleepingTime = (remainingTime / pitchCache * 1000).toLong
+              Thread.sleep(sleepingTime)
+            }
           } catch {
             case e: InterruptedException => // just wake up and do your thing
           }
@@ -161,8 +168,8 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
         // Closing
         decoder.close()
       }
-    })
-
+    }
+    streamingThread.setDaemon(true)
     streamingThread.start()
 
     (alSource, streamingThread)
