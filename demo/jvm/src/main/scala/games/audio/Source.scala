@@ -45,7 +45,7 @@ class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends So
 
 class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends Source with ALSource {
 
-  private val converter = new FixedSigned16Converter
+  private val converter: Converter = FixedSigned16Converter
 
   private def init() = {
     val alSource = AL10.alGenSources()

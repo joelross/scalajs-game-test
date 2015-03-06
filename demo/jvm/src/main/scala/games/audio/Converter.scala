@@ -2,12 +2,12 @@ package games.audio
 
 import java.nio.ByteBuffer
 
-abstract class Converter {
+trait Converter {
   def apply(value: Float, dst: ByteBuffer): Unit
   val bytePerValue: Int
 }
 
-class FixedSigned8Converter extends Converter {
+object FixedSigned8Converter extends Converter {
   def apply(value: Float, dst: ByteBuffer): Unit = {
     val amplified = (value * Byte.MaxValue).toInt
     val clamped = Math.max(Byte.MinValue, Math.min(Byte.MaxValue, amplified)).toByte
@@ -19,7 +19,7 @@ class FixedSigned8Converter extends Converter {
 /**
  * Usable for OpenAL with format AL_FORMAT_MONO8/AL_FORMAT_STEREO8
  */
-class FixedUnsigned8Converter extends Converter {
+object FixedUnsigned8Converter extends Converter {
   private val max = 255
 
   def apply(value: Float, dst: ByteBuffer): Unit = {
@@ -33,7 +33,7 @@ class FixedUnsigned8Converter extends Converter {
 /**
  * Usable for OpenAL with format AL_FORMAT_MONO16/AL_FORMAT_STEREO16
  */
-class FixedSigned16Converter extends Converter {
+object FixedSigned16Converter extends Converter {
   def apply(value: Float, dst: ByteBuffer): Unit = {
     val amplified = (value * Short.MaxValue).toInt
     val clamped = Math.max(Short.MinValue, Math.min(Short.MaxValue, amplified)).toShort
@@ -42,7 +42,7 @@ class FixedSigned16Converter extends Converter {
   val bytePerValue = 2
 }
 
-class FixedUnsigned16Converter extends Converter {
+object FixedUnsigned16Converter extends Converter {
   private val max = 65535
 
   def apply(value: Float, dst: ByteBuffer): Unit = {
@@ -53,7 +53,7 @@ class FixedUnsigned16Converter extends Converter {
   val bytePerValue = 2
 }
 
-class Floating32Converter extends Converter {
+object Floating32Converter extends Converter {
   def apply(value: Float, dst: ByteBuffer): Unit = {
     dst.putFloat(value)
   }

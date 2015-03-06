@@ -85,10 +85,3 @@ class JsStreamingData private[games] (ctx: JsContext, res: Resource) extends Str
     }
   }
 }
-
-class JsRawData private[games] (ctx: JsContext) extends RawData {
-  // TODO manually filling buffer with a ByteBuffer
-
-  def createSource: Future[Source] = ???
-  def createSource3D: Future[Source3D] = ???
-}

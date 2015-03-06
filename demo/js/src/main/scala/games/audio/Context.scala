@@ -23,9 +23,9 @@ class JsContext extends Context {
   }
   private[games] val webApi = js.Dynamic.newInstance(audioContext)()
 
-  def createBufferedData(res: Resource) = new JsBufferedData(this, res)
-  def createStreamingData(res: Resource) = new JsStreamingData(this, res)
-  def createRawData() = new JsRawData(this)
+  def createBufferedData(res: Resource): BufferedData = new JsBufferedData(this, res)
+  def createStreamingData(res: Resource): StreamingData = new JsStreamingData(this, res)
+  def createRawData(): RawData = ???
 
   def listener: Listener = new JsListener(webApi.listener)
 }

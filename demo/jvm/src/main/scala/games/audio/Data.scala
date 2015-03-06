@@ -18,7 +18,7 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
 
     val in = JvmResourceUtil.streamForResource(res)
 
-    val decoder = new VorbisDecoder(in, new FixedSigned16Converter)
+    val decoder = new VorbisDecoder(in, FixedSigned16Converter)
 
     val transfertBufferSize = 4096
 
