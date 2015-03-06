@@ -1,8 +1,9 @@
 package games.audio
 
 import java.io.Closeable
+import games.math.Vector3f
 
-abstract sealed class AbstractSource extends Closeable {
+abstract class AbstractSource extends Closeable {
   def play: Unit
   def pause: Unit
   
@@ -21,5 +22,6 @@ abstract sealed class AbstractSource extends Closeable {
 abstract class Source extends AbstractSource
 
 abstract class Source3D extends AbstractSource {
-  // TODO 3d positioning
+  def position: Vector3f
+  def position_=(position: Vector3f)
 }

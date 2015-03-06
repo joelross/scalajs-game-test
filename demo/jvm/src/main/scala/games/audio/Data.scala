@@ -65,7 +65,9 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
   def createSource: scala.concurrent.Future[games.audio.Source] = {
     bufferReady.map { alBuffer => new ALBufferedSource(ctx, alBuffer) }
   }
-  def createSource3D: scala.concurrent.Future[games.audio.Source3D] = ???
+  def createSource3D: scala.concurrent.Future[games.audio.Source3D] = {
+    bufferReady.map { alBuffer => new ALSource3D(ctx, new ALBufferedSource(ctx, alBuffer)) }
+  }
 
   override def close(): Unit = {
     bufferReady.onSuccess {
@@ -81,5 +83,8 @@ class ALStreamingData private[games] (ctx: ALContext, res: Resource) extends Str
     val source = new ALStreamingSource(ctx, res)
     source.ready.map { x => source }
   }
-  def createSource3D: scala.concurrent.Future[games.audio.Source3D] = ???
+  def createSource3D: scala.concurrent.Future[games.audio.Source3D] = {
+    val source2d = new ALStreamingSource(ctx, res)
+    source2d.ready.map { source => new ALSource3D(ctx, source2d) }
+  }
 }

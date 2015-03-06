@@ -10,7 +10,13 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.io.EOFException
 
-class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends Source {
+import games.math.Vector3f
+
+trait ALSource extends AbstractSource {
+  private[games] val alSource: Int
+}
+
+class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends Source with ALSource {
 
   private def init() = {
     val alSource = AL10.alGenSources()
@@ -20,7 +26,7 @@ class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends So
     alSource
   }
 
-  private val alSource = init()
+  private[games] val alSource = init()
 
   def loop: Boolean = AL10.alGetSourcei(alSource, AL10.AL_LOOPING) == AL10.AL_TRUE
   def loop_=(loop: Boolean): Unit = AL10.alSourcei(alSource, AL10.AL_LOOPING, if (loop) AL10.AL_TRUE else AL10.AL_FALSE)
@@ -37,7 +43,7 @@ class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends So
   }
 }
 
-class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends Source {
+class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends Source with ALSource {
 
   private val converter = new FixedSigned16Converter
 
@@ -175,7 +181,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
     (alSource, streamingThread)
   }
 
-  private val (alSource, streamingThread) = init()
+  private[games] val (alSource, streamingThread) = init()
   private var threadRunning = true
 
   private def wakeUpThread() {
@@ -207,3 +213,34 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
   private[games] val ready = promiseReady.future
 }
 
+class ALSource3D private[games] (ctx: ALContext, source: ALSource) extends Source3D with ALSource {
+  private[games] val alSource = source.alSource
+
+  private val positionBuffer = ByteBuffer.allocateDirect(3 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
+
+  // Preload buffer
+  AL10.alGetSource(alSource, AL10.AL_POSITION, positionBuffer)
+  Util.checkALError()
+
+  def loop: Boolean = source.loop
+  def loop_=(loop: Boolean): Unit = source.loop_=(loop)
+  def pause: Unit = source.pause
+  def pitch: Float = source.pitch
+  def pitch_=(pitch: Float): Unit = source.pitch_=(pitch)
+  def play: Unit = source.play
+  def volume: Float = source.volume
+  def volume_=(volume: Float): Unit = source.volume_=(volume)
+
+  def position: games.math.Vector3f = {
+    positionBuffer.rewind()
+    val ret = new Vector3f
+    ret.load(positionBuffer)
+    ret
+  }
+  def position_=(position: games.math.Vector3f): Unit = {
+    positionBuffer.rewind()
+    position.store(positionBuffer)
+    positionBuffer.rewind()
+    AL10.alListener(AL10.AL_POSITION, positionBuffer)
+  }
+}

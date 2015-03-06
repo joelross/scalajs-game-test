@@ -8,6 +8,7 @@ import games.audio.VorbisDecoder
 import java.io.EOFException
 import games.audio._
 import games.Resource
+import games.math.Vector3f
 
 object Launcher {
 
@@ -17,11 +18,12 @@ object Launcher {
     }
 
     val audioContext: Context = new ALContext
+    printLine("Listener is at " + audioContext.listener.position + " and looking at " + audioContext.listener.orientation)
 
-    val testResource = new Resource("/games/demo/test.ogg")
+    val testResource = new Resource("/games/demo/test_mono.ogg")
 
     val testData = audioContext.createStreamingData(testResource)
-    val s = testData.createSource
+    val s = testData.createSource3D
     s.onSuccess {
       case s =>
         printLine("Resource ready")
