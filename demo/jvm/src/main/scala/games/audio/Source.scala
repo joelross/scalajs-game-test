@@ -241,6 +241,6 @@ class ALSource3D private[games] (ctx: ALContext, source: ALSource) extends Sourc
     positionBuffer.rewind()
     position.store(positionBuffer)
     positionBuffer.rewind()
-    AL10.alListener(AL10.AL_POSITION, positionBuffer)
+    AL10.alSource(alSource, AL10.AL_POSITION, positionBuffer)
   }
 }
