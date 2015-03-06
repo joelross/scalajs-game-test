@@ -7,7 +7,9 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.ArrayBuffer) extends Source {
+import games.math.Vector3f
+
+class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.ArrayBuffer, outputNode: js.Dynamic) extends Source {
   private var sourceNode = ctx.webApi.createBufferSource()
   sourceNode.buffer = buffer
 
@@ -16,7 +18,7 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
 
   gainNode.gain.value = 1.0
 
-  gainNode.connect(ctx.webApi.destination)
+  gainNode.connect(outputNode)
 
   private var needRestarting = false
   private var nextStartTime = 0.0
@@ -68,12 +70,12 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
   }
 }
 
-class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[String]) extends Source {
+class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[String], outputNode: js.Dynamic) extends Source {
   private val promiseReady = Promise[Unit]
 
   private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
   private val sourceNode = ctx.webApi.createMediaElementSource(audio)
-  sourceNode.connect(ctx.webApi.destination)
+  sourceNode.connect(outputNode)
 
   pathFuture.onSuccess {
     case path =>
@@ -122,4 +124,26 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
   }
 
   private[games] val ready = promiseReady.future
+}
+
+class JsSource3D private[games] (ctx: JsContext, source: AbstractSource, pannerNode: js.Dynamic) extends Source3D {
+  private val positionData = new Vector3f(0, 0, 0)
+
+  // Init
+  pannerNode.setPosition(positionData.x, positionData.y, positionData.z)
+
+  def loop: Boolean = source.loop
+  def loop_=(loop: Boolean): Unit = source.loop_=(loop)
+  def pause: Unit = source.pause
+  def pitch: Float = source.pitch
+  def pitch_=(pitch: Float): Unit = source.pitch_=(pitch)
+  def play: Unit = source.play
+  def volume: Float = source.volume
+  def volume_=(volume: Float): Unit = source.volume_=(volume)
+
+  def position: games.math.Vector3f = positionData.copy()
+  def position_=(position: games.math.Vector3f): Unit = {
+    Vector3f.set(position, positionData)
+    pannerNode.setPosition(positionData.x, positionData.y, positionData.z)
+  }
 }

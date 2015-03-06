@@ -8,6 +8,7 @@ import games.audio.JsContext
 import games.Resource
 import games.JsResourceUtil
 import games.audio.Context
+import games.math.Vector3f
 
 object Launcher extends js.JSApp {
   def main(): Unit = {
@@ -26,14 +27,16 @@ object Launcher extends js.JSApp {
     engine.start()*/
 
     val audioContext: Context = new JsContext
+    printLine("Listener is at " + audioContext.listener.position + " and looking at " + audioContext.listener.orientation + " (up is at " + audioContext.listener.up + ")")
 
-    val testResource = new Resource("/games/demo/test.ogg")
+    val testResource = new Resource("/games/demo/test_mono.ogg")
 
     val testData = audioContext.createBufferedData(testResource)
-    val s = testData.createSource
+    val s = testData.createSource3D
     s.onSuccess {
       case s =>
         printLine("Resource ready")
+        s.position = new Vector3f(-10, 0, 0)
         s.play
     }
     s.onFailure {

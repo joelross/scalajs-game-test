@@ -19,10 +19,10 @@ class ALContext extends Context {
     AL.destroy()
   }
 
-  val listener: Listener = new ALListener
+  val listener: Listener = new ALListener()
 }
 
-class ALListener extends Listener {
+class ALListener private[games] () extends Listener {
   private val orientationBuffer = ByteBuffer.allocateDirect(2 * 3 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
   private val positionBuffer = ByteBuffer.allocateDirect(1 * 3 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
 

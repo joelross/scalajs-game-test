@@ -35,9 +35,16 @@ class JsBufferedData private[games] (ctx: JsContext, res: Resource) extends Buff
   request.send()
 
   def createSource: Future[Source] = {
-    decodedDataReady.future.map { arrayBuffer => new JsBufferedSource(ctx, arrayBuffer) }
+    decodedDataReady.future.map { arrayBuffer => new JsBufferedSource(ctx, arrayBuffer, ctx.webApi.destination) }
   }
-  def createSource3D: Future[Source3D] = ???
+  def createSource3D: Future[Source3D] = {
+    decodedDataReady.future.map { arrayBuffer =>
+      val pannerNode = ctx.webApi.createPanner()
+      val source2d = new JsBufferedSource(ctx, arrayBuffer, pannerNode)
+      pannerNode.connect(ctx.webApi.destination)
+      new JsSource3D(ctx, source2d, pannerNode)
+    }
+  }
 }
 
 class JsStreamingData private[games] (ctx: JsContext, res: Resource) extends StreamingData {
@@ -66,10 +73,17 @@ class JsStreamingData private[games] (ctx: JsContext, res: Resource) extends Str
   }
 
   def createSource: Future[Source] = {
-    val source = new JsStreamingSource(ctx, streamReady.future)
+    val source = new JsStreamingSource(ctx, streamReady.future, ctx.webApi.destination)
     source.ready.map { x => source }
   }
-  def createSource3D: Future[Source3D] = ???
+  def createSource3D: Future[Source3D] = {
+    val pannerNode = ctx.webApi.createPanner()
+    val source = new JsStreamingSource(ctx, streamReady.future, pannerNode)
+    source.ready.map { x =>
+      pannerNode.connect(ctx.webApi.destination)
+      new JsSource3D(ctx, source, pannerNode)
+    }
+  }
 }
 
 class JsRawData private[games] (ctx: JsContext) extends RawData {
