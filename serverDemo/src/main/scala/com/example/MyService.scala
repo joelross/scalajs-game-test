@@ -34,10 +34,8 @@ trait MyService extends HttpService {
         }
       } ~
       path("code" / Rest) { file =>
-        respondWithMediaType(`text/html`) {
-          val path = "../demo/js/target/scala-2.11/" + file
-          getFromFile(path)
-        }
+        val path = "../demo/js/target/scala-2.11/" + file
+        getFromFile(path)
       } ~
       path("resources" / Rest) { file =>
         val path = "../demo/shared/src/main/resources/" + file
