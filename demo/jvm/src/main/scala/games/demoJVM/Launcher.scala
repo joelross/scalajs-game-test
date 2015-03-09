@@ -20,14 +20,13 @@ object Launcher {
     val audioContext: Context = new ALContext
     printLine("Listener is at " + audioContext.listener.position + " and looking at " + audioContext.listener.orientation + " (up is at " + audioContext.listener.up + ")")
 
-    val testResource = new Resource("/games/demo/test_mono.ogg")
+    val testResource = new Resource("/games/demo/test_stereo.ogg")
 
     val testData = audioContext.createStreamingData(testResource)
-    val s = testData.createSource3D
+    val s = testData.createSource
     s.onSuccess {
       case s =>
         printLine("Resource ready")
-        s.position = new Vector3f(10, 0, 0)
         s.play
     }
     s.onFailure {

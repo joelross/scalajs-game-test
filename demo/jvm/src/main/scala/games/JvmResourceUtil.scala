@@ -6,10 +6,8 @@ import java.io.File
 
 object JvmResourceUtil {
   def streamForResource(res: Resource): InputStream = {
-    // TODO looks like can't access resource somehow
-    val stream = new FileInputStream(new File("/home/joel/project-git/scalajs-games/demo/shared/src/main/resources" + res.name))
-    //    val stream = JvmResourceUtil.getClass().getResourceAsStream(res.name)
-    require(stream != null) // TODO remove later, sanity check
+    val stream = JvmResourceUtil.getClass().getResourceAsStream(res.name)
+    if (stream == null) throw new RuntimeException("Could not load resource " + res.name) // TODO remove later, sanity check
     stream
   }
 }

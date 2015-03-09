@@ -48,7 +48,7 @@ lazy val demo = crossProject
     .jvmSettings(
         name := "demoJVM",
         connectInput in run := true,
-        resourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
+        unmanagedResourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %%% "transport-tyrus" % "0.1-SNAPSHOT",
             "org.jcraft" % "jorbis" % "0.0.17"
@@ -76,8 +76,8 @@ lazy val demoAndroid = project
         ),
         unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "scala",
         unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared" / "src" / "test" / "scala",
-        resourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
-        resourceDirectories in Test += baseDirectory.value / ".." / "shared" / "src" / "test" / "resources",
+        unmanagedResourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
+        unmanagedResourceDirectories in Test += baseDirectory.value / ".." / "shared" / "src" / "test" / "resources",
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %% "transport-core" % "0.1-SNAPSHOT",
             "com.github.olivierblanvillain" %% "transport-tyrus" % "0.1-SNAPSHOT",
