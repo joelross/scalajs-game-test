@@ -20,8 +20,8 @@ Run ```sbt "demoJVM/run"```
 
 #### Scala.js
 
-Run ```sbt "demoJS/fastOptJS"``` and open the file ```demoJS-launcher/index-fastopt.html``` with a modern browser
+Run ```sbt```. Once in SBT, run ```demoJS/fullOptJS``` then ```serverDemoJS/re-start```, open your browser to the specified address, normally http://localhost:8080/ (press Ctrl + C to stop the server and exit SBT)
 
-#### Android
+#### Android (not maintained anymore, on standby)
 
 Run ```sbt "demoAndroid/android:run"``` after having installed the Android SDK and NDK with the appropriate packages and connected your device

@@ -72,7 +72,7 @@ lazy val demoAndroid = project
         proguardOptions in Android ++= Seq(
             "-ignorewarnings",
             "-keep class org.glassfish.tyrus.**", // Somehow, tyrus doesn't seem to like proguard
-            "-keep class scala.Dynamic"
+            "-keep class scala.Dynamic" // TODO should be removed
         ),
         unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "scala",
         unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared" / "src" / "test" / "scala",
@@ -84,6 +84,31 @@ lazy val demoAndroid = project
             aar("com.google.android.gms" % "play-services" % "4.0.30"),
             aar("com.android.support" % "support-v4" % "r7")
         )
+    )
+
+/* Spray server for the demoJS project */
+
+lazy val serverDemoJS = project
+    .in(file("serverDemo"))
+    .settings(
+        Revolver.settings: _*
+    )
+    .settings(
+        commonSettings: _*
+    )
+    .settings(
+        libraryDependencies ++= {
+            val akkaV = "2.3.6"
+            val sprayV = "1.3.2"
+            Seq(
+                "io.spray" %% "spray-can" % sprayV,
+                "io.spray" %% "spray-routing" % sprayV,
+                "io.spray" %% "spray-testkit" % sprayV % "test",
+                "com.typesafe.akka" %% "akka-actor" % akkaV,
+                "com.typesafe.akka" %% "akka-testkit" % akkaV % "test",
+                "org.specs2" %% "specs2-core" % "2.3.11" % "test"
+            )
+        }
     )
 
 /* Server project */

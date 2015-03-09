@@ -12,7 +12,7 @@ import games.math.Vector3f
 
 object Launcher extends js.JSApp {
   def main(): Unit = {
-    JsResourceUtil.setResourcePath("./demo/shared/src/main/resources")
+    JsResourceUtil.setResourcePath("/resources")
 
     val output = dom.document.getElementById("demo-output")
     def printLine(msg: String): Unit = {
