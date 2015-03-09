@@ -91,7 +91,7 @@ lazy val demoAndroid = project
 lazy val serverDemoJS = project
     .in(file("serverDemo"))
     .settings(
-        Revolver.settings: _*
+        spray.revolver.RevolverPlugin.Revolver.settings: _*
     )
     .settings(
         commonSettings: _*
