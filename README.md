@@ -20,7 +20,7 @@ Run ```sbt "demoJVM/run"```
 
 #### Scala.js
 
-Run ```sbt```. Once in SBT, run ```demoJS/fullOptJS``` then ```serverDemoJS/re-start```, open your browser to the specified address, normally http://localhost:8080/ (press Ctrl + C to stop the server and exit SBT)
+Run ```sbt```. Once in SBT, enter ```demoJS/fullOptJS``` then ```serverDemoJS/re-start```, open your browser to the specified address, normally [http://localhost:8080/](http://localhost:8080/) (press Ctrl + C to stop the server and exit SBT)
 
 #### Android (not maintained anymore, on standby)
 
