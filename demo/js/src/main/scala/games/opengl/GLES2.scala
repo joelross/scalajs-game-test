@@ -1,6 +1,6 @@
 package games.opengl
 
-import java.nio.{Buffer, ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer, ByteOrder}
+import java.nio.{ Buffer, ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer, ByteOrder }
 
 import org.scalajs.dom
 
@@ -84,7 +84,6 @@ object Token {
   }
 
 }
-
 
 // Main componenents
 
@@ -204,14 +203,14 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
   }
 
   final def compressedTexImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    data: ByteBuffer): Unit = {
+                                 data: ByteBuffer): Unit = {
 
     val bytebuffer: ByteBuffer = if (data != null) { val tmp = data.slice; require(tmp.hasArrayBuffer()); tmp } else null
     gl.compressedTexImage2D(target, level, internalformat, width, height, border, if (data != null) bytebuffer.dataView() else null)
   }
 
   final def compressedTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, data: ByteBuffer): Unit = {
+                                    format: Int, data: ByteBuffer): Unit = {
 
     val bytebuffer: ByteBuffer = if (data != null) { val tmp = data.slice; require(tmp.hasArrayBuffer()); tmp } else null
     gl.compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, if (data != null) bytebuffer.dataView() else null)
@@ -660,7 +659,7 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
   }
 
   private final def _texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: Buffer): Unit = {
+                                format: Int, `type`: Int, pixels: Buffer): Unit = {
 
     val buffer: Buffer = pixels
     if (pixels != null) require(buffer.hasArrayBuffer())
@@ -668,22 +667,22 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
   }
 
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
+                       format: Int, `type`: Int, pixels: ByteBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
     format, `type`, if (pixels != null) pixels.slice else null)
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
+                       format: Int, `type`: Int, pixels: ShortBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
     format, `type`, if (pixels != null) pixels.slice else null)
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
+                       format: Int, `type`: Int, pixels: IntBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
     format, `type`, if (pixels != null) pixels.slice else null)
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
+                       format: Int, `type`: Int, pixels: FloatBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
     format, `type`, if (pixels != null) pixels.slice else null)
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
+                       format: Int, `type`: Int, pixels: DoubleBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
     format, `type`, if (pixels != null) pixels.slice else null)
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int): Unit = {
+                       format: Int, `type`: Int): Unit = {
     gl.texImage2D(target, level, internalformat, width, height, border, format, `type`, null)
   }
 
@@ -697,7 +696,7 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
   }
 
   private final def _texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: Buffer): Unit = {
+                                   format: Int, `type`: Int, pixels: Buffer): Unit = {
 
     val buffer: Buffer = pixels
     if (pixels != null) require(buffer.hasArrayBuffer())
@@ -705,19 +704,19 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
   }
 
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
+                          format: Int, `type`: Int, pixels: ByteBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
     format, `type`, pixels.slice)
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
+                          format: Int, `type`: Int, pixels: ShortBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
     format, `type`, pixels.slice)
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
+                          format: Int, `type`: Int, pixels: IntBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
     format, `type`, pixels.slice)
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
+                          format: Int, `type`: Int, pixels: FloatBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
     format, `type`, pixels.slice)
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
+                          format: Int, `type`: Int, pixels: DoubleBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
     format, `type`, pixels.slice)
 
   final def uniform1f(location: Token.UniformLocation, x: Float): Unit = {
@@ -915,20 +914,20 @@ private[games] object JSTypeHelper {
     val typeName = JsUtils.typeName(value)
     typeName match {
       case "Boolean" => value.asInstanceOf[Boolean]
-      case "Number" => this.jsNumberToBoolean(value.asInstanceOf[Double])
+      case "Number"  => this.jsNumberToBoolean(value.asInstanceOf[Double])
       case "Array" => {
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toBoolean(jsArray(0))
       }
-      case "Int8Array" => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Int8Array](0))
-      case "Uint8Array" => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Uint8Array](0))
-      case "Int16Array" => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Int16Array](0))
-      case "Uint16Array" => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Uint16Array](0))
-      case "Int32Array" => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Int32Array](0))
-      case "Uint32Array" => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Uint32Array](0))
+      case "Int8Array"    => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Int8Array](0))
+      case "Uint8Array"   => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Uint8Array](0))
+      case "Int16Array"   => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Int16Array](0))
+      case "Uint16Array"  => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Uint16Array](0))
+      case "Int32Array"   => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Int32Array](0))
+      case "Uint32Array"  => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Uint32Array](0))
       case "Float32Array" => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Float32Array](0))
       case "Float64Array" => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Float64Array](0))
-      case _ => throw new RuntimeException("Cannot convert type " + typeName + " to boolean")
+      case _              => throw new RuntimeException("Cannot convert type " + typeName + " to boolean")
     }
   }
 
@@ -936,20 +935,20 @@ private[games] object JSTypeHelper {
     val typeName = JsUtils.typeName(value)
     typeName match {
       case "Boolean" => this.booleanToInt(value.asInstanceOf[Boolean])
-      case "Number" => value.asInstanceOf[Double].toInt
+      case "Number"  => value.asInstanceOf[Double].toInt
       case "Array" => {
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toInt(jsArray(0))
       }
-      case "Int8Array" => value.asInstanceOf[js.typedarray.Int8Array](0).toInt
-      case "Uint8Array" => value.asInstanceOf[js.typedarray.Uint8Array](0).toInt
-      case "Int16Array" => value.asInstanceOf[js.typedarray.Int16Array](0).toInt
-      case "Uint16Array" => value.asInstanceOf[js.typedarray.Uint16Array](0).toInt
-      case "Int32Array" => value.asInstanceOf[js.typedarray.Int32Array](0).toInt
-      case "Uint32Array" => value.asInstanceOf[js.typedarray.Uint32Array](0).toInt
+      case "Int8Array"    => value.asInstanceOf[js.typedarray.Int8Array](0).toInt
+      case "Uint8Array"   => value.asInstanceOf[js.typedarray.Uint8Array](0).toInt
+      case "Int16Array"   => value.asInstanceOf[js.typedarray.Int16Array](0).toInt
+      case "Uint16Array"  => value.asInstanceOf[js.typedarray.Uint16Array](0).toInt
+      case "Int32Array"   => value.asInstanceOf[js.typedarray.Int32Array](0).toInt
+      case "Uint32Array"  => value.asInstanceOf[js.typedarray.Uint32Array](0).toInt
       case "Float32Array" => this.normalizedFloatToSignedInt(value.asInstanceOf[js.typedarray.Float32Array](0).toDouble)
       case "Float64Array" => this.normalizedFloatToSignedInt(value.asInstanceOf[js.typedarray.Float64Array](0).toDouble)
-      case _ => throw new RuntimeException("Cannot convert type " + typeName + " to int")
+      case _              => throw new RuntimeException("Cannot convert type " + typeName + " to int")
     }
   }
 
@@ -957,20 +956,20 @@ private[games] object JSTypeHelper {
     val typeName = JsUtils.typeName(value)
     typeName match {
       case "Boolean" => this.booleanToShort(value.asInstanceOf[Boolean])
-      case "Number" => value.asInstanceOf[Double].toShort
+      case "Number"  => value.asInstanceOf[Double].toShort
       case "Array" => {
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toShort(jsArray(0))
       }
-      case "Int8Array" => value.asInstanceOf[js.typedarray.Int8Array](0).toShort
-      case "Uint8Array" => value.asInstanceOf[js.typedarray.Uint8Array](0).toShort
-      case "Int16Array" => value.asInstanceOf[js.typedarray.Int16Array](0).toShort
-      case "Uint16Array" => value.asInstanceOf[js.typedarray.Uint16Array](0).toShort
-      case "Int32Array" => value.asInstanceOf[js.typedarray.Int32Array](0).toShort
-      case "Uint32Array" => value.asInstanceOf[js.typedarray.Uint32Array](0).toShort
+      case "Int8Array"    => value.asInstanceOf[js.typedarray.Int8Array](0).toShort
+      case "Uint8Array"   => value.asInstanceOf[js.typedarray.Uint8Array](0).toShort
+      case "Int16Array"   => value.asInstanceOf[js.typedarray.Int16Array](0).toShort
+      case "Uint16Array"  => value.asInstanceOf[js.typedarray.Uint16Array](0).toShort
+      case "Int32Array"   => value.asInstanceOf[js.typedarray.Int32Array](0).toShort
+      case "Uint32Array"  => value.asInstanceOf[js.typedarray.Uint32Array](0).toShort
       case "Float32Array" => this.normalizedFloatToSignedShort(value.asInstanceOf[js.typedarray.Float32Array](0).toDouble)
       case "Float64Array" => this.normalizedFloatToSignedShort(value.asInstanceOf[js.typedarray.Float64Array](0).toDouble)
-      case _ => throw new RuntimeException("Cannot convert type " + typeName + " to short")
+      case _              => throw new RuntimeException("Cannot convert type " + typeName + " to short")
     }
   }
 
@@ -978,20 +977,20 @@ private[games] object JSTypeHelper {
     val typeName = JsUtils.typeName(value)
     typeName match {
       case "Boolean" => this.booleanToFloat(value.asInstanceOf[Boolean])
-      case "Number" => value.asInstanceOf[Double].toFloat
+      case "Number"  => value.asInstanceOf[Double].toFloat
       case "Array" => {
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toFloat(jsArray(0))
       }
-      case "Int8Array" => this.signedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Int8Array](0).toByte).toFloat
-      case "Uint8Array" => this.unsignedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint8Array](0).toByte).toFloat
-      case "Int16Array" => this.signedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Int16Array](0).toShort).toFloat
-      case "Uint16Array" => this.unsignedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint16Array](0).toShort).toFloat
-      case "Int32Array" => this.signedIntToNormalizedFloat(value.asInstanceOf[js.typedarray.Int32Array](0).toInt).toFloat
-      case "Uint32Array" => this.unsignedIntToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint32Array](0).toInt).toFloat
+      case "Int8Array"    => this.signedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Int8Array](0).toByte).toFloat
+      case "Uint8Array"   => this.unsignedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint8Array](0).toByte).toFloat
+      case "Int16Array"   => this.signedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Int16Array](0).toShort).toFloat
+      case "Uint16Array"  => this.unsignedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint16Array](0).toShort).toFloat
+      case "Int32Array"   => this.signedIntToNormalizedFloat(value.asInstanceOf[js.typedarray.Int32Array](0).toInt).toFloat
+      case "Uint32Array"  => this.unsignedIntToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint32Array](0).toInt).toFloat
       case "Float32Array" => value.asInstanceOf[js.typedarray.Float32Array](0).toFloat
       case "Float64Array" => value.asInstanceOf[js.typedarray.Float64Array](0).toFloat
-      case _ => throw new RuntimeException("Cannot convert type " + typeName + " to float")
+      case _              => throw new RuntimeException("Cannot convert type " + typeName + " to float")
     }
   }
 
@@ -999,20 +998,20 @@ private[games] object JSTypeHelper {
     val typeName = JsUtils.typeName(value)
     typeName match {
       case "Boolean" => this.booleanToFloat(value.asInstanceOf[Boolean])
-      case "Number" => value.asInstanceOf[Double].toDouble
+      case "Number"  => value.asInstanceOf[Double].toDouble
       case "Array" => {
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toDouble(jsArray(0))
       }
-      case "Int8Array" => this.signedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Int8Array](0).toByte).toDouble
-      case "Uint8Array" => this.unsignedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint8Array](0).toByte).toDouble
-      case "Int16Array" => this.signedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Int16Array](0).toShort).toDouble
-      case "Uint16Array" => this.unsignedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint16Array](0).toShort).toDouble
-      case "Int32Array" => this.signedIntToNormalizedFloat(value.asInstanceOf[js.typedarray.Int32Array](0).toInt).toDouble
-      case "Uint32Array" => this.unsignedIntToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint32Array](0).toInt).toDouble
+      case "Int8Array"    => this.signedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Int8Array](0).toByte).toDouble
+      case "Uint8Array"   => this.unsignedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint8Array](0).toByte).toDouble
+      case "Int16Array"   => this.signedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Int16Array](0).toShort).toDouble
+      case "Uint16Array"  => this.unsignedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint16Array](0).toShort).toDouble
+      case "Int32Array"   => this.signedIntToNormalizedFloat(value.asInstanceOf[js.typedarray.Int32Array](0).toInt).toDouble
+      case "Uint32Array"  => this.unsignedIntToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint32Array](0).toInt).toDouble
       case "Float32Array" => value.asInstanceOf[js.typedarray.Float32Array](0).toDouble
       case "Float64Array" => value.asInstanceOf[js.typedarray.Float64Array](0).toDouble
-      case _ => throw new RuntimeException("Cannot convert type " + typeName + " to double")
+      case _              => throw new RuntimeException("Cannot convert type " + typeName + " to double")
     }
   }
 
@@ -1022,7 +1021,7 @@ private[games] object JSTypeHelper {
     val typeName = JsUtils.typeName(value)
     typeName match {
       case "Boolean" => slice.put(this.booleanToByte(value.asInstanceOf[Boolean]))
-      case "Number" => slice.put(this.booleanToByte(this.jsNumberToBoolean(value.asInstanceOf[Double])))
+      case "Number"  => slice.put(this.booleanToByte(this.jsNumberToBoolean(value.asInstanceOf[Double])))
       case "Array" => {
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         val length = jsArray.length.toInt
@@ -1146,7 +1145,7 @@ private[games] object JSTypeHelper {
     val typeName = JsUtils.typeName(value)
     typeName match {
       case "Boolean" => slice.put(this.booleanToByte(value.asInstanceOf[Boolean]))
-      case "Number" => slice.put(value.asInstanceOf[Double].toInt)
+      case "Number"  => slice.put(value.asInstanceOf[Double].toInt)
       case "Array" => {
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         val length = jsArray.length.toInt
@@ -1266,7 +1265,7 @@ private[games] object JSTypeHelper {
     val typeName = JsUtils.typeName(value)
     typeName match {
       case "Boolean" => slice.put(this.booleanToByte(value.asInstanceOf[Boolean]))
-      case "Number" => slice.put(value.asInstanceOf[Double].toFloat)
+      case "Number"  => slice.put(value.asInstanceOf[Double].toFloat)
       case "Array" => {
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         val length = jsArray.length.toInt
@@ -1851,23 +1850,23 @@ trait GLES2CompImpl extends GLES2CompRequirements {
 
   /* public API - methods */
 
-  final def createByteData(sz: Int): ByteBuffer = {
+  final def createByteBuffer(sz: Int): ByteBuffer = {
     ByteBuffer.allocateDirect(sz).order(ByteOrder.nativeOrder())
   }
 
-  final def createShortData(sz: Int): ShortBuffer = {
+  final def createShortBuffer(sz: Int): ShortBuffer = {
     ByteBuffer.allocateDirect(sz * this.bytesPerShort).order(ByteOrder.nativeOrder()).asShortBuffer()
   }
 
-  final def createIntData(sz: Int): IntBuffer = {
+  final def createIntBuffer(sz: Int): IntBuffer = {
     ByteBuffer.allocateDirect(sz * this.bytesPerInt).order(ByteOrder.nativeOrder()).asIntBuffer()
   }
 
-  final def createFloatData(sz: Int): FloatBuffer = {
+  final def createFloatBuffer(sz: Int): FloatBuffer = {
     ByteBuffer.allocateDirect(sz * this.bytesPerFloat).order(ByteOrder.nativeOrder()).asFloatBuffer()
   }
 
-  final def createDoubleData(sz: Int): DoubleBuffer = {
+  final def createDoubleBuffer(sz: Int): DoubleBuffer = {
     ByteBuffer.allocateDirect(sz * this.bytesPerDouble).order(ByteOrder.nativeOrder()).asDoubleBuffer()
   }
 

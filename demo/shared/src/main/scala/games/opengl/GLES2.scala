@@ -396,11 +396,11 @@ trait GLES2 {
   def viewport(x: Int, y: Int, width: Int, height: Int): Unit
 
   protected val maxResultSize = 16
-  protected val tmpByte = GLES2.createByteData(maxResultSize)
-  protected val tmpShort = GLES2.createShortData(maxResultSize)
-  protected val tmpInt = GLES2.createIntData(maxResultSize)
-  protected val tmpFloat = GLES2.createFloatData(maxResultSize)
-  protected val tmpDouble = GLES2.createDoubleData(maxResultSize)
+  protected val tmpByte = GLES2.createByteBuffer(maxResultSize)
+  protected val tmpShort = GLES2.createShortBuffer(maxResultSize)
+  protected val tmpInt = GLES2.createIntBuffer(maxResultSize)
+  protected val tmpFloat = GLES2.createFloatBuffer(maxResultSize)
+  protected val tmpDouble = GLES2.createDoubleBuffer(maxResultSize)
 
   // Helper methods
 
@@ -786,11 +786,11 @@ trait GLES2CompRequirements {
 
   /* public API - methods */
 
-  def createByteData(sz: Int): ByteBuffer
-  def createShortData(sz: Int): ShortBuffer
-  def createIntData(sz: Int): IntBuffer
-  def createFloatData(sz: Int): FloatBuffer
-  def createDoubleData(sz: Int): DoubleBuffer
+  def createByteBuffer(sz: Int): ByteBuffer
+  def createShortBuffer(sz: Int): ShortBuffer
+  def createIntBuffer(sz: Int): IntBuffer
+  def createFloatBuffer(sz: Int): FloatBuffer
+  def createDoubleBuffer(sz: Int): DoubleBuffer
 }
 
 object GLES2 extends GLES2CompImpl {}

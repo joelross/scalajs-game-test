@@ -1,6 +1,6 @@
 package games.audio
 
-import games.JvmResourceUtil
+import games.JvmUtils
 import games.Resource
 import org.lwjgl.openal.AL10
 import org.lwjgl.openal.Util
@@ -16,7 +16,7 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
   private val bufferReady = Future {
     val alBuffer = AL10.alGenBuffers()
 
-    val in = JvmResourceUtil.streamForResource(res)
+    val in = JvmUtils.streamForResource(res)
 
     val decoder = new VorbisDecoder(in, FixedSigned16Converter)
 

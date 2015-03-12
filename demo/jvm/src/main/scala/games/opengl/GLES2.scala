@@ -326,7 +326,7 @@ class GLES2LWJGL() extends GLES2 {
 
   final def getAttachedShaders(program: Token.Program): Array[Token.Shader] = {
     val maxCount = this.getProgramParameteri(program, GL20.GL_ATTACHED_SHADERS)
-    val buffer = GLES2.createIntData(maxCount)
+    val buffer = GLES2.createIntBuffer(maxCount)
     this.tmpInt.clear()
     GL20.glGetAttachedShaders(program, this.tmpInt, buffer)
     val count = this.tmpInt.get(0)
@@ -1132,23 +1132,23 @@ trait GLES2CompImpl extends GLES2CompRequirements {
 
   /* public API - methods */
 
-  final def createByteData(sz: Int): ByteBuffer = {
+  final def createByteBuffer(sz: Int): ByteBuffer = {
     org.lwjgl.BufferUtils.createByteBuffer(sz)
   }
 
-  final def createShortData(sz: Int): ShortBuffer = {
+  final def createShortBuffer(sz: Int): ShortBuffer = {
     org.lwjgl.BufferUtils.createShortBuffer(sz)
   }
 
-  final def createIntData(sz: Int): IntBuffer = {
+  final def createIntBuffer(sz: Int): IntBuffer = {
     org.lwjgl.BufferUtils.createIntBuffer(sz)
   }
 
-  final def createFloatData(sz: Int): FloatBuffer = {
+  final def createFloatBuffer(sz: Int): FloatBuffer = {
     org.lwjgl.BufferUtils.createFloatBuffer(sz)
   }
 
-  final def createDoubleData(sz: Int): DoubleBuffer = {
+  final def createDoubleBuffer(sz: Int): DoubleBuffer = {
     org.lwjgl.BufferUtils.createDoubleBuffer(sz)
   }
 

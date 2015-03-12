@@ -4,7 +4,7 @@ import scala.scalajs.js
 import org.scalajs.dom
 import games.Resource
 import scala.concurrent.Promise
-import games.JsResourceUtil
+import games.JsUtils
 import scala.concurrent.Future
 
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
@@ -13,7 +13,7 @@ class JsBufferedData private[games] (ctx: JsContext, res: Resource) extends Buff
   private val decodedDataReady = Promise[js.typedarray.ArrayBuffer]
 
   private val request = new dom.XMLHttpRequest()
-  request.open("GET", JsResourceUtil.pathForResource(res), true)
+  request.open("GET", JsUtils.pathForResource(res), true)
   request.responseType = "arraybuffer"
 
   request.onload = (e: dom.Event) => {
@@ -51,7 +51,7 @@ class JsStreamingData private[games] (ctx: JsContext, res: Resource) extends Str
   private val streamReady = Promise[String]
 
   private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
-  private val path = JsResourceUtil.pathForResource(res)
+  private val path = JsUtils.pathForResource(res)
   audio.src = path
 
   audio.oncanplay = () => {

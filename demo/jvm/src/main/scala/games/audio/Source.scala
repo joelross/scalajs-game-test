@@ -4,7 +4,7 @@ import scala.concurrent._
 import org.lwjgl.openal.AL10
 import org.lwjgl.openal.Util
 import java.io.InputStream
-import games.JvmResourceUtil
+import games.JvmUtils
 import games.Resource
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -55,7 +55,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
     val streamingThread = new Thread() {
       override def run(): Unit = {
         // Init
-        var decoder = new VorbisDecoder(JvmResourceUtil.streamForResource(res), converter)
+        var decoder = new VorbisDecoder(JvmUtils.streamForResource(res), converter)
 
         val bufferedTime = 2.0f // amount of time buffered
         val numBuffers = 8 // buffers
@@ -130,7 +130,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
               // Check for looping
               if (!running && looping) {
                 decoder.close()
-                decoder = new VorbisDecoder(JvmResourceUtil.streamForResource(res), converter)
+                decoder = new VorbisDecoder(JvmUtils.streamForResource(res), converter)
                 running = true
               }
             }

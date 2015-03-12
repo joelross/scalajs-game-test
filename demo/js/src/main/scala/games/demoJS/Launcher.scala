@@ -6,13 +6,13 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 import games.demo.Engine
 import games.audio.JsContext
 import games.Resource
-import games.JsResourceUtil
+import games.JsUtils
 import games.audio.Context
 import games.math.Vector3f
 
 object Launcher extends js.JSApp {
   def main(): Unit = {
-    JsResourceUtil.setResourcePath("/resources")
+    JsUtils.setResourcePath("/resources")
 
     val output = dom.document.getElementById("demo-output")
     def printLine(msg: String): Unit = {
