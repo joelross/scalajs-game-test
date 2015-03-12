@@ -1,6 +1,6 @@
 package games.opengl
 
-import java.nio.{ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer}
+import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer }
 
 import org.lwjgl.opengl._
 import org.lwjgl.util.glu._
@@ -176,12 +176,12 @@ class GLES2LWJGL() extends GLES2 {
   }
 
   final def compressedTexImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    data: ByteBuffer): Unit = {
+                                 data: ByteBuffer): Unit = {
     GL13.glCompressedTexImage2D(target, level, internalformat, width, height, border, data)
   }
 
   final def compressedTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, data: ByteBuffer): Unit = {
+                                    format: Int, data: ByteBuffer): Unit = {
     GL13.glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, data)
   }
 
@@ -613,27 +613,27 @@ class GLES2LWJGL() extends GLES2 {
   }
 
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: IntBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int): Unit = {
+                       format: Int, `type`: Int): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, null: ByteBuffer)
   }
 
@@ -646,23 +646,23 @@ class GLES2LWJGL() extends GLES2 {
   }
 
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: IntBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
 

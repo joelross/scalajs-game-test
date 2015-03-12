@@ -87,67 +87,71 @@ object Token {
 
 // Main componenents
 
-class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
+class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext) extends GLES2 {
+
+  /* JS Specific */
+
+  final def getWebGLRenderingContext(): dom.raw.WebGLRenderingContext = webGL
 
   /* public API */
 
   final def activeTexture(texture: Int): Unit = {
-    gl.activeTexture(texture)
+    webGL.activeTexture(texture)
   }
 
   final def attachShader(program: Token.Program, shader: Token.Shader): Unit = {
-    gl.attachShader(program, shader)
+    webGL.attachShader(program, shader)
   }
 
   final def bindAttribLocation(program: Token.Program, index: Int, name: String): Unit = {
-    gl.bindAttribLocation(program, index, name)
+    webGL.bindAttribLocation(program, index, name)
   }
 
   final def bindBuffer(target: Int, buffer: Token.Buffer): Unit = {
-    gl.bindBuffer(target, buffer)
+    webGL.bindBuffer(target, buffer)
   }
 
   final def bindFramebuffer(target: Int, framebuffer: Token.FrameBuffer): Unit = {
-    gl.bindFramebuffer(target, framebuffer)
+    webGL.bindFramebuffer(target, framebuffer)
   }
 
   final def bindRenderbuffer(target: Int, renderbuffer: Token.RenderBuffer): Unit = {
-    gl.bindRenderbuffer(target, renderbuffer)
+    webGL.bindRenderbuffer(target, renderbuffer)
   }
 
   final def bindTexture(target: Int, texture: Token.Texture): Unit = {
-    gl.bindTexture(target, texture)
+    webGL.bindTexture(target, texture)
   }
 
   final def blendColor(red: Float, green: Float, blue: Float, alpha: Float): Unit = {
-    gl.blendColor(red, green, blue, alpha)
+    webGL.blendColor(red, green, blue, alpha)
   }
 
   final def blendEquation(mode: Int): Unit = {
-    gl.blendEquation(mode)
+    webGL.blendEquation(mode)
   }
 
   final def blendEquationSeparate(modeRGB: Int, modeAlpha: Int): Unit = {
-    gl.blendEquationSeparate(modeRGB, modeAlpha)
+    webGL.blendEquationSeparate(modeRGB, modeAlpha)
   }
 
   final def blendFunc(sfactor: Int, dfactor: Int): Unit = {
-    gl.blendFunc(sfactor, dfactor)
+    webGL.blendFunc(sfactor, dfactor)
   }
 
   final def blendFuncSeparate(srcfactorRGB: Int, dstfactorRGB: Int, srcfactorAlpha: Int, dstfactorAlpha: Int): Unit = {
-    gl.blendFuncSeparate(srcfactorRGB, dstfactorRGB, srcfactorAlpha, dstfactorAlpha)
+    webGL.blendFuncSeparate(srcfactorRGB, dstfactorRGB, srcfactorAlpha, dstfactorAlpha)
   }
 
   final def bufferData(target: Int, totalBytes: Long, usage: Int): Unit = {
-    gl.bufferData(target, totalBytes.toInt, usage)
+    webGL.bufferData(target, totalBytes.toInt, usage)
   }
 
   private final def _bufferData(target: Int, data: Buffer, usage: Int): Unit = {
     val buffer: Buffer = data
     if (buffer != null)
       require(buffer.hasArrayBuffer()) // should we have a backup plan?
-    gl.bufferData(target, if (buffer != null) buffer.dataView() else null, usage)
+    webGL.bufferData(target, if (buffer != null) buffer.dataView() else null, usage)
   }
 
   final def bufferData(target: Int, data: ByteBuffer, usage: Int): Unit = this._bufferData(target, if (data != null) data.slice else null, usage)
@@ -164,7 +168,7 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
 
     // TODO bufferSubData currently missing from org.scalajs.dom, correct this once it's ok
     // PS: bufferSubData exists in the WebGL specs
-    gl.asInstanceOf[js.Dynamic].bufferSubData(target, offset, if (buffer != null) buffer.dataView() else null)
+    webGL.asInstanceOf[js.Dynamic].bufferSubData(target, offset, if (buffer != null) buffer.dataView() else null)
   }
 
   final def bufferSubData(target: Int, offset: Long, data: ByteBuffer): Unit = this._bufferSubData(target, offset, if (data != null) data.slice else null)
@@ -174,432 +178,432 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
   final def bufferSubData(target: Int, offset: Long, data: DoubleBuffer): Unit = this._bufferSubData(target, offset, if (data != null) data.slice else null)
 
   final def checkFramebufferStatus(target: Int): Int = {
-    gl.checkFramebufferStatus(target).toInt
+    webGL.checkFramebufferStatus(target).toInt
   }
 
   final def clear(mask: Int): Unit = {
-    gl.clear(mask)
+    webGL.clear(mask)
   }
 
   final def clearColor(red: Float, green: Float, blue: Float, alpha: Float): Unit = {
-    gl.clearColor(red, green, blue, alpha)
+    webGL.clearColor(red, green, blue, alpha)
   }
 
   final def clearDepth(depth: Double): Unit = {
-    gl.asInstanceOf[js.Dynamic].clearDepth(depth)
+    webGL.asInstanceOf[js.Dynamic].clearDepth(depth)
     //gl.clearDepth(depth) // not correct in Scala dom
   }
 
   final def clearStencil(s: Int): Unit = {
-    gl.clearStencil(s)
+    webGL.clearStencil(s)
   }
 
   final def colorMask(red: Boolean, green: Boolean, blue: Boolean, alpha: Boolean): Unit = {
-    gl.colorMask(red, green, blue, alpha)
+    webGL.colorMask(red, green, blue, alpha)
   }
 
   final def compileShader(shader: Token.Shader): Unit = {
-    gl.compileShader(shader)
+    webGL.compileShader(shader)
   }
 
   final def compressedTexImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
                                  data: ByteBuffer): Unit = {
 
     val bytebuffer: ByteBuffer = if (data != null) { val tmp = data.slice; require(tmp.hasArrayBuffer()); tmp } else null
-    gl.compressedTexImage2D(target, level, internalformat, width, height, border, if (data != null) bytebuffer.dataView() else null)
+    webGL.compressedTexImage2D(target, level, internalformat, width, height, border, if (data != null) bytebuffer.dataView() else null)
   }
 
   final def compressedTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
                                     format: Int, data: ByteBuffer): Unit = {
 
     val bytebuffer: ByteBuffer = if (data != null) { val tmp = data.slice; require(tmp.hasArrayBuffer()); tmp } else null
-    gl.compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, if (data != null) bytebuffer.dataView() else null)
+    webGL.compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, if (data != null) bytebuffer.dataView() else null)
   }
 
   final def copyTexImage2D(target: Int, level: Int, internalFormat: Int, x: Int, y: Int, width: Int, height: Int, border: Int): Unit = {
-    gl.copyTexImage2D(target, level, internalFormat, x, y, width, height, border)
+    webGL.copyTexImage2D(target, level, internalFormat, x, y, width, height, border)
   }
 
   final def copyTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, x: Int, y: Int, width: Int, height: Int): Unit = {
-    gl.copyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height)
+    webGL.copyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height)
   }
 
   final def createBuffer(): Token.Buffer = {
-    val ret = gl.createBuffer()
+    val ret = webGL.createBuffer()
     ret
   }
 
   final def createFramebuffer(): Token.FrameBuffer = {
-    gl.createFramebuffer()
+    webGL.createFramebuffer()
   }
 
   final def createProgram(): Token.Program = {
-    gl.createProgram()
+    webGL.createProgram()
   }
 
   final def createRenderbuffer(): Token.RenderBuffer = {
     // TODO org.scalajs.dom has the name wrong the 'b' is not capital in the WebGL spec, correct this once it's ok
-    gl.asInstanceOf[js.Dynamic].createRenderbuffer().asInstanceOf[Token.RenderBuffer]
+    webGL.asInstanceOf[js.Dynamic].createRenderbuffer().asInstanceOf[Token.RenderBuffer]
   }
 
   final def createShader(`type`: Int): Token.Shader = {
-    gl.createShader(`type`)
+    webGL.createShader(`type`)
   }
 
   final def createTexture(): Token.Texture = {
-    gl.createTexture()
+    webGL.createTexture()
   }
 
   final def cullFace(mode: Int): Unit = {
-    gl.cullFace(mode)
+    webGL.cullFace(mode)
   }
 
   final def deleteBuffer(buffer: Token.Buffer): Unit = {
-    gl.deleteBuffer(buffer)
+    webGL.deleteBuffer(buffer)
   }
 
   final def deleteFramebuffer(framebuffer: Token.FrameBuffer): Unit = {
-    gl.deleteFramebuffer(framebuffer)
+    webGL.deleteFramebuffer(framebuffer)
   }
 
   final def deleteProgram(program: Token.Program): Unit = {
-    gl.deleteProgram(program)
+    webGL.deleteProgram(program)
   }
 
   final def deleteRenderbuffer(renderbuffer: Token.RenderBuffer): Unit = {
-    gl.deleteRenderbuffer(renderbuffer)
+    webGL.deleteRenderbuffer(renderbuffer)
   }
 
   final def deleteShader(shader: Token.Shader): Unit = {
-    gl.deleteShader(shader)
+    webGL.deleteShader(shader)
   }
 
   final def deleteTexture(texture: Token.Texture): Unit = {
-    gl.deleteTexture(texture)
+    webGL.deleteTexture(texture)
   }
 
   final def depthFunc(func: Int): Unit = {
-    gl.depthFunc(func)
+    webGL.depthFunc(func)
   }
 
   final def depthMask(flag: Boolean): Unit = {
-    gl.depthMask(flag)
+    webGL.depthMask(flag)
   }
 
   final def depthRange(zNear: Double, zFar: Double): Unit = {
-    gl.depthRange(zNear, zFar)
+    webGL.depthRange(zNear, zFar)
   }
 
   final def detachShader(program: Token.Program, shader: Token.Shader): Unit = {
-    gl.detachShader(program, shader)
+    webGL.detachShader(program, shader)
   }
 
   final def disable(cap: Int): Unit = {
-    gl.disable(cap)
+    webGL.disable(cap)
   }
 
   final def disableVertexAttribArray(index: Int): Unit = {
-    gl.disableVertexAttribArray(index)
+    webGL.disableVertexAttribArray(index)
   }
 
   final def drawArrays(mode: Int, first: Int, count: Int): Unit = {
-    gl.drawArrays(mode, first, count)
+    webGL.drawArrays(mode, first, count)
   }
 
   final def drawElements(mode: Int, count: Int, `type`: Int, offset: Long): Unit = {
     // may be a good idea to check that an element array buffer is currently bound
-    gl.drawElements(mode, count, `type`, offset.toInt)
+    webGL.drawElements(mode, count, `type`, offset.toInt)
   }
 
   final def enable(cap: Int): Unit = {
-    gl.enable(cap)
+    webGL.enable(cap)
   }
 
   final def enableVertexAttribArray(index: Int): Unit = {
-    gl.enableVertexAttribArray(index)
+    webGL.enableVertexAttribArray(index)
   }
 
   final def finish(): Unit = {
-    gl.finish()
+    webGL.finish()
   }
 
   final def flush(): Unit = {
-    gl.flush()
+    webGL.flush()
   }
 
   final def framebufferRenderbuffer(target: Int, attachment: Int, renderbuffertarget: Int, renderbuffer: Token.RenderBuffer): Unit = {
-    gl.framebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer)
+    webGL.framebufferRenderbuffer(target, attachment, renderbuffertarget, renderbuffer)
   }
 
   final def framebufferTexture2D(target: Int, attachment: Int, textarget: Int, texture: Token.Texture, level: Int): Unit = {
-    gl.framebufferTexture2D(target, attachment, textarget, texture, level)
+    webGL.framebufferTexture2D(target, attachment, textarget, texture, level)
   }
 
   final def frontFace(mode: Int): Unit = {
-    gl.frontFace(mode)
+    webGL.frontFace(mode)
   }
 
   final def generateMipmap(target: Int): Unit = {
-    gl.generateMipmap(target)
+    webGL.generateMipmap(target)
   }
 
   final def getActiveAttrib(program: Token.Program, index: Int): ActiveInfo = {
-    val jsActiveInfo = gl.getActiveAttrib(program, index)
+    val jsActiveInfo = webGL.getActiveAttrib(program, index)
     ActiveInfo(jsActiveInfo.size.toInt, jsActiveInfo.`type`.toInt, jsActiveInfo.name)
   }
 
   final def getActiveUniform(program: Token.Program, index: Int): ActiveInfo = {
     // TODO org.scalajs.dom has the return type wrong, correct this once it's ok
-    val jsActiveInfoDyn = gl.asInstanceOf[js.Dynamic].getActiveUniform(program, index)
+    val jsActiveInfoDyn = webGL.asInstanceOf[js.Dynamic].getActiveUniform(program, index)
     val jsActiveInfo = jsActiveInfoDyn.asInstanceOf[dom.raw.WebGLActiveInfo]
     ActiveInfo(jsActiveInfo.size.toInt, jsActiveInfo.`type`.toInt, jsActiveInfo.name)
   }
 
   final def getAttachedShaders(program: Token.Program): Array[Token.Shader] = {
-    val jsArray = gl.getAttachedShaders(program)
+    val jsArray = webGL.getAttachedShaders(program)
     jsArray.toArray
   }
 
   final def getAttribLocation(program: Token.Program, name: String): Int = {
-    gl.getAttribLocation(program, name).toInt
+    webGL.getAttribLocation(program, name).toInt
   }
 
   final def getBufferParameteri(target: Int, pname: Int): Int = {
     // accept only GL_BUFFER_SIZE and GL_BUFFER_USAGE, both return a simple Int, no problem here
-    gl.getBufferParameter(target, pname).toInt
+    webGL.getBufferParameter(target, pname).toInt
   }
 
   final def getParameterBuffer(pname: Int): Token.Buffer = {
-    gl.getParameter(pname).asInstanceOf[Token.Buffer]
+    webGL.getParameter(pname).asInstanceOf[Token.Buffer]
   }
 
   final def getParameterTexture(pname: Int): Token.Texture = {
-    gl.getParameter(pname).asInstanceOf[Token.Texture]
+    webGL.getParameter(pname).asInstanceOf[Token.Texture]
   }
 
   final def getParameterFramebuffer(pname: Int): Token.FrameBuffer = {
-    gl.getParameter(pname).asInstanceOf[Token.FrameBuffer]
+    webGL.getParameter(pname).asInstanceOf[Token.FrameBuffer]
   }
 
   final def getParameterProgram(pname: Int): Token.Program = {
-    gl.getParameter(pname).asInstanceOf[Token.Program]
+    webGL.getParameter(pname).asInstanceOf[Token.Program]
   }
 
   final def getParameterRenderbuffer(pname: Int): Token.RenderBuffer = {
-    gl.getParameter(pname).asInstanceOf[Token.RenderBuffer]
+    webGL.getParameter(pname).asInstanceOf[Token.RenderBuffer]
   }
 
   final def getParameterShader(pname: Int): Token.Shader = {
-    gl.getParameter(pname).asInstanceOf[Token.Shader]
+    webGL.getParameter(pname).asInstanceOf[Token.Shader]
   }
 
   final def getParameterString(pname: Int): String = {
-    gl.getParameter(pname).asInstanceOf[String]
+    webGL.getParameter(pname).asInstanceOf[String]
   }
 
   final def getParameteri(pname: Int): Int = {
     // LWJGL hint: use glGetInteger(int pname): Int
-    val ret = gl.getParameter(pname)
+    val ret = webGL.getParameter(pname)
     JSTypeHelper.toInt(ret)
   }
 
   final def getParameteriv(pname: Int, outputs: IntBuffer): Unit = {
     // LWJGL hint: use glGetInteger(int pname, IntBuffer params)
-    val ret = gl.getParameter(pname)
+    val ret = webGL.getParameter(pname)
     JSTypeHelper.toInts(ret, outputs)
   }
 
   final def getParameterf(pname: Int): Float = {
     // LWJGL hint: use glGetFloat(int pname): Int
-    gl.getParameter(pname).asInstanceOf[Double].toFloat
+    webGL.getParameter(pname).asInstanceOf[Double].toFloat
   }
 
   final def getParameterfv(pname: Int, outputs: FloatBuffer): Unit = {
     // LWJGL hint: use glGetInteger(int pname, IntBuffer params)
-    val ret = gl.getParameter(pname)
+    val ret = webGL.getParameter(pname)
     JSTypeHelper.toFloats(ret, outputs)
   }
 
   final def getParameterb(pname: Int): Boolean = {
     // LWJGL hint: use glGetBoolean(int pname): Boolean
-    val ret = gl.getParameter(pname)
+    val ret = webGL.getParameter(pname)
     JSTypeHelper.toBoolean(ret)
   }
 
   final def getParameterbv(pname: Int, outputs: ByteBuffer): Unit = {
     // LWJGL hint: use glGetBoolean(int pname, ByteBuffer params)
-    val ret = gl.getParameter(pname)
+    val ret = webGL.getParameter(pname)
     JSTypeHelper.toBooleans(ret, outputs)
   }
 
   final def getError(): Int = {
-    gl.getError().toInt
+    webGL.getError().toInt
   }
 
   final def getFramebufferAttachmentParameteri(target: Int, attachment: Int, pname: Int): Int = {
-    gl.getFramebufferAttachmentParameter(target, attachment, pname).asInstanceOf[Double].toInt
+    webGL.getFramebufferAttachmentParameter(target, attachment, pname).asInstanceOf[Double].toInt
   }
 
   final def getFramebufferAttachmentParameterRenderbuffer(target: Int, attachment: Int, pname: Int): Token.RenderBuffer = {
-    gl.getFramebufferAttachmentParameter(target, attachment, pname).asInstanceOf[Token.RenderBuffer]
+    webGL.getFramebufferAttachmentParameter(target, attachment, pname).asInstanceOf[Token.RenderBuffer]
   }
 
   final def getFramebufferAttachmentParameterTexture(target: Int, attachment: Int, pname: Int): Token.Texture = {
-    gl.getFramebufferAttachmentParameter(target, attachment, pname).asInstanceOf[Token.Texture]
+    webGL.getFramebufferAttachmentParameter(target, attachment, pname).asInstanceOf[Token.Texture]
   }
 
   final def getProgramParameteri(program: Token.Program, pname: Int): Int = {
-    val ret = gl.getProgramParameter(program, pname)
+    val ret = webGL.getProgramParameter(program, pname)
     JSTypeHelper.toInt(ret)
   }
 
   final def getProgramParameterb(program: Token.Program, pname: Int): Boolean = {
-    val ret = gl.getProgramParameter(program, pname)
+    val ret = webGL.getProgramParameter(program, pname)
     JSTypeHelper.toBoolean(ret)
   }
 
   final def getProgramInfoLog(program: Token.Program): String = {
-    gl.getProgramInfoLog(program)
+    webGL.getProgramInfoLog(program)
   }
 
   final def getRenderbufferParameteri(target: Int, pname: Int): Int = {
-    gl.getRenderbufferParameter(target, pname).asInstanceOf[Double].toInt
+    webGL.getRenderbufferParameter(target, pname).asInstanceOf[Double].toInt
   }
 
   final def getShaderParameteri(shader: Token.Shader, pname: Int): Int = {
-    val ret = gl.getShaderParameter(shader, pname)
+    val ret = webGL.getShaderParameter(shader, pname)
     JSTypeHelper.toInt(ret)
   }
 
   final def getShaderParameterb(shader: Token.Shader, pname: Int): Boolean = {
-    val ret = gl.getShaderParameter(shader, pname)
+    val ret = webGL.getShaderParameter(shader, pname)
     JSTypeHelper.toBoolean(ret)
   }
 
   final def getShaderPrecisionFormat(shadertype: Int, precisiontype: Int): PrecisionFormat = {
-    val jsPrecisionFormat = gl.getShaderPrecisionFormat(shadertype, precisiontype)
+    val jsPrecisionFormat = webGL.getShaderPrecisionFormat(shadertype, precisiontype)
     PrecisionFormat(jsPrecisionFormat.rangeMin.toInt, jsPrecisionFormat.rangeMax.toInt, jsPrecisionFormat.precision.toInt)
   }
 
   final def getShaderInfoLog(shader: Token.Shader): String = {
-    gl.getShaderInfoLog(shader)
+    webGL.getShaderInfoLog(shader)
   }
 
   final def getShaderSource(shader: Token.Shader): String = {
-    gl.getShaderSource(shader)
+    webGL.getShaderSource(shader)
   }
 
   final def getTexParameteri(target: Int, pname: Int): Int = {
     // org.scalajs.dom could maybe use return type Double instead of js.Any
-    val ret = gl.getTexParameter(target, pname)
+    val ret = webGL.getTexParameter(target, pname)
     JSTypeHelper.toInt(ret)
   }
 
   final def getUniformi(program: Token.Program, location: Token.UniformLocation): Int = {
-    val ret = gl.getUniform(program, location)
+    val ret = webGL.getUniform(program, location)
     JSTypeHelper.toInt(ret)
   }
 
   final def getUniformiv(program: Token.Program, location: Token.UniformLocation, outputs: IntBuffer): Unit = {
-    val ret = gl.getUniform(program, location)
+    val ret = webGL.getUniform(program, location)
     JSTypeHelper.toInts(ret, outputs)
   }
 
   final def getUniformf(program: Token.Program, location: Token.UniformLocation): Float = {
-    val ret = gl.getUniform(program, location)
+    val ret = webGL.getUniform(program, location)
     JSTypeHelper.toFloat(ret)
   }
 
   final def getUniformfv(program: Token.Program, location: Token.UniformLocation, outputs: FloatBuffer): Unit = {
-    val ret = gl.getUniform(program, location)
+    val ret = webGL.getUniform(program, location)
     JSTypeHelper.toFloats(ret, outputs)
   }
 
   final def getUniformLocation(program: Token.Program, name: String): Token.UniformLocation = {
-    gl.getUniformLocation(program, name).asInstanceOf[Token.UniformLocation]
+    webGL.getUniformLocation(program, name).asInstanceOf[Token.UniformLocation]
   }
 
   final def getVertexAttribi(index: Int, pname: Int): Int = {
-    val ret = gl.getVertexAttrib(index, pname)
+    val ret = webGL.getVertexAttrib(index, pname)
     JSTypeHelper.toInt(ret)
   }
 
   final def getVertexAttribf(index: Int, pname: Int): Float = {
-    val ret = gl.getVertexAttrib(index, pname)
+    val ret = webGL.getVertexAttrib(index, pname)
     JSTypeHelper.toFloat(ret)
   }
 
   final def getVertexAttribfv(index: Int, pname: Int, outputs: FloatBuffer): Unit = {
-    val ret = gl.getVertexAttrib(index, pname)
+    val ret = webGL.getVertexAttrib(index, pname)
     JSTypeHelper.toFloats(ret, outputs)
   }
 
   final def getVertexAttribb(index: Int, pname: Int): Boolean = {
-    val ret = gl.getVertexAttrib(index, pname)
+    val ret = webGL.getVertexAttrib(index, pname)
     JSTypeHelper.toBoolean(ret)
   }
 
   final def hint(target: Int, mode: Int): Unit = {
     // org.scalajs.dom has the return type wrong (js.Any instead of void), correct this once it's ok
-    gl.asInstanceOf[js.Dynamic].hint(target, mode)
+    webGL.asInstanceOf[js.Dynamic].hint(target, mode)
   }
 
   final def isBuffer(buffer: Token.Buffer): Boolean = {
     if (buffer == null) false
-    else gl.isBuffer(buffer)
+    else webGL.isBuffer(buffer)
   }
 
   final def isEnabled(cap: Int): Boolean = {
-    gl.isEnabled(cap)
+    webGL.isEnabled(cap)
   }
 
   final def isFramebuffer(framebuffer: Token.FrameBuffer): Boolean = {
     if (framebuffer == null) false
-    else gl.isFramebuffer(framebuffer)
+    else webGL.isFramebuffer(framebuffer)
   }
 
   final def isProgram(program: Token.Program): Boolean = {
     if (program == null) false
-    else gl.isProgram(program)
+    else webGL.isProgram(program)
   }
 
   final def isRenderbuffer(renderbuffer: Token.RenderBuffer): Boolean = {
     if (renderbuffer == null) false
-    else gl.isRenderbuffer(renderbuffer)
+    else webGL.isRenderbuffer(renderbuffer)
   }
 
   final def isShader(shader: Token.Shader): Boolean = {
     if (shader == null) false
-    else gl.isShader(shader)
+    else webGL.isShader(shader)
   }
 
   final def isTexture(texture: Token.Texture): Boolean = {
     if (texture == null) false
-    else gl.isTexture(texture)
+    else webGL.isTexture(texture)
   }
 
   final def lineWidth(width: Float): Unit = {
-    gl.asInstanceOf[js.Dynamic].lineWidth(width)
+    webGL.asInstanceOf[js.Dynamic].lineWidth(width)
     //gl.lineWidth(width)
   }
 
   final def linkProgram(program: Token.Program): Unit = {
-    gl.linkProgram(program)
+    webGL.linkProgram(program)
   }
 
   final def pixelStorei(pname: Int, param: Int): Unit = {
-    gl.pixelStorei(pname, param)
+    webGL.pixelStorei(pname, param)
   }
 
   final def polygonOffset(factor: Float, units: Float): Unit = {
-    gl.asInstanceOf[js.Dynamic].polygonOffset(factor, units)
+    webGL.asInstanceOf[js.Dynamic].polygonOffset(factor, units)
     //gl.polygonOffset(factor, units)
   }
 
   private final def _readPixels(x: Int, y: Int, width: Int, height: Int, format: Int, `type`: Int, pixels: Buffer): Unit = {
     val buffer: Buffer = pixels
     if (pixels != null) require(buffer.hasArrayBuffer())
-    gl.readPixels(x, y, width, height, format, `type`, if (pixels != null) buffer.dataView() else null)
+    webGL.readPixels(x, y, width, height, format, `type`, if (pixels != null) buffer.dataView() else null)
   }
 
   final def readPixels(x: Int, y: Int, width: Int, height: Int, format: Int, `type`: Int, pixels: ByteBuffer): Unit =
@@ -614,48 +618,48 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
     this._readPixels(x, y, width, height, format, `type`, pixels.slice)
 
   final def renderbufferStorage(target: Int, internalformat: Int, width: Int, height: Int): Unit = {
-    gl.renderbufferStorage(target, internalformat, width, height)
+    webGL.renderbufferStorage(target, internalformat, width, height)
   }
 
   final def sampleCoverage(value: Float, invert: Boolean): Unit = {
-    gl.asInstanceOf[js.Dynamic].sampleCoverage(value, invert)
+    webGL.asInstanceOf[js.Dynamic].sampleCoverage(value, invert)
     //gl.sampleCoverage(value, invert)
   }
 
   final def scissor(x: Int, y: Int, width: Int, height: Int): Unit = {
-    gl.scissor(x, y, width, height)
+    webGL.scissor(x, y, width, height)
   }
 
   final def shaderSource(shader: Token.Shader, source: String): Unit = {
-    gl.shaderSource(shader, source)
+    webGL.shaderSource(shader, source)
   }
 
   final def stencilFunc(func: Int, ref: Int, mask: Int): Unit = {
-    gl.stencilFunc(func, ref, mask)
+    webGL.stencilFunc(func, ref, mask)
   }
 
   final def stencilFuncSeparate(face: Int, func: Int, ref: Int, mask: Int): Unit = {
-    gl.stencilFuncSeparate(face, func, ref, mask)
+    webGL.stencilFuncSeparate(face, func, ref, mask)
   }
 
   final def stencilMask(mask: Int): Unit = {
-    gl.stencilMask(mask)
+    webGL.stencilMask(mask)
   }
 
   final def stencilMaskSeparate(face: Int, mask: Int): Unit = {
     // TODO
     //gl.stencilMaskSeperate(face, mask)
-    gl.asInstanceOf[js.Dynamic].stencilMaskSeparate(face, mask)
+    webGL.asInstanceOf[js.Dynamic].stencilMaskSeparate(face, mask)
   }
 
   final def stencilOp(fail: Int, zfail: Int, zpass: Int): Unit = {
-    gl.stencilOp(fail, zfail, zpass)
+    webGL.stencilOp(fail, zfail, zpass)
   }
 
   final def stencilOpSeparate(face: Int, sfail: Int, dpfail: Int, dppass: Int): Unit = {
     // TODO
     //gl.stencilOpSeperate(face, sfail, dpfail, dppass)
-    gl.asInstanceOf[js.Dynamic].stencilOpSeparate(face, sfail, dpfail, dppass)
+    webGL.asInstanceOf[js.Dynamic].stencilOpSeparate(face, sfail, dpfail, dppass)
   }
 
   private final def _texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
@@ -663,7 +667,7 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
 
     val buffer: Buffer = pixels
     if (pixels != null) require(buffer.hasArrayBuffer())
-    gl.texImage2D(target, level, internalformat, width, height, border, format, `type`, if (pixels != null) buffer.dataView() else null)
+    webGL.texImage2D(target, level, internalformat, width, height, border, format, `type`, if (pixels != null) buffer.dataView() else null)
   }
 
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
@@ -683,16 +687,16 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
     format, `type`, if (pixels != null) pixels.slice else null)
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
                        format: Int, `type`: Int): Unit = {
-    gl.texImage2D(target, level, internalformat, width, height, border, format, `type`, null)
+    webGL.texImage2D(target, level, internalformat, width, height, border, format, `type`, null)
   }
 
   final def texParameterf(target: Int, pname: Int, param: Float): Unit = {
-    gl.asInstanceOf[js.Dynamic].texParameterf(target, pname, param)
+    webGL.asInstanceOf[js.Dynamic].texParameterf(target, pname, param)
     //gl.texParameterf(target, pname, param)
   }
 
   final def texParameteri(target: Int, pname: Int, param: Int): Unit = {
-    gl.texParameteri(target, pname, param)
+    webGL.texParameteri(target, pname, param)
   }
 
   private final def _texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
@@ -700,7 +704,7 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
 
     val buffer: Buffer = pixels
     if (pixels != null) require(buffer.hasArrayBuffer())
-    gl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, if (pixels != null) buffer.dataView() else null)
+    webGL.texSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, if (pixels != null) buffer.dataView() else null)
   }
 
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
@@ -720,157 +724,157 @@ class GLES2WebGL(gl: dom.raw.WebGLRenderingContext) extends GLES2 {
     format, `type`, pixels.slice)
 
   final def uniform1f(location: Token.UniformLocation, x: Float): Unit = {
-    gl.uniform1f(location, x)
+    webGL.uniform1f(location, x)
   }
 
   final def uniform1fv(location: Token.UniformLocation, values: FloatBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.uniform1fv(location, slice.typedArray())
+    webGL.uniform1fv(location, slice.typedArray())
   }
 
   final def uniform1i(location: Token.UniformLocation, x: Int): Unit = {
-    gl.uniform1i(location, x)
+    webGL.uniform1i(location, x)
   }
 
   final def uniform1iv(location: Token.UniformLocation, values: IntBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.uniform1iv(location, slice.typedArray())
+    webGL.uniform1iv(location, slice.typedArray())
   }
 
   final def uniform2f(location: Token.UniformLocation, x: Float, y: Float): Unit = {
-    gl.uniform2f(location, x, y)
+    webGL.uniform2f(location, x, y)
   }
 
   final def uniform2fv(location: Token.UniformLocation, values: FloatBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.uniform2fv(location, slice.typedArray())
+    webGL.uniform2fv(location, slice.typedArray())
   }
 
   final def uniform2i(location: Token.UniformLocation, x: Int, y: Int): Unit = {
-    gl.uniform2i(location, x, y)
+    webGL.uniform2i(location, x, y)
   }
 
   final def uniform2iv(location: Token.UniformLocation, values: IntBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.uniform2iv(location, slice.typedArray())
+    webGL.uniform2iv(location, slice.typedArray())
   }
 
   final def uniform3f(location: Token.UniformLocation, x: Float, y: Float, z: Float): Unit = {
-    gl.uniform3f(location, x, y, z)
+    webGL.uniform3f(location, x, y, z)
   }
 
   final def uniform3fv(location: Token.UniformLocation, values: FloatBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.uniform3fv(location, slice.typedArray())
+    webGL.uniform3fv(location, slice.typedArray())
   }
 
   final def uniform3i(location: Token.UniformLocation, x: Int, y: Int, z: Int): Unit = {
-    gl.uniform3i(location, x, y, z)
+    webGL.uniform3i(location, x, y, z)
   }
 
   final def uniform3iv(location: Token.UniformLocation, values: IntBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.uniform3iv(location, slice.typedArray())
+    webGL.uniform3iv(location, slice.typedArray())
   }
 
   final def uniform4f(location: Token.UniformLocation, x: Float, y: Float, z: Float, w: Float): Unit = {
-    gl.uniform4f(location, x, y, z, w)
+    webGL.uniform4f(location, x, y, z, w)
   }
 
   final def uniform4fv(location: Token.UniformLocation, values: FloatBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.uniform4fv(location, slice.typedArray())
+    webGL.uniform4fv(location, slice.typedArray())
   }
 
   final def uniform4i(location: Token.UniformLocation, x: Int, y: Int, z: Int, w: Int): Unit = {
-    gl.uniform4i(location, x, y, z, w)
+    webGL.uniform4i(location, x, y, z, w)
   }
 
   final def uniform4iv(location: Token.UniformLocation, values: IntBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.uniform4iv(location, slice.typedArray())
+    webGL.uniform4iv(location, slice.typedArray())
   }
 
   final def uniformMatrix2fv(location: Token.UniformLocation, transpose: Boolean, matrices: FloatBuffer): Unit = {
     val slice = matrices.slice
     require(slice.hasTypedArray())
-    gl.uniformMatrix2fv(location, transpose, slice.typedArray())
+    webGL.uniformMatrix2fv(location, transpose, slice.typedArray())
   }
 
   final def uniformMatrix3fv(location: Token.UniformLocation, transpose: Boolean, matrices: FloatBuffer): Unit = {
     val slice = matrices.slice
     require(slice.hasTypedArray())
-    gl.uniformMatrix3fv(location, transpose, slice.typedArray())
+    webGL.uniformMatrix3fv(location, transpose, slice.typedArray())
   }
 
   final def uniformMatrix4fv(location: Token.UniformLocation, transpose: Boolean, matrices: FloatBuffer): Unit = {
     val slice = matrices.slice
     require(slice.hasTypedArray())
-    gl.uniformMatrix4fv(location, transpose, slice.typedArray())
+    webGL.uniformMatrix4fv(location, transpose, slice.typedArray())
   }
 
   final def useProgram(program: Token.Program): Unit = {
-    gl.useProgram(program)
+    webGL.useProgram(program)
   }
 
   final def validateProgram(program: Token.Program): Unit = {
-    gl.validateProgram(program)
+    webGL.validateProgram(program)
   }
 
   final def vertexAttrib1f(index: Int, x: Float): Unit = {
-    gl.vertexAttrib1f(index, x)
+    webGL.vertexAttrib1f(index, x)
   }
 
   final def vertexAttrib1fv(index: Int, values: FloatBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.vertexAttrib1fv(index, slice.typedArray())
+    webGL.vertexAttrib1fv(index, slice.typedArray())
   }
 
   final def vertexAttrib2f(index: Int, x: Float, y: Float): Unit = {
-    gl.vertexAttrib2f(index, x, y)
+    webGL.vertexAttrib2f(index, x, y)
   }
 
   final def vertexAttrib2fv(index: Int, values: FloatBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.vertexAttrib2fv(index, slice.typedArray())
+    webGL.vertexAttrib2fv(index, slice.typedArray())
   }
 
   final def vertexAttrib3f(index: Int, x: Float, y: Float, z: Float): Unit = {
-    gl.vertexAttrib3f(index, x, y, z)
+    webGL.vertexAttrib3f(index, x, y, z)
   }
 
   final def vertexAttrib3fv(index: Int, values: FloatBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.vertexAttrib3fv(index, slice.typedArray())
+    webGL.vertexAttrib3fv(index, slice.typedArray())
   }
 
   final def vertexAttrib4f(index: Int, x: Float, y: Float, z: Float, w: Float): Unit = {
-    gl.vertexAttrib4f(index, x, y, z, w)
+    webGL.vertexAttrib4f(index, x, y, z, w)
   }
 
   final def vertexAttrib4fv(index: Int, values: FloatBuffer): Unit = {
     val slice = values.slice
     require(slice.hasTypedArray())
-    gl.vertexAttrib4fv(index, slice.typedArray())
+    webGL.vertexAttrib4fv(index, slice.typedArray())
   }
 
   final def vertexAttribPointer(index: Int, size: Int, `type`: Int, normalized: Boolean, stride: Int, offset: Long): Unit = {
-    gl.vertexAttribPointer(index, size, `type`, normalized, stride, offset.toInt)
+    webGL.vertexAttribPointer(index, size, `type`, normalized, stride, offset.toInt)
   }
 
   final def viewport(x: Int, y: Int, width: Int, height: Int): Unit = {
-    gl.viewport(x, y, width, height)
+    webGL.viewport(x, y, width, height)
   }
 
   // Helper methods

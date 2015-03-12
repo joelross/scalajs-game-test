@@ -1,6 +1,6 @@
 package games.opengl
 
-import java.nio.{ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer}
+import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer }
 
 // Auxiliary components
 
@@ -73,10 +73,10 @@ trait GLES2 {
    */
 
   def compressedTexImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    data: ByteBuffer): Unit
+                           data: ByteBuffer): Unit
 
   def compressedTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, data: ByteBuffer): Unit
+                              format: Int, data: ByteBuffer): Unit
   def copyTexImage2D(target: Int, level: Int, internalFormat: Int, x: Int, y: Int, width: Int, height: Int, border: Int): Unit
 
   def copyTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, x: Int, y: Int, width: Int, height: Int): Unit
@@ -298,32 +298,32 @@ trait GLES2 {
   def stencilOpSeparate(face: Int, sfail: Int, dpfail: Int, dppass: Int): Unit
 
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit
+                 format: Int, `type`: Int, pixels: ByteBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit
+                 format: Int, `type`: Int, pixels: ShortBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit
+                 format: Int, `type`: Int, pixels: IntBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit
+                 format: Int, `type`: Int, pixels: FloatBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit
+                 format: Int, `type`: Int, pixels: DoubleBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int): Unit
+                 format: Int, `type`: Int): Unit
 
   def texParameterf(target: Int, pname: Int, param: Float): Unit
 
   def texParameteri(target: Int, pname: Int, param: Int): Unit
 
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit
+                    format: Int, `type`: Int, pixels: ByteBuffer): Unit
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit
+                    format: Int, `type`: Int, pixels: ShortBuffer): Unit
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit
+                    format: Int, `type`: Int, pixels: IntBuffer): Unit
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit
+                    format: Int, `type`: Int, pixels: FloatBuffer): Unit
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit
+                    format: Int, `type`: Int, pixels: DoubleBuffer): Unit
 
   def uniform1f(location: Token.UniformLocation, x: Float): Unit
 

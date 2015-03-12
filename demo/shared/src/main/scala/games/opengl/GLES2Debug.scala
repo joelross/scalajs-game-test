@@ -1,8 +1,12 @@
 package games.opengl
 
-import java.nio.{ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer}
+import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer }
 
 class GLES2Debug(ogl: GLES2) extends GLES2 {
+
+  /* Debug specifics */
+
+  final def getInternalContext(): GLES2 = ogl
 
   // Unchecked methods
 
@@ -170,13 +174,13 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
   }
 
   final def compressedTexImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    data: ByteBuffer): Unit = {
+                                 data: ByteBuffer): Unit = {
     ogl.compressedTexImage2D(target, level, internalformat, width, height, border, data)
     this.checkError()
   }
 
   final def compressedTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, data: ByteBuffer): Unit = {
+                                    format: Int, data: ByteBuffer): Unit = {
     ogl.compressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, data)
     this.checkError()
   }
@@ -723,32 +727,32 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
   }
 
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
     ogl.texImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
     this.checkError()
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
     ogl.texImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
     this.checkError()
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: IntBuffer): Unit = {
     ogl.texImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
     this.checkError()
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
     ogl.texImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
     this.checkError()
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
     ogl.texImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
     this.checkError()
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int): Unit = {
+                       format: Int, `type`: Int): Unit = {
     ogl.texImage2D(target, level, internalformat, width, height, border, format, `type`)
     this.checkError()
   }
@@ -764,27 +768,27 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
   }
 
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
     ogl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
     this.checkError()
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
     ogl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
     this.checkError()
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: IntBuffer): Unit = {
     ogl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
     this.checkError()
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
     ogl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
     this.checkError()
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
     ogl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
     this.checkError()
   }

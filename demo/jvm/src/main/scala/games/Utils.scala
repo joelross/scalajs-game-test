@@ -32,7 +32,7 @@ object JvmUtils {
     val promise = Promise[T]
 
     val prepare: Future[T] = Future { fun }(ec)
-    // The immediateExecutionContext is not necessary here, but as we are simply redirecting to other promises, the additional threading provides no gain
+    // The immediateExecutionContext is not necessary here, but as we are simply redirecting to other promises, the additional threading would provide no gain
     prepare.onSuccess { case retValue => JvmUtils.addPendingTask { () => promise.success(retValue) } }(JvmUtils.immediateExecutionContext)
     prepare.onFailure { case t: Throwable => JvmUtils.addPendingTask { () => promise.failure(t) } }(JvmUtils.immediateExecutionContext)
 
@@ -97,26 +97,26 @@ trait UtilsImpl extends UtilsRequirements {
       byteBuffer
     }
   }
-  def getTextDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[Array[String]] = {
+  def getTextDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[String] = {
     JvmUtils.doAsync {
       val stream = JvmUtils.streamForResource(res)
       val streamReader = new InputStreamReader(stream)
       val reader = new BufferedReader(streamReader)
 
-      val buffer = new scala.collection.mutable.ArrayBuffer[String]()
-      var line: String = null
+      val text = new StringBuilder()
 
-      while ({ line = reader.readLine(); line } != null) {
-        buffer += line
+      val buffer = Array[Char](4096) // 4KiB buffer
+      var bufferReadLength = 0
+
+      while ({ bufferReadLength = reader.read(buffer); bufferReadLength } >= 0) {
+        text.appendAll(buffer, 0, bufferReadLength)
       }
 
       reader.close()
       streamReader.close()
       stream.close()
 
-      val lines = buffer.toArray
-
-      lines
+      text.toString()
     }
   }
   def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, preload: => Boolean = true)(implicit gl: games.opengl.GLES2, ec: ExecutionContext): scala.concurrent.Future[Unit] = {
@@ -170,7 +170,7 @@ trait UtilsImpl extends UtilsRequirements {
       }
     }
 
-    promise.future
+    JvmUtils.wrapFuture(promise.future)
   }
   def startFrameListener(fl: games.FrameListener): Unit = {
     def screenDim(): (Int, Int) = {
