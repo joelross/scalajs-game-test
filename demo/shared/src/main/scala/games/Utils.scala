@@ -5,7 +5,6 @@ import scala.concurrent.ExecutionContext
 import java.nio.ByteBuffer
 import games.opengl.GLES2
 import games.opengl.Token
-import scala.annotation.implicitNotFound
 
 case class FrameEvent(elapsedTime: Float)
 
