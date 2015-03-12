@@ -1,5 +1,7 @@
 package games
 
+import scala.concurrent.{ Future, ExecutionContext }
+
 object JsUtils {
   private var relativeResourcePath: Option[String] = None
 
@@ -14,8 +16,8 @@ object JsUtils {
 }
 
 trait UtilsImpl extends UtilsRequirements {
-  def getBinaryDataFromResource(res: games.Resource): scala.concurrent.Future[java.nio.ByteBuffer] = ???
-  def getTextDataFromResource(res: games.Resource): scala.concurrent.Future[Array[String]] = ???
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, preload: => Boolean = true)(implicit gl: games.opengl.GLES2): scala.concurrent.Future[Unit] = ???
+  def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer] = ???
+  def getTextDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[Array[String]] = ???
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, preload: => Boolean = true)(implicit gl: games.opengl.GLES2, ec: ExecutionContext): scala.concurrent.Future[Unit] = ???
   def startFrameListener(fl: games.FrameListener): Unit = ???
 }

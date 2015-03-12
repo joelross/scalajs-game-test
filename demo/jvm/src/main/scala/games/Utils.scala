@@ -12,13 +12,42 @@ import javax.imageio.ImageIO
 
 import games.opengl.GLES2
 
+class FixedExecutionContextFuture[T](realFuture: Future[T], ec: ExecutionContext) extends Future[T] {
+  // Members declared in scala.concurrent.Awaitable
+  def ready(atMost: scala.concurrent.duration.Duration)(implicit permit: scala.concurrent.CanAwait): this.type = { realFuture.ready(atMost)(permit); this }
+  def result(atMost: scala.concurrent.duration.Duration)(implicit permit: scala.concurrent.CanAwait): T = realFuture.result(atMost)(permit)
+
+  // Members declared in scala.concurrent.Future
+  def isCompleted: Boolean = realFuture.isCompleted
+  def onComplete[U](f: scala.util.Try[T] => U)(implicit executor: scala.concurrent.ExecutionContext): Unit = realFuture.onComplete(f)(ec)
+  def value: Option[scala.util.Try[T]] = realFuture.value
+}
+
 object JvmUtils {
-  implicit val immediateExecutionContext = new ExecutionContext {
+  private val pendingTaskList = new ConcurrentLinkedQueue[() => Unit]
+
+  def wrapFuture[T](future: Future[T]): Future[T] = new FixedExecutionContextFuture(future, JvmUtils.immediateExecutionContext)
+
+  def doAsync[T](fun: => T)(implicit ec: ExecutionContext): Future[T] = {
+    val promise = Promise[T]
+
+    val prepare: Future[T] = Future { fun }(ec)
+    // The immediateExecutionContext is not necessary here, but as we are simply redirecting to other promises, the additional threading provides no gain
+    prepare.onSuccess { case retValue => JvmUtils.addPendingTask { () => promise.success(retValue) } }(JvmUtils.immediateExecutionContext)
+    prepare.onFailure { case t: Throwable => JvmUtils.addPendingTask { () => promise.failure(t) } }(JvmUtils.immediateExecutionContext)
+
+    wrapFuture(promise.future)
+  }
+
+  /**
+   * Trivial ExecutionContext that simply execute the Runnable immediately in the same thread (useful to make sure it happens
+   * on the OpenGL thread)
+   */
+  implicit val immediateExecutionContext: ExecutionContext = new ExecutionContext {
     def execute(runnable: Runnable): Unit = runnable.run()
     def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
   }
 
-  private val pendingTaskList = new ConcurrentLinkedQueue[() => Unit]
   /**
    * Flush all the pending tasks.
    * You don't need to explicitly use this method if you use the FrameListener loop system.
@@ -43,27 +72,11 @@ object JvmUtils {
     if (stream == null) throw new RuntimeException("Could not load resource " + res.name)
     stream
   }
-
-  private[games] var parallelExecutionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-
-  def setExecutionContext(ec: ExecutionContext): Unit = {
-    parallelExecutionContext = ec
-  }
 }
 
 trait UtilsImpl extends UtilsRequirements {
-  private def doAsync[T](fun: => T): Future[T] = {
-    val promise = Promise[T]
-
-    val prepare: Future[T] = Future { fun }(JvmUtils.parallelExecutionContext)
-    prepare.onSuccess { case retValue => JvmUtils.addPendingTask { () => promise.success(retValue) } }(JvmUtils.immediateExecutionContext)
-    prepare.onFailure { case t: Throwable => JvmUtils.addPendingTask { () => promise.failure(t) } }(JvmUtils.immediateExecutionContext)
-
-    promise.future
-  }
-
-  def getBinaryDataFromResource(res: games.Resource): scala.concurrent.Future[java.nio.ByteBuffer] = {
-    doAsync {
+  def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer] = {
+    JvmUtils.doAsync {
       val stream = JvmUtils.streamForResource(res)
       val byteStream = new ByteArrayOutputStream()
       val tmpData: Array[Byte] = new Array[Byte](4096) // 4KiB of temp data
@@ -84,8 +97,8 @@ trait UtilsImpl extends UtilsRequirements {
       byteBuffer
     }
   }
-  def getTextDataFromResource(res: games.Resource): scala.concurrent.Future[Array[String]] = {
-    doAsync {
+  def getTextDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[Array[String]] = {
+    JvmUtils.doAsync {
       val stream = JvmUtils.streamForResource(res)
       val streamReader = new InputStreamReader(stream)
       val reader = new BufferedReader(streamReader)
@@ -106,7 +119,7 @@ trait UtilsImpl extends UtilsRequirements {
       lines
     }
   }
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, preload: => Boolean = true)(implicit gl: games.opengl.GLES2): scala.concurrent.Future[Unit] = {
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, preload: => Boolean = true)(implicit gl: games.opengl.GLES2, ec: ExecutionContext): scala.concurrent.Future[Unit] = {
     val promise = Promise[Unit]
 
     Future {
@@ -155,7 +168,7 @@ trait UtilsImpl extends UtilsRequirements {
       } catch {
         case t: Throwable => JvmUtils.addPendingTask { () => promise.failure(t) }
       }
-    }(JvmUtils.parallelExecutionContext)
+    }
 
     promise.future
   }
