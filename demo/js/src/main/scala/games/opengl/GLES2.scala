@@ -15,7 +15,7 @@ import scala.scalajs.js.typedarray.TypedArrayBufferOps._
 
 // Utils
 
-private[games] object JsUtils {
+private[opengl] object JsUtils {
   private val typeRegex = js.Dynamic.newInstance(g.RegExp)("^\\[object\\s(.*)\\]$")
 
   /*
@@ -880,7 +880,8 @@ class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext) extends GLES2 {
   // Helper methods
 
   final def errorMessage(code: Int): String = {
-    val msg: String = g.WebGLDebugUtils.glEnumToString(code).asInstanceOf[String]
+    //val msg: String = g.WebGLDebugUtils.glEnumToString(code).asInstanceOf[String] // Not available
+    val msg: String = "Error code " + code
     msg
   }
 

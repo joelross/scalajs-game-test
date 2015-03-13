@@ -112,25 +112,13 @@ trait UtilsImpl extends UtilsRequirements {
     class FrameListenerLoopContext {
       var lastLoopTime: Double = JsUtils.now()
       var closed: Boolean = false
-      var dim: (Int, Int) = _
     }
 
     val ctx = new FrameListenerLoopContext
 
-    val renderingContext = JsUtils.getWebGLRenderingContext(fl.context)
-    val canvas = renderingContext.canvas
-
     def loop(timeStamp: js.Any): Unit = {
       if (!ctx.closed) {
         if (fl.continue()) {
-          // Check whether the canvas dimension has changed
-          val newDim = (canvas.width, canvas.height)
-          if (newDim != ctx.dim) {
-            ctx.dim = newDim
-            val (width, height) = newDim
-            fl.onChange(width, height)
-          }
-
           // Main loop call
           val currentTime = JsUtils.now()
           val diff = ((currentTime - ctx.lastLoopTime) / 1e3).toFloat
@@ -147,10 +135,6 @@ trait UtilsImpl extends UtilsRequirements {
 
     def loopInit(timeStamp: js.Any): Unit = {
       fl.onCreate()
-      val width = canvas.width
-      val height = canvas.height
-      ctx.dim = (width, height)
-      fl.onChange(width, height)
       loop(timeStamp)
     }
 

@@ -1,40 +1,60 @@
 package games.demoJVM
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import games.demo.Engine
 import java.io.FileInputStream
 import java.io.File
-import games.audio.VorbisDecoder
 import java.io.EOFException
-import games.audio._
-import games.Resource
+
+import org.lwjgl.opengl._
+
+import games._
+import games.math
 import games.math.Vector3f
+import games.opengl._
+import games.audio._
+
+import games.demo._
 
 object Launcher {
 
   def main(args: Array[String]): Unit = {
-    def printLine(m: String): Unit = {
-      println(m)
+    val glMajor = 3
+    val glMinor = 0
+    val width = 640
+    val height = 360
+    val title = "Scala.js-games"
+
+    val itf = new EngineInterface {
+      def printLine(m: String): Unit = {
+        println(m)
+      }
+      def getScreenDim(): (Int, Int) = {
+        val displayMode = Display.getDisplayMode()
+        val width = displayMode.getWidth()
+        val height = displayMode.getHeight()
+        (width, height)
+      }
+      def init(): (GLES2, Context) = {
+        val contextAttributes = new ContextAttribs(glMajor, glMinor)
+        Display.setDisplayMode(new DisplayMode(width, height))
+        Display.setVSyncEnabled(true)
+        Display.create(new PixelFormat, contextAttributes)
+        Display.setTitle(title)
+        val glContext: GLES2 = new GLES2LWJGL()
+        val audioContext: Context = new ALContext()
+        (glContext, audioContext)
+      }
+      def update(): Boolean = {
+        Display.update()
+        !Display.isCloseRequested()
+      }
+      def close(): Unit = {
+        Display.destroy()
+      }
     }
 
-    val audioContext: Context = new ALContext
-    printLine("Listener is at " + audioContext.listener.position + " and looking at " + audioContext.listener.orientation + " (up is at " + audioContext.listener.up + ")")
+    val engine = new Engine(itf)
 
-    val testResource = new Resource("/games/demo/test_stereo.ogg")
-
-    val testData = audioContext.createStreamingData(testResource)
-    val s = testData.createSource
-    s.onSuccess {
-      case s =>
-        printLine("Resource ready")
-        s.play
-    }
-    s.onFailure {
-      case t => printLine("Error: " + t.getMessage)
-    }
-
-    println("Press enter to exit")
-    System.in.read()
-    println("Client closing...")
+    Utils.startFrameListener(engine)
   }
 }

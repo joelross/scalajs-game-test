@@ -9,7 +9,7 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 import games.math.Vector3f
 
-class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.ArrayBuffer, outputNode: js.Dynamic) extends Source {
+class JsBufferedSource private[games] (ctx: WebAudioContext, buffer: js.typedarray.ArrayBuffer, outputNode: js.Dynamic) extends Source {
   private var sourceNode = ctx.webApi.createBufferSource()
   sourceNode.buffer = buffer
 
@@ -76,7 +76,7 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
   def playing: Boolean = isPlaying
 }
 
-class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[String], outputNode: js.Dynamic) extends Source {
+class JsStreamingSource private[games] (ctx: WebAudioContext, pathFuture: Future[String], outputNode: js.Dynamic) extends Source {
   private val promiseReady = Promise[Unit]
 
   private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
@@ -141,7 +141,7 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
   private[games] val ready = promiseReady.future
 }
 
-class JsSource3D private[games] (ctx: JsContext, source: AbstractSource, pannerNode: js.Dynamic) extends Source3D {
+class JsSource3D private[games] (ctx: WebAudioContext, source: AbstractSource, pannerNode: js.Dynamic) extends Source3D {
   private val positionData = new Vector3f(0, 0, 0)
 
   // Init

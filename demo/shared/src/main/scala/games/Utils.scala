@@ -12,7 +12,6 @@ trait FrameListener {
   def context: GLES2
 
   def onCreate(): Unit
-  def onChange(width: Int, height: Int): Unit
   def continue(): Boolean
   def onDraw(fe: FrameEvent): Unit
   def onClose(): Unit

@@ -9,7 +9,7 @@ import scala.concurrent.Future
 
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class JsBufferedData private[games] (ctx: JsContext, res: Resource) extends BufferedData {
+class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extends BufferedData {
   private val decodedDataReady = Promise[js.typedarray.ArrayBuffer]
 
   private val request = new dom.XMLHttpRequest()
@@ -47,7 +47,7 @@ class JsBufferedData private[games] (ctx: JsContext, res: Resource) extends Buff
   }
 }
 
-class JsStreamingData private[games] (ctx: JsContext, res: Resource) extends StreamingData {
+class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) extends StreamingData {
   private val streamReady = Promise[String]
 
   private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()

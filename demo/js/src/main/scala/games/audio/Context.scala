@@ -7,7 +7,7 @@ import games.math.Vector3f
 
 import js.Dynamic.{ global => g }
 
-class JsContext extends Context {
+class WebAudioContext extends Context {
 
   val classicAudioContext: js.UndefOr[js.Dynamic] = g.AudioContext
   val webKitAudioContext: js.UndefOr[js.Dynamic] = g.webkitAudioContext

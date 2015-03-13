@@ -193,20 +193,9 @@ trait UtilsImpl extends UtilsRequirements {
         var lastLoopTime: Long = System.nanoTime()
         fl.onCreate()
 
-        var dim = screenDim()
-        val (width, height) = dim
-        fl.onChange(width, height)
         while (fl.continue()) {
           // Execute the pending tasks
           JvmUtils.flushPendingTaskList()
-
-          // Check whether the screen dimension has changed
-          val newDim = screenDim()
-          if (newDim != dim) {
-            dim = newDim
-            val (width, height) = newDim
-            fl.onChange(width, height)
-          }
 
           // Main loop call
           val currentTime: Long = System.nanoTime()

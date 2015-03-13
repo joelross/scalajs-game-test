@@ -1,6 +1,7 @@
 package games.opengl
 
 import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer }
+import java.io.Closeable
 
 // Auxiliary components
 
@@ -11,7 +12,9 @@ class GLException(msg: String) extends RuntimeException(msg)
 
 // Main components
 
-trait GLES2 {
+trait GLES2 extends Closeable {
+
+  def close(): Unit = {}
 
   /* public API */
 
@@ -400,7 +403,7 @@ trait GLES2 {
   protected val tmpShort = GLES2.createShortBuffer(maxResultSize)
   protected val tmpInt = GLES2.createIntBuffer(maxResultSize)
   protected val tmpFloat = GLES2.createFloatBuffer(maxResultSize)
-  protected val tmpDouble = GLES2.createDoubleBuffer(maxResultSize)
+  //protected val tmpDouble = GLES2.createDoubleBuffer(maxResultSize) // TODO uncomment once https://github.com/scala-js/scala-js/issues/1532 is OK
 
   // Helper methods
 
