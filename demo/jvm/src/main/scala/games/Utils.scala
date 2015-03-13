@@ -44,7 +44,13 @@ object JvmUtils {
    * on the OpenGL thread)
    */
   implicit val immediateExecutionContext: ExecutionContext = new ExecutionContext {
-    def execute(runnable: Runnable): Unit = runnable.run()
+    def execute(runnable: Runnable): Unit = {
+      try {
+        runnable.run()
+      } catch {
+        case t: Throwable => this.reportFailure(t)
+      }
+    }
     def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
   }
 
