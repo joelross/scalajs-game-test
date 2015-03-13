@@ -12,7 +12,8 @@ import games.audio._
 abstract class EngineInterface {
   def printLine(msg: String): Unit
   def getScreenDim(): (Int, Int)
-  def init(): (GLES2, Context)
+  def initGL(): GLES2
+  def initAudio(): Context
   def update(): Boolean
   def close(): Unit
 }
@@ -37,9 +38,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   def onCreate(): Unit = {
     itf.printLine("Init...")
-    val (glContext, audioContext) = itf.init()
-    this.gl = new GLES2Debug(glContext) // Enable automatic error checking
-    this.audioContext = audioContext
+    this.gl = new GLES2Debug(itf.initGL()) // Enable automatic error checking
+    this.audioContext = itf.initAudio()
 
     // Prepare shaders
     val vertexSource = """
@@ -89,7 +89,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     verticesBuffer = gl.createBuffer()
     gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
     gl.bufferData(GLES2.ARRAY_BUFFER, verticesBufferData, GLES2.STATIC_DRAW)
-    gl.vertexAttribPointer(positionAttribLocation, 3, GLES2.FLOAT, false, 12, 0)
+    gl.vertexAttribPointer(positionAttribLocation, 3, GLES2.FLOAT, false, 3 * 4, 0) // 3 vertex, each vertex is 3 floats of 4 bytes
 
     val indicesBufferData = GLES2.createShortBuffer(3 * 1)
     indicesBufferData.put(0.toShort).put(1.toShort).put(2.toShort)
