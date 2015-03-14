@@ -32,18 +32,16 @@ object Launcher extends js.JSApp {
         (width, height)
       }
       def initGL(): GLES2 = {
-        val classicWebGLContext = canvas.getContext("webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]
-        val experimentalWebGLContext = canvas.getContext("experimental-webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]
-        val webGL: dom.raw.WebGLRenderingContext = classicWebGLContext.orElse(experimentalWebGLContext).getOrElse(throw new RuntimeException("WebGL not supported by the browser"))
-        val glContext: GLES2 = new GLES2WebGL(webGL)
+        val glContext: GLES2 = new GLES2WebGL(canvas)
         glContext
       }
       def initAudio(): Context = {
-        val audioContext: Context = new WebAudioContext
+        val audioContext: Context = new WebAudioContext()
         audioContext
       }
       def initKeyboard(): Keyboard = {
-        ???
+        val keyboard = new KeyboardJS()
+        keyboard
       }
       def update(): Boolean = true
       def close(): Unit = {}

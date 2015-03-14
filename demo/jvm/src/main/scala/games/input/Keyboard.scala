@@ -3,7 +3,7 @@ package games.input
 import org.lwjgl.input.{ Keyboard => LWJGLKey }
 
 object KeyboardLWJGL {
-  val keys = new KeyMapper[Int](
+  val mapper = new KeyMapper[Int](
     (Key.Space, LWJGLKey.KEY_SPACE),
     (Key.Apostrophe, LWJGLKey.KEY_APOSTROPHE),
     //(Key.Circumflex, LWJGLKey.KEY_CIRCUMFLEX), // seems buggy
@@ -131,7 +131,7 @@ class KeyboardLWJGL() extends Keyboard {
 
   def isKeyDown(key: games.input.Key): Boolean = {
     LWJGLKey.poll()
-    KeyboardLWJGL.keys.getForLocal(key) match {
+    KeyboardLWJGL.mapper.getForLocal(key) match {
       case Some(lwjglKeyCode) => LWJGLKey.isKeyDown(lwjglKeyCode)
       case None               => false // unsupported key
     }
@@ -140,7 +140,7 @@ class KeyboardLWJGL() extends Keyboard {
   def nextEvent(): Option[games.input.KeyboardEvent] = {
     if (LWJGLKey.next()) {
       val keyCode = LWJGLKey.getEventKey
-      KeyboardLWJGL.keys.getForRemote(keyCode) match {
+      KeyboardLWJGL.mapper.getForRemote(keyCode) match {
         case Some(key) => {
           val down = LWJGLKey.getEventKeyState
           Some(KeyboardEvent(key, down))

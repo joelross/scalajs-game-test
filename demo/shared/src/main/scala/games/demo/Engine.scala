@@ -112,7 +112,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   var indicesBuffer: Token.Buffer = _
   var positionAttribLocation: Int = _
   var colorUniformLocation: Token.UniformLocation = _
-  val triangleColor = new math.Vector3f(0, 0, 1)
+  val triangleColor1 = new math.Vector3f(0, 0, 1)
+  val triangleColor2 = new math.Vector3f(0, 1, 0)
 
   def onDraw(fe: games.FrameEvent): Unit = {
     def processKeyboard() {
@@ -132,7 +133,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.clear(GLES2.COLOR_BUFFER_BIT)
 
     gl.useProgram(program)
-    gl.uniform3f(colorUniformLocation, triangleColor)
+
+    gl.uniform3f(colorUniformLocation, if (keyboard.isKeyDown(Key.Space)) triangleColor1 else triangleColor2)
 
     gl.enableVertexAttribArray(positionAttribLocation)
     gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
