@@ -7,7 +7,9 @@ sealed abstract class Key
 object Key {
   case object Space extends Key
   case object Apostrophe extends Key
+  case object Circumflex extends Key
   case object Comma extends Key
+  case object Period extends Key
   case object Minus extends Key
   case object Slash extends Key
   case object N0 extends Key
@@ -48,11 +50,10 @@ object Key {
   case object X extends Key
   case object Y extends Key
   case object Z extends Key
-  case object Bracket extends Key // left/right?
+  case object BracketLeft extends Key
+  case object BracketRight extends Key
   case object BackSlash extends Key
   case object GraveAccent extends Key
-  case object World1 extends Key
-  case object World2 extends Key
   case object Escape extends Key
   case object Enter extends Key
   case object Tab extends Key
@@ -114,11 +115,16 @@ object Key {
   case object NumAdd extends Key
   case object NumEnter extends Key
   case object NumEqual extends Key
-  case object Shift extends Key // left/right?
-  case object Control extends Key // left/right?
-  case object Alt extends Key // left/right?
-  case object Super extends Key // left/right?
-  case object Menu extends Key
+  case object ShiftLeft extends Key
+  case object ShiftRight extends Key
+  case object ControlLeft extends Key
+  case object ControlRight extends Key
+  case object AltLeft extends Key
+  case object AltRight extends Key
+  case object SuperLeft extends Key
+  case object SuperRight extends Key
+  case object MenuLeft extends Key
+  case object MenuRight extends Key
 }
 
 case class KeyboardEvent(key: Key, down: Boolean)
@@ -126,6 +132,6 @@ case class KeyboardEvent(key: Key, down: Boolean)
 abstract class Keyboard extends Closeable {
   def isKeyDown(key: Key): Boolean
   def nextEvent(): Option[KeyboardEvent]
-  
+
   def close(): Unit = {}
 }

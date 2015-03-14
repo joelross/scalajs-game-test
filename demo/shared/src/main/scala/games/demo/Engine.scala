@@ -8,12 +8,14 @@ import games.math
 import games.math.Vector3f
 import games.opengl._
 import games.audio._
+import games.input._
 
 abstract class EngineInterface {
   def printLine(msg: String): Unit
   def getScreenDim(): (Int, Int)
   def initGL(): GLES2
   def initAudio(): Context
+  def initKeyboard(): Keyboard
   def update(): Boolean
   def close(): Unit
 }
@@ -25,6 +27,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var gl: GLES2 = _
   private var audioContext: Context = _
+  private var keyboard: Keyboard = _
 
   def continue(): Boolean = continueCond
 
@@ -34,12 +37,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     gl.close()
     audioContext.close()
+    keyboard.close()
   }
 
   def onCreate(): Unit = {
     itf.printLine("Init...")
     this.gl = new GLES2Debug(itf.initGL()) // Enable automatic error checking
     this.audioContext = itf.initAudio()
+    this.keyboard = itf.initKeyboard()
 
     // Prepare shaders
     val vertexSource = """
@@ -110,6 +115,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   val triangleColor = new math.Vector3f(0, 0, 1)
 
   def onDraw(fe: games.FrameEvent): Unit = {
+    def processKeyboard() {
+      val event = keyboard.nextEvent()
+      event match {
+        case Some(KeyboardEvent(key, down)) =>
+          println("Key " + key + (if (down) " is down" else " is up")); processKeyboard()
+        case None => // nothing to do
+      }
+    }
+
+    processKeyboard()
+
     val (width, height) = itf.getScreenDim()
     gl.viewport(0, 0, width, height)
 

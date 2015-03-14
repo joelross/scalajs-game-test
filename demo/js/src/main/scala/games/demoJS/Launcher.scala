@@ -9,6 +9,7 @@ import games.math
 import games.math.Vector3f
 import games.opengl._
 import games.audio._
+import games.input._
 
 import games.demo._
 
@@ -40,6 +41,9 @@ object Launcher extends js.JSApp {
       def initAudio(): Context = {
         val audioContext: Context = new WebAudioContext
         audioContext
+      }
+      def initKeyboard(): Keyboard = {
+        ???
       }
       def update(): Boolean = true
       def close(): Unit = {}

@@ -12,6 +12,7 @@ import games.math
 import games.math.Vector3f
 import games.opengl._
 import games.audio._
+import games.input._
 
 import games.demo._
 
@@ -46,6 +47,10 @@ object Launcher {
       def initAudio(): Context = {
         val audioContext: Context = new ALContext()
         audioContext
+      }
+      def initKeyboard(): Keyboard = {
+        val keyboard = new KeyboardLWJGL()
+        keyboard
       }
       def update(): Boolean = {
         Display.update()
