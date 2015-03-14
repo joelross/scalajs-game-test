@@ -2,16 +2,8 @@ package games.input
 
 import org.lwjgl.input.{ Keyboard => LWJGLKey }
 
-class BiMap[A, B](entries: (A, B)*) {
-  private val map = entries.toMap
-  private val reverseMap = entries.map { case (a, b) => (b, a) }.toMap
-
-  def getForKey(a: A): Option[B] = map.get(a)
-  def getForValue(b: B): Option[A] = reverseMap.get(b)
-}
-
 object KeyboardLWJGL {
-  val keys = new BiMap[Key, Int](
+  val keys = new KeyMapper[Int](
     (Key.Space, LWJGLKey.KEY_SPACE),
     (Key.Apostrophe, LWJGLKey.KEY_APOSTROPHE),
     //(Key.Circumflex, LWJGLKey.KEY_CIRCUMFLEX), // seems buggy
@@ -139,19 +131,22 @@ class KeyboardLWJGL() extends Keyboard {
 
   def isKeyDown(key: games.input.Key): Boolean = {
     LWJGLKey.poll()
-    LWJGLKey.isKeyDown(KeyboardLWJGL.keys.getForKey(key).get)
+    KeyboardLWJGL.keys.getForLocal(key) match {
+      case Some(lwjglKeyCode) => LWJGLKey.isKeyDown(lwjglKeyCode)
+      case None               => false // unsupported key
+    }
   }
 
   def nextEvent(): Option[games.input.KeyboardEvent] = {
     if (LWJGLKey.next()) {
       val keyCode = LWJGLKey.getEventKey
-      KeyboardLWJGL.keys.getForValue(keyCode) match {
+      KeyboardLWJGL.keys.getForRemote(keyCode) match {
         case Some(key) => {
           val down = LWJGLKey.getEventKeyState
           Some(KeyboardEvent(key, down))
         }
         case None => {
-          nextEvent() // skip, go to the next event
+          nextEvent() // unsupported key, skip to the next event
         }
       }
     } else {

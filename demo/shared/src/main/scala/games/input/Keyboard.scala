@@ -135,3 +135,11 @@ abstract class Keyboard extends Closeable {
 
   def close(): Unit = {}
 }
+
+private[games] class KeyMapper[T](entries: (Key, T)*) {
+  private val map = entries.toMap
+  private val reverseMap = entries.map { case (a, b) => (b, a) }.toMap
+
+  def getForLocal(loc: Key): Option[T] = map.get(loc)
+  def getForRemote(rem: T): Option[Key] = reverseMap.get(rem)
+}
