@@ -26,7 +26,7 @@ object KeyboardJS {
     (Key.N6, 54),
     (Key.N7, 55),
     (Key.N8, 56),
-    (Key.N9, 777),
+    (Key.N9, 57),
     (Key.SemiColon, 59), // According to Oryol
     (Key.Equal, 64), // According to Oryol
     (Key.A, 65),
@@ -119,7 +119,7 @@ object KeyboardJS {
     (Key.NumMultiply, 106),
     (Key.NumSubstract, 109),
     (Key.NumAdd, 107),
-    (Key.NumEnter, 13),
+    //(Key.NumEnter, 13), // Duplicate keyCode with key.Enter
     //(Key.NumEqual, 777),
     (Key.ShiftLeft, 16), // location=1
     (Key.ShiftRight, 16), // location=2
@@ -193,7 +193,6 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
     }
   }
 
-  js.Dynamic.global.console.log("Init on element", element)
   element.addEventListener("keyup", onKeyUp, true)
   element.addEventListener("keydown", onKeyDown, true)
 
