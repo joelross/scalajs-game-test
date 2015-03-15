@@ -127,7 +127,7 @@ object KeyboardJS {
     (Key.ControlRight, 17), // location=2
     (Key.AltLeft, 18), // location=1
     (Key.AltRight, 18), // location=2 // not able to test
-    //(Key.AltGrLeft, 225) // no location
+    //(Key.AltGrLeft, 225) // no location (reported by firefox?)
     (Key.SuperLeft, 91), // location=1 // 224 according to oryol
     (Key.SuperRight, 91) // location=2
     //(Key.MenuLeft, 777), // not able to test

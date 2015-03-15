@@ -1,6 +1,8 @@
 package games.input
 
-class MouseLWJGL extends Mouse {
+import org.lwjgl.input.{ Mouse => LWJGLMouse }
+
+class MouseLWJGL() extends Mouse {
   def deltaPosition: games.input.Position = ???
   def locked: Boolean = ???
   def locked_=(locked: Boolean): Unit = ???

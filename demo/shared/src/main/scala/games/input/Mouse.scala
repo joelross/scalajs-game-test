@@ -12,12 +12,17 @@ object MouseButton {
 
 case class Position(x: Int, y: Int)
 
+case class MouseButtonEvent(button: MouseButton, down: Boolean)
+
 abstract class Mouse extends Closeable {
   def position: Position
   def deltaPosition: Position
-  
-  def locked: Boolean 
+
+  def locked: Boolean
   def locked_=(locked: Boolean): Unit
-  
+
+  def isButtonDown(button: MouseButton): Boolean
+  def nextEvent(): Option[MouseButtonEvent]
+
   def close(): Unit = {}
 }
