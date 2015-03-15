@@ -89,7 +89,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
 
     val (posX, posY) = if (offX.isDefined || offY.isDefined) { // For WebKit browsers
       (offX.get, offY.get)
-    } else { // For... the others
+    } else { // For... the others. From jQuery: https://github.com/jquery/jquery/blob/2.1.3/src/offset.js#L107-L108
       val bounding = element.getBoundingClientRect()
       val window = js.Dynamic.global.window
 
