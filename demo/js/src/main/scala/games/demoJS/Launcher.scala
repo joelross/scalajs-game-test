@@ -22,9 +22,10 @@ object Launcher extends js.JSApp {
 
     val itf = new EngineInterface {
       def printLine(msg: String): Unit = {
-        val line = dom.document.createElement("p")
-        line.innerHTML = msg
-        output.appendChild(line)
+        //        val line = dom.document.createElement("p")
+        //        line.innerHTML = msg
+        //        output.appendChild(line)
+        println(msg)
       }
       def getScreenDim(): (Int, Int) = {
         val width = canvas.width

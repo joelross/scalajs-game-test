@@ -124,7 +124,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val event = keyboard.nextEvent()
       event match {
         case Some(KeyboardEvent(key, down)) => {
-          println("Key " + key + (if (down) " is down" else " is up"))
+          itf.printLine("Key " + key + (if (down) " is down" else " is up"))
 
           if (down) key match {
             case Key.L      => mouse.locked = !mouse.locked
@@ -143,10 +143,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val event = mouse.nextEvent()
       event match {
         case Some(WheelEvent(wheel)) => {
-          println("Wheel rotated " + wheel)
+          itf.printLine("Wheel rotated " + wheel)
         }
         case Some(ButtonEvent(button, down)) => {
-          println("Button " + button + (if (down) " is down" else " is up"))
+          itf.printLine("Button " + button + (if (down) " is down" else " is up"))
 
           if (down) button match {
             case _ => // nothing to do
