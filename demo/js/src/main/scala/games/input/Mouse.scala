@@ -87,7 +87,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     val offX = ev.offsetX.asInstanceOf[js.UndefOr[Int]]
     val offY = ev.offsetY.asInstanceOf[js.UndefOr[Int]]
 
-    val (posX, posY) = if (offX.isDefined || offY.isDefined) { // For WebKit browsers
+    val (posX, posY) = if (offX.isDefined && offY.isDefined) { // For WebKit browsers
       (offX.get, offY.get)
     } else { // For... the others. From jQuery: https://github.com/jquery/jquery/blob/2.1.3/src/offset.js#L107-L108
       val bounding = element.getBoundingClientRect()
