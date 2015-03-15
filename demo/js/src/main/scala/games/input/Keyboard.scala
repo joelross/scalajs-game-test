@@ -7,7 +7,7 @@ import scala.collection.mutable.Queue
 import scala.collection.mutable.Set
 
 object KeyboardJS {
-  val keyCodeMapper = new KeyMapper[Int](
+  val keyCodeMapper = new Keyboard.KeyMapper[Int](
     (Key.Space, 32),
     (Key.Apostrophe, 219), // Chrome
     (Key.Apostrophe, 222), // Firefox
@@ -89,7 +89,7 @@ object KeyboardJS {
     (Key.F9, 120),
     (Key.F10, 121),
     (Key.F11, 122),
-    (Key.F12, 129),
+    (Key.F12, 123),
     // Unable to test F13 to F25
     /*(Key.F13, 777),
     (Key.F14, 777),
@@ -145,7 +145,10 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
   private def selectLocatedKey(leftKey: Key, rightKey: Key, location: Int) = location match {
     case 1 => leftKey
     case 2 => rightKey
-    case x => throw new RuntimeException("Unknown location " + x + " for key")
+    case x => {
+      println("Unknown location " + x + " for key " + leftKey + " or " + rightKey)
+      leftKey // just default to the left one
+    }
   }
 
   private def locateKeyIfNecessary(key: Key, ev: dom.raw.KeyboardEvent): Key = key match {
@@ -179,6 +182,8 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
   }
 
   private val onKeyUp = (e: dom.raw.Event) => {
+    e.preventDefault()
+
     val ev = e.asInstanceOf[dom.raw.KeyboardEvent]
     keyFromEvent(ev) match {
       case Some(key) => keyUp(key)
@@ -186,6 +191,8 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
     }
   }
   private val onKeyDown = (e: dom.raw.Event) => {
+    e.preventDefault()
+
     val ev = e.asInstanceOf[dom.raw.KeyboardEvent]
     keyFromEvent(ev) match {
       case Some(key) => keyDown(key)

@@ -4,6 +4,10 @@ import java.io.Closeable
 
 sealed abstract class Key
 
+object Keyboard {
+  private[games] type KeyMapper[T] = BiMap[Key, T]
+}
+
 object Key {
   case object Space extends Key
   case object Apostrophe extends Key
@@ -134,12 +138,4 @@ abstract class Keyboard extends Closeable {
   def nextEvent(): Option[KeyboardEvent]
 
   def close(): Unit = {}
-}
-
-private[games] class KeyMapper[T](entries: (Key, T)*) {
-  private val map = entries.toMap
-  private val reverseMap = entries.map { case (a, b) => (b, a) }.toMap
-
-  def getForLocal(loc: Key): Option[T] = map.get(loc)
-  def getForRemote(rem: T): Option[Key] = reverseMap.get(rem)
 }

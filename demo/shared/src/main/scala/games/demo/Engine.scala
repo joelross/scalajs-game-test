@@ -16,6 +16,7 @@ abstract class EngineInterface {
   def initGL(): GLES2
   def initAudio(): Context
   def initKeyboard(): Keyboard
+  def initMouse(): Mouse
   def update(): Boolean
   def close(): Unit
 }
@@ -28,6 +29,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var gl: GLES2 = _
   private var audioContext: Context = _
   private var keyboard: Keyboard = _
+  private var mouse: Mouse = _
 
   def continue(): Boolean = continueCond
 
@@ -35,9 +37,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     itf.printLine("Closing...")
     itf.close()
 
-    gl.close()
-    audioContext.close()
+    mouse.close()
     keyboard.close()
+    audioContext.close()
+    gl.close()
   }
 
   def onCreate(): Unit = {
@@ -45,6 +48,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.gl = new GLES2Debug(itf.initGL()) // Enable automatic error checking
     this.audioContext = itf.initAudio()
     this.keyboard = itf.initKeyboard()
+    this.mouse = itf.initMouse()
 
     // Prepare shaders
     val vertexSource = """
@@ -119,13 +123,41 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     def processKeyboard() {
       val event = keyboard.nextEvent()
       event match {
-        case Some(KeyboardEvent(key, down)) =>
-          println("Key " + key + (if (down) " is down" else " is up")); processKeyboard()
+        case Some(KeyboardEvent(key, down)) => {
+          println("Key " + key + (if (down) " is down" else " is up"))
+
+          if (down) key match {
+            case Key.L      => mouse.locked = !mouse.locked
+            case Key.Escape => continueCond = false
+            case _          => // nothing to do
+          }
+
+          processKeyboard()
+        }
         case None => // nothing to do
       }
     }
-
     processKeyboard()
+
+    def processMouse() {
+      val event = mouse.nextEvent()
+      event match {
+        case Some(WheelEvent(wheel)) => {
+          println("Wheel rotated " + wheel)
+        }
+        case Some(ButtonEvent(button, down)) => {
+          println("Button " + button + (if (down) " is down" else " is up"))
+
+          if (down) button match {
+            case _ => // nothing to do
+          }
+
+          processMouse()
+        }
+        case None => // nothing to do
+      }
+    }
+    processMouse()
 
     val (width, height) = itf.getScreenDim()
     gl.viewport(0, 0, width, height)
@@ -141,6 +173,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.drawElements(GLES2.TRIANGLES, 3, GLES2.UNSIGNED_SHORT, 0)
     gl.disableVertexAttribArray(positionAttribLocation)
 
-    continueCond = itf.update()
+    continueCond = continueCond && itf.update()
   }
 }

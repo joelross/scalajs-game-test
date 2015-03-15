@@ -52,6 +52,10 @@ object Launcher {
         val keyboard = new KeyboardLWJGL()
         keyboard
       }
+      def initMouse(): Mouse = {
+        val mouse = new MouseLWJGL()
+        mouse
+      }
       def update(): Boolean = {
         Display.update()
         !Display.isCloseRequested()

@@ -43,6 +43,10 @@ object Launcher extends js.JSApp {
         val keyboard = new KeyboardJS()
         keyboard
       }
+      def initMouse(): Mouse = {
+        val mouse = new MouseJS(canvas)
+        mouse
+      }
       def update(): Boolean = true
       def close(): Unit = {}
     }
