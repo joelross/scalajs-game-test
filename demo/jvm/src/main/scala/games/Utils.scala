@@ -139,7 +139,7 @@ trait UtilsImpl extends UtilsRequirements {
       byteBuffer.rewind
 
       (width, height, byteBuffer)
-    }.map {
+    }.map { // Execute this part with the openglExecutionContext instead of the standard one
       case (width, height, byteBuffer) =>
         if (!preload) throw new RuntimeException("Texture loading cancelled by user")
 
