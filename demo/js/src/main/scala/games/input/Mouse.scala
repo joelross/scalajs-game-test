@@ -68,7 +68,7 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
   }
   private val onMouseMove: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    connector.flushUserEventTasks()
+    //connector.flushUserEventTasks() // Apparently, a mouse move is not considered as a user gesture
 
     val ev = e.asInstanceOf[js.Dynamic]
 

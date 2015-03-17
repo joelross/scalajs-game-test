@@ -32,12 +32,12 @@ class MouseLWJGL() extends Mouse {
   def position: games.input.Position = {
     val x = LWJGLMouse.getX()
     val y = LWJGLMouse.getY()
-    Position(x, y)
+    Position(x, org.lwjgl.opengl.Display.getDisplayMode().getHeight() - y)
   }
   def deltaPosition: games.input.Position = {
     val dx = LWJGLMouse.getDX()
     val dy = LWJGLMouse.getDY()
-    Position(dx, dy)
+    Position(dx, -dy)
   }
 
   def locked: Boolean = LWJGLMouse.isGrabbed()

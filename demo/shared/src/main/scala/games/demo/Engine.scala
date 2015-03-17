@@ -150,7 +150,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           itf.printLine("Button " + button + (if (down) " is down" else " is up"))
 
           if (down) button match {
-            case _ => // nothing to do
+            case Button.Left => itf.printLine("Mouse is at " + mouse.position.x + "x" + mouse.position.y + " (display is " + gl.display.width + "x" + gl.display.height + ")")
+            case _           => // nothing to do
           }
 
           processMouse()
@@ -159,6 +160,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
     processMouse()
+
+    if (mouse.isButtonDown(Button.Right)) {
+      val delta = mouse.deltaPosition
+      if (delta != Position(0, 0)) itf.printLine("Mouse has moved " + delta.x + "x" + delta.y + " px")
+    }
 
     val (width, height) = itf.getScreenDim()
     gl.viewport(0, 0, width, height)
