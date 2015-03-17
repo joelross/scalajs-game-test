@@ -6,6 +6,8 @@ import org.scalajs.dom
 import scala.collection.mutable.Queue
 import scala.collection.mutable.Set
 
+import games.JsUtils
+
 object MouseJS {
   val mapper = new Mouse.ButtonMapper[Int](
     (Button.Left, 0),
@@ -26,9 +28,9 @@ object MouseJS {
   }
 }
 
-class MouseJS(element: js.Dynamic) extends Mouse {
-  def this() = this(dom.document.asInstanceOf[js.Dynamic])
-  def this(html: dom.raw.HTMLElement) = this(html.asInstanceOf[js.Dynamic])
+class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mouse {
+  def this(connector: games.JsEventConnector) = this(dom.document.asInstanceOf[js.Dynamic], connector)
+  def this(html: dom.raw.HTMLElement, connector: games.JsEventConnector) = this(html.asInstanceOf[js.Dynamic], connector)
 
   private var isLocked = false
   private var mouseInside = false
@@ -38,23 +40,15 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   private val eventQueue: Queue[MouseEvent] = Queue()
   private val downButtons: Set[Button] = Set()
 
-  private def getOptional[T](el: js.Dynamic, fields: String*): Option[T] = {
-    def getOptionalJS(fields: String*): js.UndefOr[T] = {
-      if (fields.isEmpty) js.undefined
-      else el.selectDynamic(fields.head).asInstanceOf[js.UndefOr[T]].orElse(getOptionalJS(fields.tail: _*))
-    }
-
-    getOptionalJS(fields: _*).toOption
-  }
-
   private def buttonFromEvent(ev: dom.raw.MouseEvent): Button = {
     val eventButton = ev.button.asInstanceOf[Int]
     val button = MouseJS.getForRemote(eventButton)
     button
   }
 
-  private val onMouseUp = (e: dom.raw.MouseEvent) => {
+  private val onMouseUp: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
+    connector.flushUserEventTasks()
 
     val button = buttonFromEvent(e)
     if (this.isButtonDown(button)) {
@@ -62,8 +56,9 @@ class MouseJS(element: js.Dynamic) extends Mouse {
       eventQueue += ButtonEvent(button, false)
     }
   }
-  private val onMouseDown = (e: dom.raw.MouseEvent) => {
+  private val onMouseDown: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
+    connector.flushUserEventTasks()
 
     val button = buttonFromEvent(e)
     if (!this.isButtonDown(button)) {
@@ -71,14 +66,15 @@ class MouseJS(element: js.Dynamic) extends Mouse {
       eventQueue += ButtonEvent(button, true)
     }
   }
-  private val onMouseMove = (e: dom.raw.MouseEvent) => {
+  private val onMouseMove: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
+    connector.flushUserEventTasks()
 
     val ev = e.asInstanceOf[js.Dynamic]
 
     // Get relative position
-    val movX = getOptional[Int](ev, "movementX", "webkitMovementX", "mozMovementX")
-    val movY = getOptional[Int](ev, "movementY", "webkitMovementY", "mozMovementY")
+    val movX = JsUtils.getOptional[Int](ev, "movementX", "webkitMovementX", "mozMovementX")
+    val movY = JsUtils.getOptional[Int](ev, "movementY", "webkitMovementY", "mozMovementY")
 
     dx = movX.getOrElse(0)
     dy = movY.getOrElse(0)
@@ -108,14 +104,22 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     x = posX
     y = posY
   }
-  private val onMouseOver = (e: dom.raw.MouseEvent) => {
+  private val onMouseOver: js.Function = (e: dom.raw.MouseEvent) => {
+    e.preventDefault()
+    connector.flushUserEventTasks()
+
     mouseInside = true
   }
-  private val onMouseOut = (e: dom.raw.MouseEvent) => {
+  private val onMouseOut: js.Function = (e: dom.raw.MouseEvent) => {
+    e.preventDefault()
+    connector.flushUserEventTasks()
+
     mouseInside = false
   }
-  private val onMouseWheel = (e: dom.raw.WheelEvent) => {
+  private val onMouseWheel: js.Function = (e: dom.raw.WheelEvent) => {
     e.preventDefault()
+    connector.flushUserEventTasks()
+
     val ev = e.asInstanceOf[js.Dynamic]
 
     val wheelX = ev.wheelDeltaX.asInstanceOf[Int]
@@ -131,8 +135,10 @@ class MouseJS(element: js.Dynamic) extends Mouse {
       eventQueue += WheelEvent(Wheel.Right)
     }
   }
-  private val onFirefoxMouseWheel = (e: dom.raw.WheelEvent) => {
+  private val onFirefoxMouseWheel: js.Function = (e: dom.raw.WheelEvent) => {
     e.preventDefault()
+    connector.flushUserEventTasks()
+
     val ev = e.asInstanceOf[js.Dynamic]
 
     val axis = ev.axis.asInstanceOf[Int]
@@ -145,7 +151,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     }
   }
 
-  private val onContextMenu = (e: dom.raw.Event) => false // disable right-click context-menu
+  private val onContextMenu: js.Function = (e: dom.raw.Event) => false // disable right-click context-menu
 
   element.addEventListener("mouseup", onMouseUp, true)
   element.addEventListener("mousedown", onMouseDown, true)
@@ -180,17 +186,11 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     delta
   }
 
-  private def featureUnsupported(feature: String): js.Function = {
-    () => { println("Feature " + feature + " not supported") }
-  }
+  val lockRequest = JsUtils.getOptional[js.Dynamic](element, "requestPointerLock", "webkitRequestPointerLock", "mozRequestPointerLock")
+  val lockExit = JsUtils.getOptional[js.Dynamic](element, "exitPointerLock", "webkitExitPointerLock", "mozExitPointerLock")
 
-  val fullScreen = getOptional[js.Dynamic](element, "requestFullscreen", "webkitRequestFullscreen", "mozRequestFullscreen", "mozRequestFullScreen")
-  val lockRequest = getOptional[js.Dynamic](element, "requestPointerLock", "webkitRequestPointerLock", "mozRequestPointerLock")
-  val lockExit = getOptional[js.Dynamic](element, "exitPointerLock", "webkitExitPointerLock", "mozExitPointerLock")
-
-  element.fullScreen = fullScreen.getOrElse(featureUnsupported("Fullscreen"))
-  element.lockRequest = lockRequest.getOrElse(featureUnsupported("Pointer Lock (Request)"))
-  element.lockExit = lockExit.getOrElse(featureUnsupported("Pointer Lock (Exit)"))
+  element.lockRequest = lockRequest.getOrElse(JsUtils.featureUnsupportedFunction("Pointer Lock (Request)"))
+  element.lockExit = lockExit.getOrElse(JsUtils.featureUnsupportedFunction("Pointer Lock (Exit)"))
 
   def locked: Boolean = {
     isLocked

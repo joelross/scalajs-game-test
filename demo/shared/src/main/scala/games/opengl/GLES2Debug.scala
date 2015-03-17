@@ -22,6 +22,8 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
     ogl.differentPrograms(p1, p2)
   }
 
+  final def display: Display = ogl.display
+
   // Checked methods
 
   final def activeTexture(texture: Int): Unit = {

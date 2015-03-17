@@ -7,31 +7,15 @@ import org.scalajs.dom
 import scala.scalajs.js
 import js.Dynamic.{ global => g }
 
+import scala.concurrent.{ Promise, Future, ExecutionContext }
+
+import games.JsUtils
+
 //import scala.scalajs.js.typedarray.TypedArrayBufferOps
 import scala.scalajs.js.typedarray.TypedArrayBufferOps._
 
 // See https://github.com/scala-js/scala-js-dom/blob/master/src/main/scala/org/scalajs/dom/WebGL.scala for documentation
 // about the WebGL DOM for ScalaJS
-
-// Utils
-
-private[opengl] object JsUtils {
-  private val typeRegex = js.Dynamic.newInstance(g.RegExp)("^\\[object\\s(.*)\\]$")
-
-  /*
-   * Return the type of the JavaScript object as a String. Examples:
-   * 1.5 -> Number
-   * true -> Boolean
-   * "Hello" -> String
-   * null -> Null
-   */
-  def typeName(jsObj: js.Any): String = {
-    val fullName = g.Object.prototype.selectDynamic("toString").call(jsObj).asInstanceOf[String]
-    val execArray = typeRegex.exec(fullName).asInstanceOf[js.Array[String]]
-    val name = execArray(1)
-    name
-  }
-}
 
 // Auxiliary components
 
@@ -87,14 +71,97 @@ object Token {
 
 // Main componenents
 
-class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext) extends GLES2 {
-  def this(canvas: dom.html.Canvas) = {
-    this((canvas.getContext("webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).orElse(canvas.getContext("experimental-webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).getOrElse(throw new RuntimeException("WebGL not supported by the browser")))
+class DisplayGLES2(gl: GLES2WebGL) extends Display {
+
+  private val onFullscreenChange: js.Function = (e: js.Dynamic) => {
+    // nothing to do?
+  }
+  private val onFullscreenError: js.Function = (e: js.Dynamic) => {
+    // nothing to do?
+  }
+
+  // Init
+  private val (canvas, document) = {
+    val canvas = gl.getWebGLRenderingContext().canvas.asInstanceOf[js.Dynamic]
+    val document = dom.document.asInstanceOf[js.Dynamic]
+
+    val fullscreenRequest = JsUtils.getOptional[js.Dynamic](canvas, "requestFullscreen", "webkitRequestFullscreen", "mozRequestFullscreen", "mozRequestFullScreen")
+    val fullscreenExit = JsUtils.getOptional[js.Dynamic](document, "exitFullscreen", "webkitCancelFullScreen", "mozCancelFullScreen")
+
+    canvas.fullscreenRequest = fullscreenRequest.getOrElse(JsUtils.featureUnsupportedFunction("Fullscreen (Request)"))
+    document.fullscreenExit = fullscreenExit.getOrElse(JsUtils.featureUnsupportedFunction("Fullscreen (Exit)"))
+
+    document.addEventListener("fullscreenchange", onFullscreenChange, true)
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange, true)
+    document.addEventListener("mozfullscreenchange", onFullscreenChange, true)
+    document.addEventListener("MSFullscreenChange", onFullscreenChange, true)
+
+    document.addEventListener("fullscreenerror", onFullscreenError, true)
+    document.addEventListener("webkitfullscreenerror", onFullscreenError, true)
+    document.addEventListener("mozfullscreenerror", onFullscreenError, true)
+    document.addEventListener("MSFullscreenError", onFullscreenError, true)
+
+    (canvas, document)
+  }
+
+  private var canvasPrevDim: (Int, Int) = (canvas.width.asInstanceOf[Int], canvas.height.asInstanceOf[Int])
+
+  def fullscreen: Boolean = {
+    val element = JsUtils.getOptional[js.Dynamic](document, "fullscreenElement", "webkitFullscreenElement", "mozFullScreenElement")
+    element match {
+      case Some(el) => el == canvas
+      case None     => false
+    }
+  }
+  def fullscreen_=(fullscreen: Boolean): Unit =
+    if (fullscreen && !this.fullscreen) {
+      canvasPrevDim = (canvas.width.asInstanceOf[Int], canvas.height.asInstanceOf[Int])
+      Future {
+        val screen = js.Dynamic.global.screen
+        canvas.width = screen.width
+        canvas.height = screen.height
+
+        canvas.fullscreenRequest()
+      }(gl.getEventConnector().userEventExecutionContext)
+    } else if (!fullscreen && this.fullscreen) {
+      Future {
+        canvas.width = canvasPrevDim._1
+        canvas.height = canvasPrevDim._2
+
+        document.fullscreenExit()
+      }(gl.getEventConnector().userEventExecutionContext)
+    }
+
+  override def close(): Unit = {
+    this.fullscreen = false
+
+    document.removeEventListener("fullscreenchange", onFullscreenChange, true)
+    document.removeEventListener("webkitfullscreenchange", onFullscreenChange, true)
+    document.removeEventListener("mozfullscreenchange", onFullscreenChange, true)
+    document.removeEventListener("MSFullscreenChange", onFullscreenChange, true)
+
+    document.removeEventListener("fullscreenerror", onFullscreenError, true)
+    document.removeEventListener("webkitfullscreenerror", onFullscreenError, true)
+    document.removeEventListener("mozfullscreenerror", onFullscreenError, true)
+    document.removeEventListener("MSFullscreenError", onFullscreenError, true)
+  }
+}
+
+class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext, connector: games.JsEventConnector) extends GLES2 {
+  def this(canvas: dom.html.Canvas, connector: games.JsEventConnector) = {
+    this((canvas.getContext("webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).orElse(canvas.getContext("experimental-webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).getOrElse(throw new RuntimeException("WebGL not supported by the browser")), connector)
+  }
+
+  final val display: Display = new DisplayGLES2(this)
+
+  override def close(): Unit = {
+    display.close()
   }
 
   /* JS Specific */
 
   final def getWebGLRenderingContext(): dom.raw.WebGLRenderingContext = webGL
+  final def getEventConnector(): games.JsEventConnector = connector
 
   /* public API */
 

@@ -8,6 +8,34 @@ import java.nio.ByteBuffer
 import games.opengl.GLES2
 import games.opengl.GLES2WebGL
 import games.opengl.GLES2Debug
+import scala.collection.mutable.Queue
+
+class UserEventExecutionContext(connector: JsEventConnector) extends ExecutionContext {
+  def execute(runnable: Runnable): Unit = connector.addUserEventTask(runnable)
+  def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
+}
+
+class JsEventConnector {
+  private val userEventTasks: Queue[Runnable] = Queue()
+
+  def flushUserEventTasks(): Unit = {
+    userEventTasks.foreach { runnable =>
+      try {
+        runnable.run()
+      } catch {
+        case t: Throwable => userEventExecutionContext.reportFailure(t)
+      }
+    }
+
+    userEventTasks.clear()
+  }
+
+  def addUserEventTask(runnable: Runnable): Unit = {
+    userEventTasks += runnable
+  }
+
+  val userEventExecutionContext: ExecutionContext = new UserEventExecutionContext(this)
+}
 
 object JsUtils {
   private var relativeResourcePath: Option[String] = None
@@ -28,6 +56,35 @@ object JsUtils {
     case gles2webgl: GLES2WebGL => gles2webgl.getWebGLRenderingContext()
     case gles2debug: GLES2Debug => getWebGLRenderingContext(gles2debug.getInternalContext())
     case _                      => throw new RuntimeException("Could not retrieve the WebGLRenderingContext from GLES2")
+  }
+
+  def getOptional[T](el: js.Dynamic, fields: String*): Option[T] = {
+    def getOptionalJS(fields: String*): js.UndefOr[T] = {
+      if (fields.isEmpty) js.undefined
+      else el.selectDynamic(fields.head).asInstanceOf[js.UndefOr[T]].orElse(getOptionalJS(fields.tail: _*))
+    }
+
+    getOptionalJS(fields: _*).toOption
+  }
+
+  def featureUnsupportedFunction(feature: String): js.Function = {
+    () => { println("Feature " + feature + " not supported") }
+  }
+
+  private val typeRegex = js.Dynamic.newInstance(g.RegExp)("^\\[object\\s(.*)\\]$")
+
+  /*
+   * Return the type of the JavaScript object as a String. Examples:
+   * 1.5 -> Number
+   * true -> Boolean
+   * "Hello" -> String
+   * null -> Null
+   */
+  def typeName(jsObj: js.Any): String = {
+    val fullName = g.Object.prototype.selectDynamic("toString").call(jsObj).asInstanceOf[String]
+    val execArray = typeRegex.exec(fullName).asInstanceOf[js.Array[String]]
+    val name = execArray(1)
+    name
   }
 }
 

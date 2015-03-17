@@ -12,7 +12,16 @@ class GLException(msg: String) extends RuntimeException(msg)
 
 // Main components
 
+abstract class Display extends Closeable {
+  def fullscreen: Boolean
+  def fullscreen_=(fullscreen: Boolean): Unit
+
+  def close(): Unit = {}
+}
+
 trait GLES2 extends Closeable {
+
+  def display: Display
 
   def close(): Unit = {}
 

@@ -129,6 +129,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           if (down) key match {
             case Key.L      => mouse.locked = !mouse.locked
             case Key.Escape => continueCond = false
+            case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
             case _          => // nothing to do
           }
 

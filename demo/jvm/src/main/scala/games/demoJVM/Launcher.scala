@@ -36,11 +36,6 @@ object Launcher {
         (width, height)
       }
       def initGL(): GLES2 = {
-        val contextAttributes = new ContextAttribs(glMajor, glMinor)
-        Display.setDisplayMode(new DisplayMode(width, height))
-        Display.setVSyncEnabled(true)
-        Display.create(new PixelFormat, contextAttributes)
-        Display.setTitle(title)
         val glContext: GLES2 = new GLES2LWJGL()
         glContext
       }

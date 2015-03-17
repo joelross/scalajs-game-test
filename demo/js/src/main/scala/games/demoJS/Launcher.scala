@@ -21,6 +21,8 @@ object Launcher extends js.JSApp {
     val canvas = dom.document.getElementById("demo-canvas-main").asInstanceOf[dom.html.Canvas]
 
     val itf = new EngineInterface {
+      val connector = new JsEventConnector
+
       def printLine(msg: String): Unit = {
         //        val line = dom.document.createElement("p")
         //        line.innerHTML = msg
@@ -33,7 +35,7 @@ object Launcher extends js.JSApp {
         (width, height)
       }
       def initGL(): GLES2 = {
-        val glContext: GLES2 = new GLES2WebGL(canvas)
+        val glContext: GLES2 = new GLES2WebGL(canvas, connector)
         glContext
       }
       def initAudio(): Context = {
@@ -41,11 +43,11 @@ object Launcher extends js.JSApp {
         audioContext
       }
       def initKeyboard(): Keyboard = {
-        val keyboard = new KeyboardJS()
+        val keyboard = new KeyboardJS(connector)
         keyboard
       }
       def initMouse(): Mouse = {
-        val mouse = new MouseJS(canvas)
+        val mouse = new MouseJS(canvas, connector)
         mouse
       }
       def update(): Boolean = true

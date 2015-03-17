@@ -1,9 +1,8 @@
 package games.opengl
 
 import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer }
-
-import org.lwjgl.opengl._
 import org.lwjgl.util.glu._
+import org.lwjgl.opengl.{ GL11, GL12, GL13, GL14, GL15, GL20, GL30, EXTFramebufferObject, ARBES2Compatibility, PixelFormat => LWJGLPixelFormat, DisplayMode => LWJGLDisplayMode, ContextAttribs => LWJGLContextAttribs, Display => LWJGLDisplay }
 
 // Auxiliary components
 
@@ -59,7 +58,45 @@ object Token {
 
 // Main componenents
 
-class GLES2LWJGL() extends GLES2 {
+case class DisplayLWJGLSettings(width: Int, height: Int, fullscreen: Boolean, vsync: Boolean)
+
+class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSettings]) extends Display {
+
+  // Init
+  {
+    val (displayMode, fullscreen, vsync) = settings match {
+      case Some(settings) => (new LWJGLDisplayMode(settings.width, settings.height), settings.fullscreen, settings.vsync)
+      case None => {
+        val modes = LWJGLDisplay.getAvailableDisplayModes()
+        val modesBySize = modes.filter { dm => dm.isFullscreenCapable() }.sortWith { (dm1, dm2) => dm1.getWidth * dm1.getHeight > dm2.getWidth * dm2.getHeight }
+        val biggestDisplayMode = modesBySize(0) // Take the biggest fullscreen config
+        (biggestDisplayMode, false, true)
+      }
+    }
+
+    val contextAttributes = new LWJGLContextAttribs(glMajor, glMinor)
+    LWJGLDisplay.setDisplayMode(displayMode)
+    LWJGLDisplay.setFullscreen(fullscreen)
+    LWJGLDisplay.setVSyncEnabled(vsync)
+    LWJGLDisplay.create(new LWJGLPixelFormat, contextAttributes)
+    LWJGLDisplay.setTitle("OpenGL window")
+  }
+
+  override def close(): Unit = {
+    LWJGLDisplay.destroy()
+  }
+
+  def fullscreen: Boolean = LWJGLDisplay.isFullscreen()
+  def fullscreen_=(fullscreen: Boolean): Unit = LWJGLDisplay.setFullscreen(fullscreen)
+}
+
+class GLES2LWJGL(glMajor: Int = 3, glMinor: Int = 0, displaySettings: Option[DisplayLWJGLSettings] = None) extends GLES2 {
+
+  final val display: Display = new DisplayLWJGL(glMajor, glMinor, displaySettings)
+
+  override def close(): Unit = {
+    display.close()
+  }
 
   /* public API */
 
