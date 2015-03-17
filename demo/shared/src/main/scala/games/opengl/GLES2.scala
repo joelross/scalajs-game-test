@@ -16,6 +16,9 @@ abstract class Display extends Closeable {
   def fullscreen: Boolean
   def fullscreen_=(fullscreen: Boolean): Unit
 
+  def width: Int
+  def height: Int
+
   def close(): Unit = {}
 }
 

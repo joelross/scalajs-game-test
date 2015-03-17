@@ -88,6 +88,9 @@ class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSett
 
   def fullscreen: Boolean = LWJGLDisplay.isFullscreen()
   def fullscreen_=(fullscreen: Boolean): Unit = LWJGLDisplay.setFullscreen(fullscreen)
+
+  def width: Int = LWJGLDisplay.getDisplayMode().getWidth()
+  def height: Int = LWJGLDisplay.getDisplayMode().getHeight()
 }
 
 class GLES2LWJGL(glMajor: Int = 3, glMinor: Int = 0, displaySettings: Option[DisplayLWJGLSettings] = None) extends GLES2 {
