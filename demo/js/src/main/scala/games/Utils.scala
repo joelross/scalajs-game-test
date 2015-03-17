@@ -163,6 +163,8 @@ trait UtilsImpl extends UtilsRequirements {
       promise.failure(new RuntimeException("Could not retrieve image " + res))
     }
 
+    image.src = JsUtils.pathForResource(res)
+
     promise.future
   }
   def startFrameListener(fl: games.FrameListener): Unit = {
