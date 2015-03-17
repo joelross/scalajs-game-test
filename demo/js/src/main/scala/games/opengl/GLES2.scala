@@ -7,7 +7,7 @@ import org.scalajs.dom
 import scala.scalajs.js
 import js.Dynamic.{ global => g }
 
-import scala.concurrent.{ Promise, Future, ExecutionContext }
+import scala.concurrent.Future
 
 import games.JsUtils
 
@@ -87,11 +87,11 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
     // nothing to do?
   }
 
-  // Init
-  private val (canvas, document) = {
-    val canvas = gl.getWebGLRenderingContext().canvas.asInstanceOf[js.Dynamic]
-    val document = dom.document.asInstanceOf[js.Dynamic]
+  private val canvas = gl.getWebGLRenderingContext().canvas.asInstanceOf[js.Dynamic]
+  private val document = dom.document.asInstanceOf[js.Dynamic]
 
+  // Init
+  {
     val fullscreenRequest = JsUtils.getOptional[js.Dynamic](canvas, "requestFullscreen", "webkitRequestFullscreen", "mozRequestFullscreen", "mozRequestFullScreen")
     val fullscreenExit = JsUtils.getOptional[js.Dynamic](document, "exitFullscreen", "webkitCancelFullScreen", "mozCancelFullScreen")
 
@@ -107,8 +107,6 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
     document.addEventListener("webkitfullscreenerror", onFullscreenError, true)
     document.addEventListener("mozfullscreenerror", onFullscreenError, true)
     document.addEventListener("MSFullscreenError", onFullscreenError, true)
-
-    (canvas, document)
   }
 
   private var canvasPrevDim: (Int, Int) = (canvas.width.asInstanceOf[Int], canvas.height.asInstanceOf[Int])

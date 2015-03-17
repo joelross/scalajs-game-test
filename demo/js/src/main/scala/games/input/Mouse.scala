@@ -8,6 +8,8 @@ import scala.collection.mutable.Set
 
 import games.JsUtils
 
+import scala.concurrent.Future
+
 object MouseJS {
   val mapper = new Mouse.ButtonMapper[Int](
     (Button.Left, 0),
@@ -153,14 +155,34 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
 
   private val onContextMenu: js.Function = (e: dom.raw.Event) => false // disable right-click context-menu
 
-  element.addEventListener("mouseup", onMouseUp, true)
-  element.addEventListener("mousedown", onMouseDown, true)
-  element.oncontextmenu = onContextMenu
-  element.addEventListener("mousemove", onMouseMove, true)
-  element.addEventListener("mouseover", onMouseOver, true)
-  element.addEventListener("mouseout", onMouseOut, true)
-  element.addEventListener("mousewheel", onMouseWheel, true)
-  element.addEventListener("DOMMouseScroll", onFirefoxMouseWheel, true) // Firefox
+  private val onPointerLockChange: js.Function = (e: js.Dynamic) => {
+    // nothing to do?
+  }
+  private val onPointerLockError: js.Function = (e: js.Dynamic) => {
+    // nothing to do?
+  }
+
+  private val document = dom.document.asInstanceOf[js.Dynamic]
+
+  // Init
+  {
+    element.addEventListener("mouseup", onMouseUp, true)
+    element.addEventListener("mousedown", onMouseDown, true)
+    element.oncontextmenu = onContextMenu
+    element.addEventListener("mousemove", onMouseMove, true)
+    element.addEventListener("mouseover", onMouseOver, true)
+    element.addEventListener("mouseout", onMouseOut, true)
+    element.addEventListener("mousewheel", onMouseWheel, true)
+    element.addEventListener("DOMMouseScroll", onFirefoxMouseWheel, true) // Firefox
+
+    element.addEventListener("pointerlockchange", onPointerLockChange, true)
+    element.addEventListener("webkitpointerlockchange", onPointerLockChange, true)
+    element.addEventListener("mozpointerlockchange", onPointerLockChange, true)
+
+    element.addEventListener("pointerlockerror", onPointerLockError, true)
+    element.addEventListener("webkitpointerlockerror", onPointerLockError, true)
+    element.addEventListener("mozpointerlockerror", onPointerLockError, true)
+  }
 
   override def close(): Unit = {
     element.removeEventListener("mouseup", onMouseUp, true)
@@ -171,6 +193,14 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
     element.removeEventListener("mouseout", onMouseOut, true)
     element.removeEventListener("mousewheel", onMouseWheel, true)
     element.removeEventListener("DOMMouseScroll", onFirefoxMouseWheel, true) // Firefox
+
+    element.removeEventListener("pointerlockchange", onPointerLockChange, true)
+    element.removeEventListener("webkitpointerlockchange", onPointerLockChange, true)
+    element.removeEventListener("mozpointerlockchange", onPointerLockChange, true)
+
+    element.removeEventListener("pointerlockerror", onPointerLockError, true)
+    element.removeEventListener("webkitpointerlockerror", onPointerLockError, true)
+    element.removeEventListener("mozpointerlockerror", onPointerLockError, true)
   }
 
   def position: games.input.Position = {
@@ -187,22 +217,24 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
   }
 
   val lockRequest = JsUtils.getOptional[js.Dynamic](element, "requestPointerLock", "webkitRequestPointerLock", "mozRequestPointerLock")
-  val lockExit = JsUtils.getOptional[js.Dynamic](element, "exitPointerLock", "webkitExitPointerLock", "mozExitPointerLock")
+  val lockExit = JsUtils.getOptional[js.Dynamic](document, "exitPointerLock", "webkitExitPointerLock", "mozExitPointerLock")
 
   element.lockRequest = lockRequest.getOrElse(JsUtils.featureUnsupportedFunction("Pointer Lock (Request)"))
-  element.lockExit = lockExit.getOrElse(JsUtils.featureUnsupportedFunction("Pointer Lock (Exit)"))
+  document.lockExit = lockExit.getOrElse(JsUtils.featureUnsupportedFunction("Pointer Lock (Exit)"))
 
-  def locked: Boolean = {
-    isLocked
+  def locked: Boolean = JsUtils.getOptional[js.Dynamic](document, "pointerLockElement", "webkitPointerLockElement", "mozPointerLockElement") match {
+    case Some(el) => el == element
+    case None     => false
   }
   def locked_=(locked: Boolean): Unit = {
-
-    throw new RuntimeException("Feature not supported for now")
-
-    if (locked) {
-
-    } else {
-
+    if (locked && !this.locked) {
+      Future {
+        element.lockRequest()
+      }(connector.userEventExecutionContext)
+    } else if (!locked && this.locked) {
+      Future {
+        document.lockExit()
+      }(connector.userEventExecutionContext)
     }
   }
 
