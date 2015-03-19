@@ -20,6 +20,9 @@ class ALContext extends Context {
   }
 
   val listener: Listener = new ALListener()
+
+  def volume: Float = ???
+  def volume_=(volume: Float) = ???
 }
 
 class ALListener private[games] () extends Listener {

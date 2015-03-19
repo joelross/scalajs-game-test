@@ -52,13 +52,13 @@ class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: 
   }
 
   def createSource: scala.concurrent.Future[games.audio.Source] = {
-    bufferReady.map { buffer => new JsBufferedSource(ctx, buffer, ctx.webApi.destination) }
+    bufferReady.map { buffer => new JsBufferedSource(ctx, buffer, ctx.mainOutput) }
   }
   def createSource3D: scala.concurrent.Future[games.audio.Source3D] = {
     bufferReady.map { buffer =>
       val pannerNode = ctx.webApi.createPanner()
       val source2d = new JsBufferedSource(ctx, buffer, pannerNode)
-      pannerNode.connect(ctx.webApi.destination)
+      pannerNode.connect(ctx.mainOutput)
       new JsSource3D(ctx, source2d, pannerNode)
     }
   }
@@ -90,13 +90,13 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
   request.send()
 
   def createSource: Future[Source] = {
-    decodedDataReady.future.map { buffer => new JsBufferedSource(ctx, buffer, ctx.webApi.destination) }
+    decodedDataReady.future.map { buffer => new JsBufferedSource(ctx, buffer, ctx.mainOutput) }
   }
   def createSource3D: Future[Source3D] = {
     decodedDataReady.future.map { buffer =>
       val pannerNode = ctx.webApi.createPanner()
       val source2d = new JsBufferedSource(ctx, buffer, pannerNode)
-      pannerNode.connect(ctx.webApi.destination)
+      pannerNode.connect(ctx.mainOutput)
       new JsSource3D(ctx, source2d, pannerNode)
     }
   }
@@ -128,14 +128,14 @@ class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) exten
   }
 
   def createSource: Future[Source] = {
-    val source = new JsStreamingSource(ctx, streamReady.future, ctx.webApi.destination)
+    val source = new JsStreamingSource(ctx, streamReady.future, ctx.mainOutput)
     source.ready.map { x => source }
   }
   def createSource3D: Future[Source3D] = {
     val pannerNode = ctx.webApi.createPanner()
     val source = new JsStreamingSource(ctx, streamReady.future, pannerNode)
     source.ready.map { x =>
-      pannerNode.connect(ctx.webApi.destination)
+      pannerNode.connect(ctx.mainOutput)
       new JsSource3D(ctx, source, pannerNode)
     }
   }

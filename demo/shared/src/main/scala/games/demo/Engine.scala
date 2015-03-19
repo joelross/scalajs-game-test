@@ -52,6 +52,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.keyboard = itf.initKeyboard()
     this.mouse = itf.initMouse()
 
+    audioContext.volume = 0.25f
+
     // Prepare shaders
     val vertexSource = """
       attribute vec3 position;

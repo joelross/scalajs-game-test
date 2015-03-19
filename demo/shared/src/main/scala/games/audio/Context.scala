@@ -19,6 +19,9 @@ abstract class Context extends Closeable {
 
   def listener: Listener
 
+  def volume: Float
+  def volume_=(volume: Float)
+
   def close(): Unit = {}
 }
 

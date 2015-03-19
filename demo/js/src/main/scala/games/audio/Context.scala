@@ -16,11 +16,23 @@ class WebAudioContext extends Context {
   val audioContext: js.Dynamic = classicAudioContext.orElse(webKitAudioContext).getOrElse(throw new RuntimeException("Web Audio API not supported by your browser"))
   private[games] val webApi = js.Dynamic.newInstance(audioContext)()
 
+  private[games] val mainOutput = {
+    val node = webApi.createGain()
+    node.connect(webApi.destination)
+    node.gain.value = 1.0
+    node
+  }
+
   def createBufferedData(res: Resource): BufferedData = new JsBufferedData(this, res)
   def createStreamingData(res: Resource): StreamingData = new JsStreamingData(this, res)
   def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): RawData = new JsRawData(this, data, format, channels, freq)
 
   def listener: Listener = new JsListener(webApi.listener)
+
+  def volume: Float = mainOutput.gain.value.asInstanceOf[Double].toFloat
+  def volume_=(volume: Float) = {
+    mainOutput.gain.value = volume.toDouble
+  }
 }
 
 class JsListener private[games] (webListener: js.Dynamic) extends Listener {
