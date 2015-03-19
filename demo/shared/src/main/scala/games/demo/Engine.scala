@@ -152,10 +152,18 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
             case Key.L      => mouse.locked = !mouse.locked
             case Key.Escape => continueCond = false
             case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
+            case Key.NumAdd => {
+              audioContext.volume *= 1.1f
+              itf.printLine("Increased volume to " + audioContext.volume)
+            }
+            case Key.NumSubstract => {
+              audioContext.volume /= 1.1f
+              itf.printLine("Decreased volume to " + audioContext.volume)
+            }
             case Key.M => {
               if (audioSources.isEmpty) {
-                val data = audioContext.createStreamingData(Resource("/games/demo/test_mono.ogg"))
-                // val data = audioContext.createRawData(createMonoSound(1000), Format.FLOAT32, 1, sampleRate)
+                //val data = audioContext.createBufferedData(Resource("/games/demo/test_mono.ogg"))
+                val data = audioContext.createRawData(createMonoSound(1000), Format.FLOAT32, 1, sampleRate)
                 val source = data.createSource
                 source.onSuccess {
                   case s =>

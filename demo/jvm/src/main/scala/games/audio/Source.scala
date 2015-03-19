@@ -39,7 +39,6 @@ class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends So
 
   private def updateVolume(): Unit = {
     val curVolume = ctx.masterVolume * thisVolume
-    println("Volume set to " + curVolume)
     AL10.alSourcef(alSource, AL10.AL_GAIN, curVolume)
     Util.checkALError()
   }
@@ -247,7 +246,6 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
 
   private def updateVolume(): Unit = {
     val curVolume = ctx.masterVolume * thisVolume
-    println("Volume set to " + curVolume)
     AL10.alSourcef(alSource, AL10.AL_GAIN, curVolume)
     Util.checkALError()
   }
