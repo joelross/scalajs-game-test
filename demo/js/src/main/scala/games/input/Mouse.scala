@@ -30,9 +30,9 @@ object MouseJS {
   }
 }
 
-class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mouse {
-  def this(connector: games.JsEventConnector) = this(dom.document.asInstanceOf[js.Dynamic], connector)
-  def this(html: dom.raw.HTMLElement, connector: games.JsEventConnector) = this(html.asInstanceOf[js.Dynamic], connector)
+class MouseJS(element: js.Dynamic) extends Mouse {
+  def this() = this(dom.document.asInstanceOf[js.Dynamic])
+  def this(html: dom.raw.HTMLElement) = this(html.asInstanceOf[js.Dynamic])
 
   private var isLocked = false
   private var mouseInside = false
@@ -50,7 +50,7 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
 
   private val onMouseUp: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    connector.flushUserEventTasks()
+    JsUtils.flushUserEventTasks()
 
     val button = buttonFromEvent(e)
     if (this.isButtonDown(button)) {
@@ -60,7 +60,7 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
   }
   private val onMouseDown: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    connector.flushUserEventTasks()
+    JsUtils.flushUserEventTasks()
 
     val button = buttonFromEvent(e)
     if (!this.isButtonDown(button)) {
@@ -70,7 +70,7 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
   }
   private val onMouseMove: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    //connector.flushUserEventTasks() // Apparently, a mouse move is not considered as a user gesture
+    //JsUtils.flushUserEventTasks() // Apparently, a mouse move is not considered as a user gesture
 
     val ev = e.asInstanceOf[js.Dynamic]
 
@@ -108,19 +108,19 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
   }
   private val onMouseOver: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    connector.flushUserEventTasks()
+    JsUtils.flushUserEventTasks()
 
     mouseInside = true
   }
   private val onMouseOut: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    connector.flushUserEventTasks()
+    JsUtils.flushUserEventTasks()
 
     mouseInside = false
   }
   private val onMouseWheel: js.Function = (e: dom.raw.WheelEvent) => {
     e.preventDefault()
-    connector.flushUserEventTasks()
+    JsUtils.flushUserEventTasks()
 
     val ev = e.asInstanceOf[js.Dynamic]
 
@@ -139,7 +139,7 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
   }
   private val onFirefoxMouseWheel: js.Function = (e: dom.raw.WheelEvent) => {
     e.preventDefault()
-    connector.flushUserEventTasks()
+    JsUtils.flushUserEventTasks()
 
     val ev = e.asInstanceOf[js.Dynamic]
 
@@ -157,9 +157,11 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
 
   private val onPointerLockChange: js.Function = (e: js.Dynamic) => {
     // nothing to do?
+    js.Dynamic.global.console.log("onPointerLockChange", this.locked, e)
   }
   private val onPointerLockError: js.Function = (e: js.Dynamic) => {
     // nothing to do?
+    js.Dynamic.global.console.log("onPointerLockError", this.locked, e)
   }
 
   private val document = dom.document.asInstanceOf[js.Dynamic]
@@ -175,13 +177,13 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
     element.addEventListener("mousewheel", onMouseWheel, true)
     element.addEventListener("DOMMouseScroll", onFirefoxMouseWheel, true) // Firefox
 
-    element.addEventListener("pointerlockchange", onPointerLockChange, true)
-    element.addEventListener("webkitpointerlockchange", onPointerLockChange, true)
-    element.addEventListener("mozpointerlockchange", onPointerLockChange, true)
+    document.addEventListener("pointerlockchange", onPointerLockChange, true)
+    document.addEventListener("webkitpointerlockchange", onPointerLockChange, true)
+    document.addEventListener("mozpointerlockchange", onPointerLockChange, true)
 
-    element.addEventListener("pointerlockerror", onPointerLockError, true)
-    element.addEventListener("webkitpointerlockerror", onPointerLockError, true)
-    element.addEventListener("mozpointerlockerror", onPointerLockError, true)
+    document.addEventListener("pointerlockerror", onPointerLockError, true)
+    document.addEventListener("webkitpointerlockerror", onPointerLockError, true)
+    document.addEventListener("mozpointerlockerror", onPointerLockError, true)
   }
 
   override def close(): Unit = {
@@ -194,13 +196,13 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
     element.removeEventListener("mousewheel", onMouseWheel, true)
     element.removeEventListener("DOMMouseScroll", onFirefoxMouseWheel, true) // Firefox
 
-    element.removeEventListener("pointerlockchange", onPointerLockChange, true)
-    element.removeEventListener("webkitpointerlockchange", onPointerLockChange, true)
-    element.removeEventListener("mozpointerlockchange", onPointerLockChange, true)
+    document.removeEventListener("pointerlockchange", onPointerLockChange, true)
+    document.removeEventListener("webkitpointerlockchange", onPointerLockChange, true)
+    document.removeEventListener("mozpointerlockchange", onPointerLockChange, true)
 
-    element.removeEventListener("pointerlockerror", onPointerLockError, true)
-    element.removeEventListener("webkitpointerlockerror", onPointerLockError, true)
-    element.removeEventListener("mozpointerlockerror", onPointerLockError, true)
+    document.removeEventListener("pointerlockerror", onPointerLockError, true)
+    document.removeEventListener("webkitpointerlockerror", onPointerLockError, true)
+    document.removeEventListener("mozpointerlockerror", onPointerLockError, true)
   }
 
   def position: games.input.Position = {
@@ -230,11 +232,11 @@ class MouseJS(element: js.Dynamic, connector: games.JsEventConnector) extends Mo
     if (locked && !this.locked) {
       Future {
         element.lockRequest()
-      }(connector.userEventExecutionContext)
+      }(JsUtils.userEventExecutionContext)
     } else if (!locked && this.locked) {
       Future {
         document.lockExit()
-      }(connector.userEventExecutionContext)
+      }(JsUtils.userEventExecutionContext)
     }
   }
 

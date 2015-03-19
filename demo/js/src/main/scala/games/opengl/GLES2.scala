@@ -82,9 +82,11 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
       canvas.width = screen.width
       canvas.height = screen.height
     }
+    js.Dynamic.global.console.log("onFullscreenChange", this.fullscreen, e)
   }
   private val onFullscreenError: js.Function = (e: js.Dynamic) => {
     // nothing to do?
+    js.Dynamic.global.console.log("onFullscreenError", this.fullscreen, e)
   }
 
   private val canvas = gl.getWebGLRenderingContext().canvas.asInstanceOf[js.Dynamic]
@@ -123,11 +125,11 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
       canvasPrevDim = (canvas.width.asInstanceOf[Int], canvas.height.asInstanceOf[Int])
       Future {
         canvas.fullscreenRequest()
-      }(gl.getEventConnector().userEventExecutionContext)
+      }(JsUtils.userEventExecutionContext)
     } else if (!fullscreen && this.fullscreen) {
       Future {
         document.fullscreenExit()
-      }(gl.getEventConnector().userEventExecutionContext)
+      }(JsUtils.userEventExecutionContext)
     }
 
   def width: Int = gl.getWebGLRenderingContext().drawingBufferWidth
@@ -148,9 +150,9 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
   }
 }
 
-class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext, connector: games.JsEventConnector) extends GLES2 {
-  def this(canvas: dom.html.Canvas, connector: games.JsEventConnector) = {
-    this((canvas.getContext("webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).orElse(canvas.getContext("experimental-webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).getOrElse(throw new RuntimeException("WebGL not supported by the browser")), connector)
+class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext) extends GLES2 {
+  def this(canvas: dom.html.Canvas) = {
+    this((canvas.getContext("webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).orElse(canvas.getContext("experimental-webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).getOrElse(throw new RuntimeException("WebGL not supported by the browser")))
   }
 
   final val display: Display = new DisplayGLES2(this)
@@ -162,7 +164,6 @@ class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext, connector: games.JsEventC
   /* JS Specific */
 
   final def getWebGLRenderingContext(): dom.raw.WebGLRenderingContext = webGL
-  final def getEventConnector(): games.JsEventConnector = connector
 
   /* public API */
 

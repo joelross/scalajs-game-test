@@ -10,12 +10,7 @@ import games.opengl.GLES2WebGL
 import games.opengl.GLES2Debug
 import scala.collection.mutable.Queue
 
-class UserEventExecutionContext(connector: JsEventConnector) extends ExecutionContext {
-  def execute(runnable: Runnable): Unit = connector.addUserEventTask(runnable)
-  def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
-}
-
-class JsEventConnector {
+object JsUtils {
   private val userEventTasks: Queue[Runnable] = Queue()
 
   def flushUserEventTasks(): Unit = {
@@ -34,10 +29,11 @@ class JsEventConnector {
     userEventTasks += runnable
   }
 
-  val userEventExecutionContext: ExecutionContext = new UserEventExecutionContext(this)
-}
+  val userEventExecutionContext: ExecutionContext = new ExecutionContext() {
+    def execute(runnable: Runnable): Unit = addUserEventTask(runnable)
+    def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
+  }
 
-object JsUtils {
   private var relativeResourcePath: Option[String] = None
 
   def pathForResource(res: Resource): String = relativeResourcePath match {

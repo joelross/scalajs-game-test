@@ -6,6 +6,8 @@ import org.scalajs.dom
 import scala.collection.mutable.Queue
 import scala.collection.mutable.Set
 
+import games.JsUtils
+
 object KeyboardJS {
   val keyCodeMapper = new Keyboard.KeyMapper[Int](
     (Key.Space, 32),
@@ -135,9 +137,9 @@ object KeyboardJS {
     )
 }
 
-class KeyboardJS(element: js.Dynamic, connector: games.JsEventConnector) extends Keyboard {
-  def this(connector: games.JsEventConnector) = this(dom.document.asInstanceOf[js.Dynamic], connector)
-  def this(html: dom.raw.HTMLElement, connector: games.JsEventConnector) = this(html.asInstanceOf[js.Dynamic], connector)
+class KeyboardJS(element: js.Dynamic) extends Keyboard {
+  def this() = this(dom.document.asInstanceOf[js.Dynamic])
+  def this(html: dom.raw.HTMLElement) = this(html.asInstanceOf[js.Dynamic])
 
   private val eventQueue: Queue[KeyboardEvent] = Queue()
   private val downKeys: Set[Key] = Set()
@@ -183,7 +185,7 @@ class KeyboardJS(element: js.Dynamic, connector: games.JsEventConnector) extends
 
   private val onKeyUp: js.Function = (e: dom.raw.Event) => {
     e.preventDefault()
-    connector.flushUserEventTasks()
+    JsUtils.flushUserEventTasks()
 
     val ev = e.asInstanceOf[dom.raw.KeyboardEvent]
     keyFromEvent(ev) match {
@@ -193,7 +195,7 @@ class KeyboardJS(element: js.Dynamic, connector: games.JsEventConnector) extends
   }
   private val onKeyDown: js.Function = (e: dom.raw.Event) => {
     e.preventDefault()
-    connector.flushUserEventTasks()
+    JsUtils.flushUserEventTasks()
 
     val ev = e.asInstanceOf[dom.raw.KeyboardEvent]
     keyFromEvent(ev) match {
