@@ -73,6 +73,8 @@ object Token {
 
 class DisplayGLES2(gl: GLES2WebGL) extends Display {
 
+  private var fullscreenRequested = false
+
   private val onFullscreenChange: js.Function = (e: js.Dynamic) => {
     if (!this.fullscreen) {
       canvas.width = canvasPrevDim._1
@@ -82,11 +84,13 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
       canvas.width = screen.width
       canvas.height = screen.height
     }
-    js.Dynamic.global.console.log("onFullscreenChange", this.fullscreen, e)
+
+    if (fullscreenRequested != this.fullscreen) this.fullscreen = fullscreenRequested // If the fullscreen state has changed against the wish of the user, change back ASAP
+    //js.Dynamic.global.console.log("onFullscreenChange", this.fullscreen, e)
   }
   private val onFullscreenError: js.Function = (e: js.Dynamic) => {
     // nothing to do?
-    js.Dynamic.global.console.log("onFullscreenError", this.fullscreen, e)
+    //js.Dynamic.global.console.log("onFullscreenError", this.fullscreen, e)
   }
 
   private val canvas = gl.getWebGLRenderingContext().canvas.asInstanceOf[js.Dynamic]
@@ -120,7 +124,9 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
       case None     => false
     }
   }
-  def fullscreen_=(fullscreen: Boolean): Unit =
+  def fullscreen_=(fullscreen: Boolean): Unit = {
+    fullscreenRequested = fullscreen // Remember the choice of the user
+
     if (fullscreen && !this.fullscreen) {
       canvasPrevDim = (canvas.width.asInstanceOf[Int], canvas.height.asInstanceOf[Int])
       Future {
@@ -131,6 +137,7 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
         document.fullscreenExit()
       }(JsUtils.userEventExecutionContext)
     }
+  }
 
   def width: Int = gl.getWebGLRenderingContext().drawingBufferWidth
   def height: Int = gl.getWebGLRenderingContext().drawingBufferHeight

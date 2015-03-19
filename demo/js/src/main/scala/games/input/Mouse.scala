@@ -34,13 +34,14 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   def this() = this(dom.document.asInstanceOf[js.Dynamic])
   def this(html: dom.raw.HTMLElement) = this(html.asInstanceOf[js.Dynamic])
 
-  private var isLocked = false
   private var mouseInside = false
   private var dx, dy = 0
   private var x, y = 0
 
   private val eventQueue: Queue[MouseEvent] = Queue()
   private val downButtons: Set[Button] = Set()
+
+  private var lockRequested = false
 
   private def buttonFromEvent(ev: dom.raw.MouseEvent): Button = {
     val eventButton = ev.button.asInstanceOf[Int]
@@ -108,7 +109,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   }
   private val onMouseOver: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    JsUtils.flushUserEventTasks()
+    //JsUtils.flushUserEventTasks() // Apparently, a mouse move is not considered as a user gesture
 
     mouseInside = true
   }
@@ -156,12 +157,12 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   private val onContextMenu: js.Function = (e: dom.raw.Event) => false // disable right-click context-menu
 
   private val onPointerLockChange: js.Function = (e: js.Dynamic) => {
-    // nothing to do?
-    js.Dynamic.global.console.log("onPointerLockChange", this.locked, e)
+    if (lockRequested != this.locked) this.locked = lockRequested // If the lock state has changed against the wish of the user, change back ASAP
+    //js.Dynamic.global.console.log("onPointerLockChange", this.locked, e)
   }
   private val onPointerLockError: js.Function = (e: js.Dynamic) => {
     // nothing to do?
-    js.Dynamic.global.console.log("onPointerLockError", this.locked, e)
+    //js.Dynamic.global.console.log("onPointerLockError", this.locked, e)
   }
 
   private val document = dom.document.asInstanceOf[js.Dynamic]
@@ -229,6 +230,8 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     case None     => false
   }
   def locked_=(locked: Boolean): Unit = {
+    lockRequested = locked // Remember the choice of the user
+
     if (locked && !this.locked) {
       Future {
         element.lockRequest()
