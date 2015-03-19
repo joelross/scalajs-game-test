@@ -4,10 +4,18 @@ import games.Resource
 import games.math.Vector3f
 import java.io.Closeable
 
+import java.nio.ByteBuffer
+
+abstract sealed class Format
+
+object Format {
+  case object FLOAT32 extends Format
+}
+
 abstract class Context extends Closeable {
   def createBufferedData(res: Resource): BufferedData
   def createStreamingData(res: Resource): StreamingData
-  def createRawData(): RawData
+  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): RawData
 
   def listener: Listener
 

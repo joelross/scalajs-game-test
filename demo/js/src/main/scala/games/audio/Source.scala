@@ -9,7 +9,7 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 import games.math.Vector3f
 
-class JsBufferedSource private[games] (ctx: WebAudioContext, buffer: js.typedarray.ArrayBuffer, outputNode: js.Dynamic) extends Source {
+class JsBufferedSource private[games] (ctx: WebAudioContext, buffer: js.Dynamic, outputNode: js.Dynamic) extends Source {
   private var sourceNode = ctx.webApi.createBufferSource()
   sourceNode.buffer = buffer
 

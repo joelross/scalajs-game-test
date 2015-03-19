@@ -5,6 +5,8 @@ import org.scalajs.dom
 import games.Resource
 import games.math.Vector3f
 
+import java.nio.ByteBuffer
+
 import js.Dynamic.{ global => g }
 
 class WebAudioContext extends Context {
@@ -16,7 +18,7 @@ class WebAudioContext extends Context {
 
   def createBufferedData(res: Resource): BufferedData = new JsBufferedData(this, res)
   def createStreamingData(res: Resource): StreamingData = new JsStreamingData(this, res)
-  def createRawData(): RawData = ???
+  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): RawData = new JsRawData(this, data, format, channels, freq)
 
   def listener: Listener = new JsListener(webApi.listener)
 }

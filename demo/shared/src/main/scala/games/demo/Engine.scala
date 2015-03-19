@@ -10,6 +10,8 @@ import games.opengl._
 import games.audio._
 import games.input._
 
+import java.nio.{ ByteBuffer, FloatBuffer, ByteOrder }
+
 abstract class EngineInterface {
   def printLine(msg: String): Unit
   def getScreenDim(): (Int, Int)
@@ -119,6 +121,24 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   val triangleColor1 = new math.Vector3f(0, 0, 1)
   val triangleColor2 = new math.Vector3f(0, 1, 0)
 
+  val sampleRate = 22100
+
+  def createMonoSound(freq: Int): ByteBuffer = {
+    val bb = ByteBuffer.allocate(4 * sampleRate).order(ByteOrder.nativeOrder())
+
+    var i = 0
+    while (i < sampleRate) {
+      val current = Math.sin(2 * Math.PI * freq * i.toDouble / sampleRate).toFloat
+      bb.putFloat(current)
+      i += 1
+    }
+
+    bb.rewind()
+    bb
+  }
+
+  var audioSources: List[Source] = Nil
+
   def onDraw(fe: games.FrameEvent): Unit = {
     def processKeyboard() {
       val event = keyboard.nextEvent()
@@ -130,7 +150,24 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
             case Key.L      => mouse.locked = !mouse.locked
             case Key.Escape => continueCond = false
             case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
-            case _          => // nothing to do
+            case Key.M => {
+              if (audioSources.isEmpty) {
+                // val data = audioContext.createBufferedData(Resource("/games/demo/test_mono.ogg"))
+                val data = audioContext.createRawData(createMonoSound(1000), Format.FLOAT32, 1, sampleRate)
+                val source = data.createSource
+                source.onSuccess {
+                  case s =>
+                    audioSources = s :: audioSources
+                    s.loop = true
+                    s.play
+                }
+                source.onFailure { case t => println("Could not load the sound: " + t) }
+              } else {
+                audioSources.foreach { source => source.close() }
+                audioSources = Nil
+              }
+            }
+            case _ => // nothing to do
           }
 
           processKeyboard()
