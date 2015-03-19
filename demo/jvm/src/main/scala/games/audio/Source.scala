@@ -204,7 +204,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
 
         }
 
-        AL10.alSourcePause(alSource)
+        AL10.alSourceStop(alSource)
 
         // destroy the awaiting buffers
         buffersReady.foreach { alBuffer => AL10.alDeleteBuffers(alBuffer) }
