@@ -71,7 +71,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   }
   private val onMouseMove: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    //JsUtils.flushUserEventTasks() // Apparently, a mouse move is not considered as a user gesture
+    //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
     val ev = e.asInstanceOf[js.Dynamic]
 
@@ -109,19 +109,19 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   }
   private val onMouseOver: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    //JsUtils.flushUserEventTasks() // Apparently, a mouse move is not considered as a user gesture
+    //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
     mouseInside = true
   }
   private val onMouseOut: js.Function = (e: dom.raw.MouseEvent) => {
     e.preventDefault()
-    JsUtils.flushUserEventTasks()
+    //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
     mouseInside = false
   }
   private val onMouseWheel: js.Function = (e: dom.raw.WheelEvent) => {
     e.preventDefault()
-    JsUtils.flushUserEventTasks()
+    //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
     val ev = e.asInstanceOf[js.Dynamic]
 
@@ -140,7 +140,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   }
   private val onFirefoxMouseWheel: js.Function = (e: dom.raw.WheelEvent) => {
     e.preventDefault()
-    JsUtils.flushUserEventTasks()
+    //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
     val ev = e.asInstanceOf[js.Dynamic]
 
@@ -154,15 +154,17 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     }
   }
 
-  private val onContextMenu: js.Function = (e: dom.raw.Event) => false // disable right-click context-menu
+  private val onContextMenu: js.Function = (e: dom.raw.Event) => {
+    false // disable right-click context-menu
+  }
 
   private val onPointerLockChange: js.Function = (e: js.Dynamic) => {
-    if (lockRequested != this.locked) this.locked = lockRequested // If the lock state has changed against the wish of the user, change back ASAP
+    this.locked = lockRequested // If the lock state has changed against the wish of the user, change back ASAP
     //js.Dynamic.global.console.log("onPointerLockChange", this.locked, e)
   }
   private val onPointerLockError: js.Function = (e: js.Dynamic) => {
     // nothing to do?
-    //js.Dynamic.global.console.log("onPointerLockError", this.locked, e)
+    js.Dynamic.global.console.log("onPointerLockError", this.locked, e)
   }
 
   private val document = dom.document.asInstanceOf[js.Dynamic]
