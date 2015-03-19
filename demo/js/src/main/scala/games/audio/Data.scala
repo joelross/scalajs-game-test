@@ -12,8 +12,6 @@ import java.nio.{ ByteBuffer, ByteOrder, FloatBuffer }
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends RawData {
-  Promise[js.Dynamic]
-
   private val bufferReady = Future {
     format match {
       case Format.FLOAT32 => // good to go
@@ -27,9 +25,8 @@ class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: 
     }
 
     val floatBuffer = data.slice().order(ByteOrder.nativeOrder()).asFloatBuffer()
-    val remaining = floatBuffer.remaining()
 
-    val sampleCount = remaining / channels
+    val sampleCount = floatBuffer.remaining() / channels
 
     val buffer = ctx.webApi.createBuffer(channels, sampleCount, freq)
 

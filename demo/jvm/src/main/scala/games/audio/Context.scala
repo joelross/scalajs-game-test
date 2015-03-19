@@ -12,7 +12,7 @@ class ALContext extends Context {
   AL.create()
 
   def createBufferedData(res: games.Resource): games.audio.BufferedData = new ALBufferedData(this, res)
-  def createRawData(): games.audio.RawData = ???
+  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.RawData = new ALRawData(this, data, format, channels, freq)
   def createStreamingData(res: games.Resource): games.audio.StreamingData = new ALStreamingData(this, res)
 
   override def close(): Unit = {

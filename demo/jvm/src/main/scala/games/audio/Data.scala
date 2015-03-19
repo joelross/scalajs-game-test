@@ -12,6 +12,65 @@ import java.io.EOFException
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 
+class ALRawData private[games] (ctx: ALContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends RawData {
+  private val bufferReady = Future {
+    format match {
+      case Format.FLOAT32 => // good to go
+      case _              => throw new RuntimeException("Unsupported data format: " + format)
+    }
+
+    val channelFormat = channels match {
+      case 1 => AL10.AL_FORMAT_MONO16
+      case 2 => AL10.AL_FORMAT_STEREO16
+      case _ => throw new RuntimeException("Unsupported channels number: " + channels)
+    }
+
+    val converter = FixedSigned16Converter
+    val fb = data.slice().order(ByteOrder.nativeOrder()).asFloatBuffer()
+
+    val sampleCount = fb.remaining() / channels
+
+    val openalData = ByteBuffer.allocateDirect(2 * channels * sampleCount).order(ByteOrder.nativeOrder())
+
+    val alBuffer = AL10.alGenBuffers()
+
+    var sampleCur = 0
+    while (sampleCur < sampleCount) {
+      var channelCur = 0
+      while (channelCur < channels) {
+        val value = fb.get()
+        converter(value, openalData)
+        channelCur += 1
+      }
+
+      sampleCur += 1
+    }
+
+    openalData.rewind()
+
+    AL10.alBufferData(alBuffer, channelFormat, openalData, freq)
+
+    Util.checkALError()
+
+    alBuffer
+  }
+
+  def createSource: scala.concurrent.Future[games.audio.Source] = {
+    bufferReady.map { alBuffer => new ALBufferedSource(ctx, alBuffer) }
+  }
+  def createSource3D: scala.concurrent.Future[games.audio.Source3D] = {
+    bufferReady.map { alBuffer => new ALSource3D(ctx, new ALBufferedSource(ctx, alBuffer)) }
+  }
+
+  override def close(): Unit = {
+    bufferReady.onSuccess {
+      case alBuffer =>
+        AL10.alDeleteBuffers(alBuffer)
+        Util.checkALError()
+    }
+  }
+}
+
 class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends BufferedData {
   private val bufferReady = Future {
     val alBuffer = AL10.alGenBuffers()
