@@ -8,6 +8,8 @@ import games.math.Vector3f
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+import scala.collection.mutable.Set
+
 class ALContext extends Context {
   AL.create()
 
@@ -21,8 +23,21 @@ class ALContext extends Context {
 
   val listener: Listener = new ALListener()
 
-  def volume: Float = ???
-  def volume_=(volume: Float) = ???
+  private[games] var masterVolume = 1f
+
+  def volume: Float = masterVolume
+  def volume_=(volume: Float) = {
+    masterVolume = volume
+    sources.foreach { source => source.masterVolumeChanged() }
+  }
+
+  private val sources: Set[ALSource] = Set()
+  private[games] def addSource(source: ALSource): Unit = {
+    sources += source
+  }
+  private[games] def removeSource(source: ALSource): Unit = {
+    sources -= source
+  }
 }
 
 class ALListener private[games] () extends Listener {

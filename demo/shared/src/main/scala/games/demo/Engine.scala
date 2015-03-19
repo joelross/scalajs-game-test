@@ -52,7 +52,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.keyboard = itf.initKeyboard()
     this.mouse = itf.initMouse()
 
-    audioContext.volume = 0.25f
+    audioContext.volume = 0.5f
 
     // Prepare shaders
     val vertexSource = """
@@ -154,16 +154,21 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
             case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
             case Key.M => {
               if (audioSources.isEmpty) {
-                // val data = audioContext.createBufferedData(Resource("/games/demo/test_mono.ogg"))
-                val data = audioContext.createRawData(createMonoSound(1000), Format.FLOAT32, 1, sampleRate)
+                val data = audioContext.createStreamingData(Resource("/games/demo/test_mono.ogg"))
+                // val data = audioContext.createRawData(createMonoSound(1000), Format.FLOAT32, 1, sampleRate)
                 val source = data.createSource
                 source.onSuccess {
                   case s =>
                     audioSources = s :: audioSources
                     s.loop = true
+                    s.volume = 0.5f
                     s.play
                 }
-                source.onFailure { case t => println("Could not load the sound: " + t) }
+                source.onFailure {
+                  case t =>
+                    println("Could not load the sound: " + t)
+                    t.printStackTrace()
+                }
               } else {
                 audioSources.foreach { source => source.close() }
                 audioSources = Nil
