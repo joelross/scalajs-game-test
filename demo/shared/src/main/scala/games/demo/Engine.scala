@@ -118,7 +118,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // Load mesh
     val futureMeshObj = Utils.getTextDataFromResource(Resource("/games/demo/sphere.obj"))
-    val futureMeshMtl = Utils.getTextDataFromResource(Resource("/games/demo/spherea.mtl"))
+    val futureMeshMtl = Utils.getTextDataFromResource(Resource("/games/demo/sphere.mtl"))
 
     val futureMesh = Future.sequence(Seq(futureMeshObj, futureMeshMtl))
     futureMesh.onSuccess {
@@ -128,7 +128,39 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
         val objs = SimpleOBJParser.parseOBJ(objLines, Map("sphere.mtl" -> mtlLines))
         val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
+        val mesh = meshes("Sphere")
 
+        val verticesData = GLES2.createFloatBuffer(mesh.vertices.length * 3)
+        mesh.vertices.foreach { v => v.store(verticesData) }
+        verticesData.rewind()
+        val verticesBuffer = gl.createBuffer()
+        gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
+        gl.bufferData(GLES2.ARRAY_BUFFER, verticesData, GLES2.STATIC_DRAW)
+
+        val normals = mesh.normals.get
+        val normalsData = GLES2.createFloatBuffer(normals.length * 3)
+        normals.foreach { v => v.store(normalsData) }
+        normalsData.rewind()
+        val normalsBuffer = gl.createBuffer()
+        gl.bindBuffer(GLES2.ARRAY_BUFFER, normalsBuffer)
+        gl.bufferData(GLES2.ARRAY_BUFFER, normalsData, GLES2.STATIC_DRAW)
+
+        mesh.submeshes.foreach { submesh =>
+          val tris = submesh.tris
+          val indicesData = GLES2.createShortBuffer(tris.length * 3)
+          tris.foreach {
+            case (i0, i1, i2) =>
+              indicesData.put(i0.toShort)
+              indicesData.put(i1.toShort)
+              indicesData.put(i2.toShort)
+          }
+          indicesData.rewind()
+          val indicesBuffer = gl.createBuffer()
+          gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+          gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesData, GLES2.STATIC_DRAW)
+        }
+
+        itf.printLine("Loading done")
     }
     futureMesh.onFailure { case t => itf.printLine("Failed to load the mesh: " + t) }
   }
@@ -165,12 +197,16 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val event = keyboard.nextEvent()
       event match {
         case Some(KeyboardEvent(key, down)) => {
-          itf.printLine("Key " + key + (if (down) " is down" else " is up"))
-
           if (down) key match {
-            case Key.L      => mouse.locked = !mouse.locked
+            case Key.L => {
+              mouse.locked = !mouse.locked
+              itf.printLine("Pointer lock toggled")
+            }
             case Key.Escape => continueCond = false
-            case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
+            case Key.F => {
+              gl.display.fullscreen = !gl.display.fullscreen
+              itf.printLine("Fullscreen toggled")
+            }
             case Key.NumAdd => {
               audioContext.volume *= 1.25f
               itf.printLine("Increased volume to " + audioContext.volume)
@@ -191,20 +227,20 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                     s.position = new Vector3f(0, 0, 0)
                     s.volume = 0.5f
                     s.play
+                    itf.printLine("Adding audio source")
                 }
                 source.onFailure {
                   case t =>
-                    println("Could not load the sound: " + t)
-                    t.printStackTrace()
+                    itf.printLine("Could not load the sound: " + t)
                 }
               } else {
                 audioSources.foreach { source => source.close() }
                 audioSources = Nil
+                itf.printLine("Closing audio sources")
               }
             }
             case _ => // nothing to do
           }
-
           processKeyboard()
         }
         case None => // nothing to do
@@ -212,44 +248,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     processKeyboard()
 
-    def processMouse() {
-      val event = mouse.nextEvent()
-      event match {
-        case Some(WheelEvent(wheel)) => {
-          itf.printLine("Wheel rotated " + wheel)
-        }
-        case Some(ButtonEvent(button, down)) => {
-          itf.printLine("Button " + button + (if (down) " is down" else " is up"))
-
-          if (down) button match {
-            //case Button.Left => itf.printLine("Mouse is at " + mouse.position.x + "x" + mouse.position.y + " (display is " + gl.display.width + "x" + gl.display.height + ")")
-            case _ => // nothing to do
-          }
-
-          processMouse()
-        }
-        case None => // nothing to do
-      }
-    }
-    processMouse()
-
     val (width, height) = (gl.display.width, gl.display.height)
-
-    if (mouse.isButtonDown(Button.Left)) {
-      def interpol(curIn: Float, minIn: Float, maxIn: Float, startValue: Float, endValue: Float): Float = startValue + (curIn - minIn) * (endValue - startValue) / (maxIn - minIn)
-
-      val mousePos = mouse.position
-      val startValue = -10.0
-      val endValue = 10.0
-      val posX = interpol(mousePos.x, 0, width, -10, 10)
-      val posY = interpol(mousePos.y, 0, height, -10, 10)
-      audioSources.foreach {
-        case s: Source3D => s.position = new Vector3f(posX, 0, posY)
-        case _           =>
-      }
-    }
-
-    //val (width, height) = itf.getScreenDim()
 
     gl.viewport(0, 0, width, height)
 
