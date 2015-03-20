@@ -2,11 +2,11 @@ package games.input
 
 import java.io.Closeable
 
-sealed abstract class Key
-
 object Keyboard {
   private[games] type KeyMapper[T] = BiMap[Key, T]
 }
+
+sealed abstract class Key
 
 object Key {
   case object Space extends Key

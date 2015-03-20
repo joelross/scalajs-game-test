@@ -2,11 +2,11 @@ package games.input
 
 import java.io.Closeable
 
-sealed abstract class Button
-
 object Mouse {
   private[games]type ButtonMapper[T] = BiMap[Button, T]
 }
+
+sealed abstract class Button
 
 object Button {
   case object Left extends Button
