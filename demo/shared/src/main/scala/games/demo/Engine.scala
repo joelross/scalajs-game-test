@@ -69,11 +69,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       attribute vec3 position;
       attribute vec3 normal;
       
-      varying vec4 varNormal;
+      varying vec3 varNormal;
+      varying vec3 varView;
       
       void main(void) {
-         gl_Position = projection * modelView * vec4(position, 1.0);
-         varNormal = normalize(modelViewInvTr * vec4(normal, 1.0));
+        vec4 pos = modelView * vec4(position, 1.0);
+        gl_Position = projection * pos;
+        varNormal = normalize((modelViewInvTr * vec4(normal, 1.0)).xyz);
+        varView = normalize(-pos.xyz);
       }
       """
 
@@ -84,11 +87,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       
       uniform vec3 diffuseColor;
       
-      varying vec4 varNormal;
+      varying vec3 varNormal;
+      varying vec3 varView;
       
       void main(void) {
-        vec3 view = vec3(0.0, 0.0, 1.0);
-        gl_FragColor = vec4(diffuseColor * dot(view, normalize(varNormal.xyz)), 1.0);
+        gl_FragColor = vec4(diffuseColor * dot(normalize(varView), normalize(varNormal)), 1.0);
       }
       """
 
@@ -207,6 +210,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   val near: Float = 0.1f
   val far: Float = 100f
 
+  val lookTranslationSpeed: Float = 2.0f
+
   var dim: (Int, Int) = _
 
   val sampleRate = 22100
@@ -292,6 +297,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       gl.viewport(0, 0, width, height)
       Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
     }
+
+    var transX: Float = 0
+    var transY: Float = 0
+    if (keyboard.isKeyDown(Key.D)) transX += fe.elapsedTime * +lookTranslationSpeed
+    if (keyboard.isKeyDown(Key.A)) transX += fe.elapsedTime * -lookTranslationSpeed
+    if (keyboard.isKeyDown(Key.W)) transY += fe.elapsedTime * -lookTranslationSpeed
+    if (keyboard.isKeyDown(Key.S)) transY += fe.elapsedTime * +lookTranslationSpeed
+    cameraTransform = Matrix4f.translate3D(new Vector3f(transX, 0, transY)) * cameraTransform
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
