@@ -63,15 +63,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Prepare shaders
     val vertexSource = """
       uniform mat4 projection;
-      uniform mat4 transform;
-      uniform mat4 cameraTransformInv;
+      uniform mat4 modelView;
+      uniform mat4 modelViewInvTr;
       
       attribute vec3 position;
       attribute vec3 normal;
       
+      varying vec4 varNormal;
+      
       void main(void) {
-         gl_Position = projection * cameraTransformInv * transform * vec4(position, 1.0);
-         //gl_Position = vec4(position, 1.0);
+         gl_Position = projection * modelView * vec4(position, 1.0);
+         varNormal = normalize(modelViewInvTr * vec4(normal, 1.0));
       }
       """
 
@@ -80,10 +82,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         precision mediump float;
       #endif
       
-      uniform vec3 color;
+      uniform vec3 diffuseColor;
+      
+      varying vec4 varNormal;
       
       void main(void) {
-        gl_FragColor = vec4(color, 1.0);
+        vec3 view = vec3(0.0, 0.0, 1.0);
+        gl_FragColor = vec4(diffuseColor * dot(view, normalize(varNormal.xyz)), 1.0);
       }
       """
 
@@ -104,10 +109,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     positionAttrLoc = gl.getAttribLocation(program, "position")
     normalAttrLoc = gl.getAttribLocation(program, "normal")
-    colorUniLoc = gl.getUniformLocation(program, "color")
+
+    diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
     projectionUniLoc = gl.getUniformLocation(program, "projection")
-    transformUniLoc = gl.getUniformLocation(program, "transform")
-    cameraTransformInvUniLoc = gl.getUniformLocation(program, "cameraTransformInv")
+    modelViewUniLoc = gl.getUniformLocation(program, "modelView")
+    modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
 
     gl.clearColor(0.5f, 0.5f, 0.5f, 1) // grey background
 
@@ -190,10 +196,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   var positionAttrLoc: Int = _
   var normalAttrLoc: Int = _
-  var colorUniLoc: Token.UniformLocation = _
+  var diffuseColorUniLoc: Token.UniformLocation = _
   var projectionUniLoc: Token.UniformLocation = _
-  var transformUniLoc: Token.UniformLocation = _
-  var cameraTransformInvUniLoc: Token.UniformLocation = _
+  var modelViewUniLoc: Token.UniformLocation = _
+  var modelViewInvTrUniLoc: Token.UniformLocation = _
 
   val meshes = new ArrayBuffer[OpenGLMesh]()
 
@@ -292,29 +298,32 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.useProgram(program)
 
     gl.uniformMatrix4f(projectionUniLoc, projection)
-    gl.uniformMatrix4f(cameraTransformInvUniLoc, cameraTransform.invertedCopy())
+    val cameraTransformInv = cameraTransform.invertedCopy()
 
     gl.enableVertexAttribArray(positionAttrLoc)
-    //gl.enableVertexAttribArray(normalAttrLoc) // uncomment when using normals
+    gl.enableVertexAttribArray(normalAttrLoc) // uncomment when using normals
 
     this.meshes.foreach { mesh =>
-      gl.uniformMatrix4f(transformUniLoc, mesh.transform)
+      val modelView = cameraTransformInv * mesh.transform
+      val modelViewInvTr = modelView.invertedCopy().transpose()
+      gl.uniformMatrix4f(modelViewUniLoc, modelView)
+      gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
 
       gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.verticesBuffer)
       gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
 
-      //gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer) // uncomment when using normals
-      //gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0) // uncomment when using normals
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer) // uncomment when using normals
+      gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0) // uncomment when using normals
 
       mesh.subMeshes.foreach { submesh =>
-        gl.uniform3f(colorUniLoc, submesh.diffuseColor)
+        gl.uniform3f(diffuseColorUniLoc, submesh.diffuseColor)
 
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
         gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
       }
     }
 
-    //gl.disableVertexAttribArray(normalAttrLoc) // uncomment when using normals
+    gl.disableVertexAttribArray(normalAttrLoc) // uncomment when using normals
     gl.disableVertexAttribArray(positionAttrLoc)
 
     continueCond = continueCond && itf.update()
