@@ -24,4 +24,8 @@ trait UtilsRequirements {
   def startFrameListener(fl: games.FrameListener): Unit
 }
 
-object Utils extends UtilsImpl {}
+object Utils extends UtilsImpl {
+  def lines(text: String): Array[String] = {
+    text.replaceAll("\r", "").split("\n")
+  }
+}

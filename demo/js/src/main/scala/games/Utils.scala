@@ -96,13 +96,20 @@ trait UtilsImpl extends UtilsRequirements {
 
     val promise = Promise[ByteBuffer]
 
+    def error(): String = "Could not binary text resource " + res + ": code " + xmlRequest.status + " (" + xmlRequest.statusText + ")"
+
     xmlRequest.onload = (e: dom.Event) => {
-      val arrayBuffer = xmlRequest.response.asInstanceOf[js.typedarray.ArrayBuffer]
-      val byteBuffer = js.typedarray.TypedArrayBuffer.wrap(arrayBuffer)
-      promise.success(byteBuffer)
+      val code = xmlRequest.status
+      if (code >= 200 && code < 400) { // HTTP Code 2xx or 3xx, Ok
+        val arrayBuffer = xmlRequest.response.asInstanceOf[js.typedarray.ArrayBuffer]
+        val byteBuffer = js.typedarray.TypedArrayBuffer.wrap(arrayBuffer)
+        promise.success(byteBuffer)
+      } else {
+        promise.failure(new RuntimeException(error()))
+      }
     }
     xmlRequest.onerror = (e: dom.Event) => {
-      promise.failure(new RuntimeException("Could not retrieve binary resource " + res + ": " + xmlRequest.statusText))
+      promise.failure(new RuntimeException(error()))
     }
 
     xmlRequest.send(null)
@@ -120,12 +127,19 @@ trait UtilsImpl extends UtilsRequirements {
 
     val promise = Promise[String]
 
+    def error(): String = "Could not retrieve text resource " + res + ": code " + xmlRequest.status + " (" + xmlRequest.statusText + ")"
+
     xmlRequest.onload = (e: dom.Event) => {
-      val text: String = xmlRequest.responseText
-      promise.success(text)
+      val code = xmlRequest.status
+      if (code >= 200 && code < 400) { // HTTP Code 2xx or 3xx, Ok
+        val text: String = xmlRequest.responseText
+        promise.success(text)
+      } else {
+        promise.failure(new RuntimeException(error()))
+      }
     }
     xmlRequest.onerror = (e: dom.Event) => {
-      promise.failure(new RuntimeException("Could not retrieve text resource " + res + ": " + xmlRequest.statusText))
+      promise.failure(new RuntimeException(error()))
     }
 
     xmlRequest.send(null)

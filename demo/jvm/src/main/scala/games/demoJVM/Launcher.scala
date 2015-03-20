@@ -60,7 +60,7 @@ object Launcher {
       }
     }
 
-    val engine = new Engine(itf)
+    val engine = new Engine(itf)(JvmUtils.openglExecutionContext)
 
     Utils.startFrameListener(engine)
   }

@@ -1,16 +1,19 @@
 package games.demo
 
 import transport.WebSocketUrl
-import scala.concurrent.ExecutionContext
-
+import scala.concurrent.{ Future, ExecutionContext }
 import games._
 import games.math
 import games.math.Vector3f
 import games.opengl._
 import games.audio._
 import games.input._
-
+import games.utils._
 import java.nio.{ ByteBuffer, FloatBuffer, ByteOrder }
+import games.opengl.GLES2Debug
+import games.audio.Source3D
+import games.input.ButtonEvent
+import games.audio.AbstractSource
 
 abstract class EngineInterface {
   def printLine(msg: String): Unit
@@ -112,6 +115,22 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesBufferData, GLES2.STATIC_DRAW)
 
     gl.clearColor(1, 0, 0, 1) // red background
+
+    // Load mesh
+    val futureMeshObj = Utils.getTextDataFromResource(Resource("/games/demo/sphere.obj"))
+    val futureMeshMtl = Utils.getTextDataFromResource(Resource("/games/demo/spherea.mtl"))
+
+    val futureMesh = Future.sequence(Seq(futureMeshObj, futureMeshMtl))
+    futureMesh.onSuccess {
+      case Seq(meshObj, meshMtl) =>
+        val objLines = Utils.lines(meshObj)
+        val mtlLines = Utils.lines(meshMtl)
+
+        val objs = SimpleOBJParser.parseOBJ(objLines, Map("sphere.mtl" -> mtlLines))
+        val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
+
+    }
+    futureMesh.onFailure { case t => itf.printLine("Failed to load the mesh: " + t) }
   }
 
   var program: Token.Program = _
@@ -234,7 +253,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     gl.viewport(0, 0, width, height)
 
-    gl.clear(GLES2.COLOR_BUFFER_BIT)
+    gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     gl.useProgram(program)
 
