@@ -68,12 +68,6 @@ class ALListener private[games] () extends Listener {
     ret.load(orientationBuffer)
     ret
   }
-  def up_=(up: Vector3f): Unit = {
-    orientationBuffer.position(3)
-    up.store(orientationBuffer)
-    orientationBuffer.rewind()
-    AL10.alListener(AL10.AL_ORIENTATION, orientationBuffer)
-  }
 
   def orientation: Vector3f = {
     orientationBuffer.rewind()
@@ -81,8 +75,9 @@ class ALListener private[games] () extends Listener {
     ret.load(orientationBuffer)
     ret
   }
-  def orientation_=(orientation: Vector3f): Unit = {
+  def setOrientation(orientation: Vector3f, up: Vector3f): Unit = {
     orientationBuffer.rewind()
+    orientation.store(orientationBuffer)
     up.store(orientationBuffer)
     orientationBuffer.rewind()
     AL10.alListener(AL10.AL_ORIENTATION, orientationBuffer)

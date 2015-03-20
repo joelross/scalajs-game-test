@@ -27,7 +27,7 @@ class WebAudioContext extends Context {
   def createStreamingData(res: Resource): StreamingData = new JsStreamingData(this, res)
   def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): RawData = new JsRawData(this, data, format, channels, freq)
 
-  def listener: Listener = new JsListener(webApi.listener)
+  def listener: Listener = new JsListener(this)
 
   def volume: Float = mainOutput.gain.value.asInstanceOf[Double].toFloat
   def volume_=(volume: Float) = {
@@ -35,28 +35,25 @@ class WebAudioContext extends Context {
   }
 }
 
-class JsListener private[games] (webListener: js.Dynamic) extends Listener {
+class JsListener private[games] (ctx: WebAudioContext) extends Listener {
   private val orientationData = new Vector3f(0, 0, -1)
   private val upData = new Vector3f(0, 1, 0)
   private val positionData = new Vector3f(0, 0, 0)
 
   // Init
-  webListener.setPosition(positionData.x, positionData.y, positionData.z)
-  webListener.setOrientation(orientationData.x, orientationData.y, orientationData.z, upData.x, upData.y, upData.z)
+  ctx.webApi.listener.setPosition(positionData.x.toDouble, positionData.y.toDouble, positionData.z.toDouble)
+  ctx.webApi.listener.setOrientation(orientationData.x.toDouble, orientationData.y.toDouble, orientationData.z.toDouble, upData.x.toDouble, upData.y.toDouble, upData.z.toDouble)
 
   def orientation: Vector3f = orientationData.copy()
-  def orientation_=(orientation: Vector3f): Unit = {
-    Vector3f.set(orientation, orientationData)
-    webListener.setOrientation(orientationData.x, orientationData.y, orientationData.z, upData.x, upData.y, upData.z)
-  }
   def position: Vector3f = positionData.copy()
   def position_=(position: Vector3f): Unit = {
     Vector3f.set(position, positionData)
-    webListener.setPosition(positionData.x, positionData.y, positionData.z)
+    ctx.webApi.listener.setPosition(positionData.x.toDouble, positionData.y.toDouble, positionData.z.toDouble)
   }
   def up: Vector3f = upData.copy()
-  def up_=(up: Vector3f): Unit = {
+  def setOrientation(orientation: Vector3f, up: Vector3f): Unit = {
+    Vector3f.set(orientation, orientationData)
     Vector3f.set(up, upData)
-    webListener.setOrientation(orientationData.x, orientationData.y, orientationData.z, upData.x, upData.y, upData.z)
+    ctx.webApi.listener.setOrientation(orientationData.x.toDouble, orientationData.y.toDouble, orientationData.z.toDouble, upData.x.toDouble, upData.y.toDouble, upData.z.toDouble)
   }
 }

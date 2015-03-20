@@ -30,10 +30,10 @@ abstract class Listener extends Closeable {
   def position_=(position: Vector3f)
 
   def up: Vector3f
-  def up_=(up: Vector3f)
 
   def orientation: Vector3f
-  def orientation_=(orientation: Vector3f)
+
+  def setOrientation(orientation: Vector3f, up: Vector3f): Unit
 
   def close(): Unit = {}
 }
