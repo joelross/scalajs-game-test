@@ -220,7 +220,7 @@ object SimpleOBJParser {
           curMat = Some(newMat)
         }
 
-        case ("ka", Some("spectral")) => throw new RuntimeException("Spectral Ka not supported")
+        case ("ka", Some("spectral")) => println("Spectral Ka not supported")
 
         case ("ka", Some("xyz")) if (tokens.size >= 5) => {
           val x = tokens(2).toFloat
@@ -240,7 +240,7 @@ object SimpleOBJParser {
           mat().ambientColor = Some(rgb)
         }
 
-        case ("kd", Some("spectral")) => throw new RuntimeException("Spectral Kd not supported")
+        case ("kd", Some("spectral")) => println("Spectral Kd not supported")
 
         case ("kd", Some("xyz")) if (tokens.size >= 5) => {
           val x = tokens(2).toFloat
@@ -260,7 +260,7 @@ object SimpleOBJParser {
           mat().diffuseColor = Some(rgb)
         }
 
-        case ("ks", Some("spectral")) => throw new RuntimeException("Spectral Ks not supported")
+        case ("ks", Some("spectral")) => println("Spectral Ks not supported")
 
         case ("ks", Some("xyz")) if (tokens.size >= 5) => {
           val x = tokens(2).toFloat
@@ -280,7 +280,7 @@ object SimpleOBJParser {
           mat().specularColor = Some(rgb)
         }
 
-        case ("tf", _) => throw new RuntimeException("Transmission filter not supported")
+        case ("tf", _) => println("Transmission filter not supported")
 
         case ("illum", _) if (tokens.size >= 2) => {
           val illum = tokens(1).toInt
@@ -328,7 +328,7 @@ object SimpleOBJParser {
         }
 
         case ("", _)  => // Empty line (probably a comment), ignore
-        case (arg, _) => throw new RuntimeException("Unknown or invalid MTL command \"" + arg + "\", ignoring the line")
+        case (arg, _) => println("Unknown or invalid MTL command \"" + arg + "\", ignoring the line")
       }
     }
 
@@ -496,19 +496,19 @@ object SimpleOBJParser {
 
         // Free-form curve/surface attributes
 
-        case "cstype" => throw new RuntimeException("Type of curve not supported")
+        case "cstype" => println("Type of curve not supported")
 
-        case "deg"    => throw new RuntimeException("Degree for curves and surfaces not supported")
+        case "deg"    => println("Degree for curves and surfaces not supported")
 
-        case "bmat"   => throw new RuntimeException("Basis matrices not supported")
+        case "bmat"   => println("Basis matrices not supported")
 
-        case "step"   => throw new RuntimeException("Step size for surces and surfaces not supported")
+        case "step"   => println("Step size for surces and surfaces not supported")
 
         // Elements
 
-        case "p"      => throw new RuntimeException("Point element not supported")
+        case "p"      => println("Point element not supported")
 
-        case "l"      => throw new RuntimeException("Line element not supported")
+        case "l"      => println("Line element not supported")
 
         case "f" => {
           val face = new Array[TmpVertex](tokens.size - 1)
@@ -537,29 +537,29 @@ object SimpleOBJParser {
           objGroupPart().faces += face
         }
 
-        case "curv"  => throw new RuntimeException("Curve element not supported")
+        case "curv"  => println("Curve element not supported")
 
-        case "curv2" => throw new RuntimeException("2D curve element not supported")
+        case "curv2" => println("2D curve element not supported")
 
-        case "surf"  => throw new RuntimeException("Surface element not supported")
+        case "surf"  => println("Surface element not supported")
 
         // Special curve and point
 
-        case "parm"  => throw new RuntimeException("Parameter not supported")
+        case "parm"  => println("Parameter not supported")
 
-        case "trim"  => throw new RuntimeException("Trimming not supported")
+        case "trim"  => println("Trimming not supported")
 
-        case "hole"  => throw new RuntimeException("Hole not supported")
+        case "hole"  => println("Hole not supported")
 
-        case "scrv"  => throw new RuntimeException("Curve sequence not supported")
+        case "scrv"  => println("Curve sequence not supported")
 
-        case "sp"    => throw new RuntimeException("Special point not supported")
+        case "sp"    => println("Special point not supported")
 
-        case "end"   => throw new RuntimeException("End not supported")
+        case "end"   => println("End not supported")
 
         // Connectivity
 
-        case "con"   => throw new RuntimeException("Connectivity not supported")
+        case "con"   => println("Connectivity not supported")
 
         // Grouping
 
@@ -579,7 +579,7 @@ object SimpleOBJParser {
           objGroup().smooth = smooth
         }
 
-        case "mg" => throw new RuntimeException("Merging group not supported")
+        case "mg" => println("Merging group not supported")
 
         case "o" if (tokens.size >= 2) => {
           flushCurObj()
@@ -597,17 +597,17 @@ object SimpleOBJParser {
 
         // Display/render attributes
 
-        case "bevel"    => throw new RuntimeException("Bevel not supported")
+        case "bevel"    => println("Bevel not supported")
 
-        case "c_interp" => throw new RuntimeException("Color interopolation not supported")
+        case "c_interp" => println("Color interopolation not supported")
 
-        case "d_interp" => throw new RuntimeException("Dissolve interpolation not supported")
+        case "d_interp" => println("Dissolve interpolation not supported")
 
-        case "lod"      => throw new RuntimeException("Level of detail not supported")
+        case "lod"      => println("Level of detail not supported")
 
-        case "maplib"   => throw new RuntimeException("Library mapping not supported")
+        case "maplib"   => println("Library mapping not supported")
 
-        case "usemap"   => throw new RuntimeException("Use mapping not supported")
+        case "usemap"   => println("Use mapping not supported")
 
         case "usemtl" if (tokens.size >= 2) => {
           flushCurObjGroupPart()
@@ -624,30 +624,30 @@ object SimpleOBJParser {
           availableMats ++= parseMTL(mtlFileContent)
         }
 
-        case "shadow_obj" => throw new RuntimeException("Shadow object not supported")
+        case "shadow_obj" => println("Shadow object not supported")
 
-        case "trace_obj"  => throw new RuntimeException("Tracing object not supported")
+        case "trace_obj"  => println("Tracing object not supported")
 
-        case "ctech"      => throw new RuntimeException("Curve approximation not supported")
+        case "ctech"      => println("Curve approximation not supported")
 
-        case "stech"      => throw new RuntimeException("Surface approximation not supported")
+        case "stech"      => println("Surface approximation not supported")
 
         // Curve and surface operation
 
-        case "bsp"        => throw new RuntimeException("B-spline patch not supported")
+        case "bsp"        => println("B-spline patch not supported")
 
-        case "bzp"        => throw new RuntimeException("Bezier patch not supported")
+        case "bzp"        => println("Bezier patch not supported")
 
-        case "cdc"        => throw new RuntimeException("Cardinal curve not supported")
+        case "cdc"        => println("Cardinal curve not supported")
 
-        case "cdp"        => throw new RuntimeException("Cardinal patch not supported")
+        case "cdp"        => println("Cardinal patch not supported")
 
-        case "res"        => throw new RuntimeException("Reference and display not supported")
+        case "res"        => println("Reference and display not supported")
 
         // Misc
 
         case ""           => // Empty line (probably a comment), ignore
-        case arg          => throw new RuntimeException("Unknown or invalid OBJ command \"" + arg + "\"")
+        case arg          => println("Unknown or invalid OBJ command \"" + arg + "\", ignoring the line")
       }
     }
 
