@@ -317,7 +317,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     cameraPosition += cameraRotation * (new Vector3f(transX, transY, transZ) * multiplier)
 
     audioContext.listener.position = cameraPosition
-    audioContext.listener.setOrientation(cameraRotation * Vector3f.Front, cameraRotation * Vector3f.Up) // Cause Web Audio API to go crazy?
+    audioContext.listener.setOrientation(cameraRotation * Vector3f.Front, cameraRotation * Vector3f.Up)
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
