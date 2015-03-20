@@ -217,13 +217,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val (width, height) = (gl.display.width, gl.display.height)
 
     if (mouse.isButtonDown(Button.Left)) {
-      def interpol(curIn: Float, maxIn: Float, startValue: Float, endValue: Float): Float = (startValue + curIn / maxIn * (endValue - startValue))
+      def interpol(curIn: Float, minIn: Float, maxIn: Float, startValue: Float, endValue: Float): Float = startValue + (curIn - minIn) * (endValue - startValue) / (maxIn - minIn)
 
       val mousePos = mouse.position
       val startValue = -10.0
       val endValue = 10.0
-      val posX = interpol(mousePos.x, width, -10, 10)
-      val posY = interpol(mousePos.y, height, -10, 10)
+      val posX = interpol(mousePos.x, 0, width, -10, 10)
+      val posY = interpol(mousePos.y, 0, height, -10, 10)
       audioSources.foreach {
         case s: Source3D => s.position = new Vector3f(posX, 0, posY)
         case _           =>
