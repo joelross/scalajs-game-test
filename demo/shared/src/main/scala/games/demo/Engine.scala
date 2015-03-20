@@ -183,8 +183,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
         val openGLMesh = OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes, new Matrix4f)
         this.meshes += openGLMesh
-
-        itf.printLine("Loading done")
     }
     futureMesh.onFailure { case t => itf.printLine("Failed to load the mesh: " + t) }
   }
@@ -300,11 +298,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     var transX: Float = 0
     var transY: Float = 0
+    var transZ: Float = 0
     if (keyboard.isKeyDown(Key.D)) transX += fe.elapsedTime * +lookTranslationSpeed
     if (keyboard.isKeyDown(Key.A)) transX += fe.elapsedTime * -lookTranslationSpeed
-    if (keyboard.isKeyDown(Key.W)) transY += fe.elapsedTime * -lookTranslationSpeed
-    if (keyboard.isKeyDown(Key.S)) transY += fe.elapsedTime * +lookTranslationSpeed
-    cameraTransform = Matrix4f.translate3D(new Vector3f(transX, 0, transY)) * cameraTransform
+    if (keyboard.isKeyDown(Key.W)) transZ += fe.elapsedTime * -lookTranslationSpeed
+    if (keyboard.isKeyDown(Key.S)) transZ += fe.elapsedTime * +lookTranslationSpeed
+    if (keyboard.isKeyDown(Key.E)) transY += fe.elapsedTime * +lookTranslationSpeed
+    if (keyboard.isKeyDown(Key.C)) transY += fe.elapsedTime * -lookTranslationSpeed
+    cameraTransform = Matrix4f.translate3D(new Vector3f(transX, transY, transZ)) * cameraTransform
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
