@@ -204,11 +204,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   val meshes = new ArrayBuffer[OpenGLMesh]()
 
-  val fovy: Float = 70f
+  val fovy: Float = 60f
   val near: Float = 0.1f
   val far: Float = 100f
 
   val lookTranslationSpeed: Float = 2.0f
+  val lookRotationSpeed: Float = 1.0f
 
   var dim: (Int, Int) = _
 
@@ -289,7 +290,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val height = gl.display.height
 
     val curDim = (width, height)
-
     if (curDim != dim) {
       dim = curDim
       gl.viewport(0, 0, width, height)
@@ -305,7 +305,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     if (keyboard.isKeyDown(Key.S)) transZ += fe.elapsedTime * +lookTranslationSpeed
     if (keyboard.isKeyDown(Key.E)) transY += fe.elapsedTime * +lookTranslationSpeed
     if (keyboard.isKeyDown(Key.C)) transY += fe.elapsedTime * -lookTranslationSpeed
-    cameraTransform = Matrix4f.translate3D(new Vector3f(transX, transY, transZ)) * cameraTransform
+    val multiplier: Float = if (keyboard.isKeyDown(Key.ShiftLeft)) 4f else 1f
+    cameraTransform = cameraTransform * Matrix4f.translate3D(new Vector3f(transX, transY, transZ) * multiplier)
+
+    val deltaPosition = mouse.deltaPosition
+    var rotX: Float = deltaPosition.x * -lookRotationSpeed
+    cameraTransform = cameraTransform * Matrix4f.rotation3D(rotX, new Vector3f(0, 1, 0))
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
