@@ -14,7 +14,7 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends RawData {
   private val bufferReady = Future {
     format match {
-      case Format.FLOAT32 => // good to go
+      case Format.Float32 => // good to go
       case _              => throw new RuntimeException("Unsupported data format: " + format)
     }
 
@@ -51,10 +51,10 @@ class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: 
     buffer
   }
 
-  def createSource: scala.concurrent.Future[games.audio.Source] = {
+  def createSource(): scala.concurrent.Future[games.audio.Source] = {
     bufferReady.map { buffer => new JsBufferedSource(ctx, buffer, ctx.mainOutput) }
   }
-  def createSource3D: scala.concurrent.Future[games.audio.Source3D] = {
+  def createSource3D(): scala.concurrent.Future[games.audio.Source3D] = {
     bufferReady.map { buffer =>
       val pannerNode = ctx.webApi.createPanner()
       val source2d = new JsBufferedSource(ctx, buffer, pannerNode)
@@ -89,10 +89,10 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
 
   request.send()
 
-  def createSource: Future[Source] = {
+  def createSource(): Future[Source] = {
     decodedDataReady.future.map { buffer => new JsBufferedSource(ctx, buffer, ctx.mainOutput) }
   }
-  def createSource3D: Future[Source3D] = {
+  def createSource3D(): Future[Source3D] = {
     decodedDataReady.future.map { buffer =>
       val pannerNode = ctx.webApi.createPanner()
       val source2d = new JsBufferedSource(ctx, buffer, pannerNode)
@@ -127,11 +127,11 @@ class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) exten
     streamReady.failure(new RuntimeException("Failed to load the stream " + res + ", cause: " + errorMessage))
   }
 
-  def createSource: Future[Source] = {
+  def createSource(): Future[Source] = {
     val source = new JsStreamingSource(ctx, streamReady.future, ctx.mainOutput)
     source.ready.map { x => source }
   }
-  def createSource3D: Future[Source3D] = {
+  def createSource3D(): Future[Source3D] = {
     val pannerNode = ctx.webApi.createPanner()
     val source = new JsStreamingSource(ctx, streamReady.future, pannerNode)
     source.ready.map { x =>

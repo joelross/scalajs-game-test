@@ -139,7 +139,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     bb
   }
 
-  var audioSources: List[Source] = Nil
+  var audioSources: List[AbstractSource] = Nil
 
   def onDraw(fe: games.FrameEvent): Unit = {
     def processKeyboard() {
@@ -153,22 +153,23 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
             case Key.Escape => continueCond = false
             case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
             case Key.NumAdd => {
-              audioContext.volume *= 1.1f
+              audioContext.volume *= 1.25f
               itf.printLine("Increased volume to " + audioContext.volume)
             }
             case Key.NumSubstract => {
-              audioContext.volume /= 1.1f
+              audioContext.volume /= 1.25f
               itf.printLine("Decreased volume to " + audioContext.volume)
             }
             case Key.M => {
               if (audioSources.isEmpty) {
                 //val data = audioContext.createBufferedData(Resource("/games/demo/test_mono.ogg"))
-                val data = audioContext.createRawData(createMonoSound(1000), Format.FLOAT32, 1, sampleRate)
-                val source = data.createSource
+                val data = audioContext.createRawData(createMonoSound(1000), Format.Float32, 1, sampleRate)
+                val source = data.createSource3D
                 source.onSuccess {
                   case s =>
                     audioSources = s :: audioSources
                     s.loop = true
+                    s.position = new Vector3f(0, 0, 0)
                     s.volume = 0.5f
                     s.play
                 }
@@ -202,8 +203,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           itf.printLine("Button " + button + (if (down) " is down" else " is up"))
 
           if (down) button match {
-            case Button.Left => itf.printLine("Mouse is at " + mouse.position.x + "x" + mouse.position.y + " (display is " + gl.display.width + "x" + gl.display.height + ")")
-            case _           => // nothing to do
+            //case Button.Left => itf.printLine("Mouse is at " + mouse.position.x + "x" + mouse.position.y + " (display is " + gl.display.width + "x" + gl.display.height + ")")
+            case _ => // nothing to do
           }
 
           processMouse()
@@ -213,12 +214,24 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     processMouse()
 
-    if (mouse.isButtonDown(Button.Right)) {
-      val delta = mouse.deltaPosition
-      if (delta != Position(0, 0)) itf.printLine("Mouse has moved " + delta.x + "x" + delta.y + " px")
+    val (width, height) = (gl.display.width, gl.display.height)
+
+    if (mouse.isButtonDown(Button.Left)) {
+      def interpol(curIn: Float, maxIn: Float, startValue: Float, endValue: Float): Float = (startValue + curIn / maxIn * (endValue - startValue))
+
+      val mousePos = mouse.position
+      val startValue = -10.0
+      val endValue = 10.0
+      val posX = interpol(mousePos.x, width, -10, 10)
+      val posY = interpol(mousePos.y, height, -10, 10)
+      audioSources.foreach {
+        case s: Source3D => s.position = new Vector3f(posX, 0, posY)
+        case _           =>
+      }
     }
 
-    val (width, height) = itf.getScreenDim()
+    //val (width, height) = itf.getScreenDim()
+
     gl.viewport(0, 0, width, height)
 
     gl.clear(GLES2.COLOR_BUFFER_BIT)

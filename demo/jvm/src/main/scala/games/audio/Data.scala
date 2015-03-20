@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class ALRawData private[games] (ctx: ALContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends RawData {
   private val bufferReady = Future {
     format match {
-      case Format.FLOAT32 => // good to go
+      case Format.Float32 => // good to go
       case _              => throw new RuntimeException("Unsupported data format: " + format)
     }
 
@@ -55,10 +55,10 @@ class ALRawData private[games] (ctx: ALContext, data: ByteBuffer, format: Format
     alBuffer
   }
 
-  def createSource: scala.concurrent.Future[games.audio.Source] = {
+  def createSource(): scala.concurrent.Future[games.audio.Source] = {
     bufferReady.map { alBuffer => new ALBufferedSource(ctx, alBuffer) }
   }
-  def createSource3D: scala.concurrent.Future[games.audio.Source3D] = {
+  def createSource3D(): scala.concurrent.Future[games.audio.Source3D] = {
     bufferReady.map { alBuffer => new ALSource3D(ctx, new ALBufferedSource(ctx, alBuffer)) }
   }
 
@@ -121,10 +121,10 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
     alBuffer
   }
 
-  def createSource: scala.concurrent.Future[games.audio.Source] = {
+  def createSource(): scala.concurrent.Future[games.audio.Source] = {
     bufferReady.map { alBuffer => new ALBufferedSource(ctx, alBuffer) }
   }
-  def createSource3D: scala.concurrent.Future[games.audio.Source3D] = {
+  def createSource3D(): scala.concurrent.Future[games.audio.Source3D] = {
     bufferReady.map { alBuffer => new ALSource3D(ctx, new ALBufferedSource(ctx, alBuffer)) }
   }
 
@@ -138,11 +138,11 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
 }
 
 class ALStreamingData private[games] (ctx: ALContext, res: Resource) extends StreamingData {
-  def createSource: scala.concurrent.Future[games.audio.Source] = {
+  def createSource(): scala.concurrent.Future[games.audio.Source] = {
     val source = new ALStreamingSource(ctx, res)
     source.ready.map { x => source }
   }
-  def createSource3D: scala.concurrent.Future[games.audio.Source3D] = {
+  def createSource3D(): scala.concurrent.Future[games.audio.Source3D] = {
     val source2d = new ALStreamingSource(ctx, res)
     source2d.ready.map { source => new ALSource3D(ctx, source2d) }
   }

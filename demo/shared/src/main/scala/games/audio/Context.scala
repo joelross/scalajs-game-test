@@ -9,7 +9,7 @@ import java.nio.ByteBuffer
 abstract sealed class Format
 
 object Format {
-  case object FLOAT32 extends Format
+  case object Float32 extends Format
 }
 
 abstract class Context extends Closeable {
