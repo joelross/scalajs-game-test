@@ -302,7 +302,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     cameraRotationH += rotX
     cameraRotationV += rotY
 
-    val cameraRotation = Matrix3f.rotation3D(cameraRotationH, new Vector3f(0, 1, 0)) * Matrix3f.rotation3D(cameraRotationV, new Vector3f(1, 0, 0)) 
+    val cameraRotation = Matrix3f.rotation3D(cameraRotationH, Vector3f.Up) * Matrix3f.rotation3D(cameraRotationV, Vector3f.Right)
 
     var transX: Float = 0
     var transY: Float = 0

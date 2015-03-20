@@ -232,4 +232,11 @@ object Vector3f {
     dst.y = v1.y / v
     dst.z = v1.z / v
   }
+
+  def Right = new Vector3f(1, 0, 0)
+  def Up = new Vector3f(0, 1, 0)
+  def Back = new Vector3f(0, 0, 1)
+  def Left = new Vector3f(-1, 0, 0)
+  def Down = new Vector3f(0, -1, 0)
+  def Front = new Vector3f(0, 0, -1)
 }
