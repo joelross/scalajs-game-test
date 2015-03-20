@@ -27,7 +27,7 @@ class WebAudioContext extends Context {
   def createStreamingData(res: Resource): StreamingData = new JsStreamingData(this, res)
   def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): RawData = new JsRawData(this, data, format, channels, freq)
 
-  def listener: Listener = new JsListener(this)
+  val listener: Listener = new JsListener(this)
 
   def volume: Float = mainOutput.gain.value.asInstanceOf[Double].toFloat
   def volume_=(volume: Float) = {
