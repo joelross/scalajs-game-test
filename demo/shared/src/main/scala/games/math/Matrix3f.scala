@@ -6,8 +6,8 @@ import java.nio.FloatBuffer
  * Ported from LWJGL source code
  */
 class Matrix3f extends Matrix {
-  private var m00, m11, m22: Float = 1
-  private var m01, m02, m10, m12, m20, m21: Float = 0
+  private[math] var m00, m11, m22: Float = 1
+  private[math] var m01, m02, m10, m12, m20, m21: Float = 0
 
   def this(a00: Float, a01: Float, a02: Float, a10: Float, a11: Float, a12: Float, a20: Float, a21: Float, a22: Float) = {
     this()
@@ -42,7 +42,7 @@ class Matrix3f extends Matrix {
     case (2, 0) => m02
     case (2, 1) => m12
     case (2, 2) => m22
-    case _ => throw new IndexOutOfBoundsException
+    case _      => throw new IndexOutOfBoundsException
   }
 
   def update(row: Int, col: Int, v: Float): Unit = (row, col) match {
@@ -57,7 +57,7 @@ class Matrix3f extends Matrix {
     case (2, 0) => m02 = v
     case (2, 1) => m12 = v
     case (2, 2) => m22 = v
-    case _ => throw new IndexOutOfBoundsException
+    case _      => throw new IndexOutOfBoundsException
   }
 
   def load(src: FloatBuffer, order: MajorOrder): Matrix3f = order match {
@@ -255,6 +255,12 @@ class Matrix3f extends Matrix {
     ret
   }
 
+  def toHomogeneous(): Matrix4f = {
+    val ret = new Matrix4f
+    Matrix3f.setHomogeneous(this, ret)
+    ret
+  }
+
   override def toString: String = {
     var sb = ""
     sb += m00 + " " + m10 + " " + m20 + "\n"
@@ -300,6 +306,28 @@ object Matrix3f {
     dst.m20 = src.m20
     dst.m21 = src.m21
     dst.m22 = src.m22
+  }
+
+  def setHomogeneous(src: Matrix3f, dst: Matrix4f): Unit = {
+    dst.m00 = src.m00
+    dst.m01 = src.m01
+    dst.m02 = src.m02
+    dst.m03 = 0f
+
+    dst.m10 = src.m10
+    dst.m11 = src.m11
+    dst.m12 = src.m12
+    dst.m13 = 0f
+
+    dst.m20 = src.m20
+    dst.m21 = src.m21
+    dst.m22 = src.m22
+    dst.m23 = 0f
+
+    dst.m30 = 0f
+    dst.m31 = 0f
+    dst.m32 = 0f
+    dst.m33 = 1f
   }
 
   def negate(src: Matrix3f, dst: Matrix3f): Unit = {

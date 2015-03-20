@@ -6,13 +6,13 @@ import java.nio.FloatBuffer
  * Ported from LWJGL source code
  */
 class Matrix4f extends Matrix {
-  private var m00, m11, m22, m33: Float = 1
-  private var m01, m02, m03, m10, m12, m13, m20, m21, m23, m30, m31, m32: Float = 0
+  private[math] var m00, m11, m22, m33: Float = 1
+  private[math] var m01, m02, m03, m10, m12, m13, m20, m21, m23, m30, m31, m32: Float = 0
 
   def this(a00: Float, a01: Float, a02: Float, a03: Float,
-    a10: Float, a11: Float, a12: Float, a13: Float,
-    a20: Float, a21: Float, a22: Float, a23: Float,
-    a30: Float, a31: Float, a32: Float, a33: Float) = {
+           a10: Float, a11: Float, a12: Float, a13: Float,
+           a20: Float, a21: Float, a22: Float, a23: Float,
+           a30: Float, a31: Float, a32: Float, a33: Float) = {
     this()
     // Internally stored as Column-major
     m00 = a00
@@ -61,7 +61,7 @@ class Matrix4f extends Matrix {
     case (3, 1) => m13
     case (3, 2) => m23
     case (3, 3) => m33
-    case _ => throw new IndexOutOfBoundsException
+    case _      => throw new IndexOutOfBoundsException
   }
 
   def update(row: Int, col: Int, v: Float): Unit = (row, col) match {
@@ -84,7 +84,7 @@ class Matrix4f extends Matrix {
     case (3, 1) => m13 = v
     case (3, 2) => m23 = v
     case (3, 3) => m33 = v
-    case _ => throw new IndexOutOfBoundsException
+    case _      => throw new IndexOutOfBoundsException
   }
 
   def load(src: FloatBuffer, order: MajorOrder): Matrix4f = order match {
@@ -335,6 +335,12 @@ class Matrix4f extends Matrix {
     ret
   }
 
+  def toCartesian(): Matrix3f = {
+    val ret = new Matrix3f
+    Matrix4f.setCartesian(this, ret)
+    ret
+  }
+
   override def toString: String = {
     var sb = ""
     sb += m00 + " " + m10 + " " + m20 + " " + m30 + "\n"
@@ -399,6 +405,20 @@ object Matrix4f {
     dst.m33 = src.m33
   }
 
+  def setCartesian(src: Matrix4f, dst: Matrix3f): Unit = {
+    dst.m00 = src.m00 / src.m33
+    dst.m01 = src.m01 / src.m33
+    dst.m02 = src.m02 / src.m33
+
+    dst.m10 = src.m10 / src.m33
+    dst.m11 = src.m11 / src.m33
+    dst.m12 = src.m12 / src.m33
+
+    dst.m20 = src.m20 / src.m33
+    dst.m21 = src.m21 / src.m33
+    dst.m22 = src.m22 / src.m33
+  }
+
   def negate(src: Matrix4f, dst: Matrix4f): Unit = {
     dst.m00 = -src.m00
     dst.m01 = -src.m01
@@ -422,8 +442,8 @@ object Matrix4f {
   }
 
   private def determinant3x3(t00: Float, t01: Float, t02: Float,
-    t10: Float, t11: Float, t12: Float,
-    t20: Float, t21: Float, t22: Float): Float = {
+                             t10: Float, t11: Float, t12: Float,
+                             t20: Float, t21: Float, t22: Float): Float = {
     t00 * (t11 * t22 - t12 * t21) + t01 * (t12 * t20 - t10 * t22) + t02 * (t10 * t21 - t11 * t20)
   }
 

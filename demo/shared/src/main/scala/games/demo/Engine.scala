@@ -4,7 +4,7 @@ import transport.WebSocketUrl
 import scala.concurrent.{ Future, ExecutionContext }
 import games._
 import games.math
-import games.math.{ Vector3f, Vector4f, Matrix4f, MatrixStack }
+import games.math.{ Vector3f, Vector4f, Matrix4f, Matrix3f, MatrixStack }
 import games.opengl._
 import games.audio._
 import games.input._
@@ -129,8 +129,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     dim = (width, height)
     gl.viewport(0, 0, width, height)
     projection = Matrix4f.perspective3D(fovy, width.toFloat / height.toFloat, near, far)
-    transformStack = new MatrixStack(new Matrix4f)
-    cameraTransform = Matrix4f.translate3D(new Vector3f(0, 0, 5)) * new Matrix4f
 
     // Load mesh
     val futureMeshObj = Utils.getTextDataFromResource(Resource("/games/demo/sphere.obj"))
@@ -189,8 +187,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   var program: Token.Program = _
   var projection: Matrix4f = _
-  var transformStack: MatrixStack[Matrix4f] = _
-  var cameraTransform: Matrix4f = _
+
+  var cameraPosition: Vector3f = new Vector3f(0, 0, 3)
+  var cameraRotationH: Float = 0
+  var cameraRotationV: Float = 0
 
   var verticesBuffer: Token.Buffer = _
   var indicesBuffer: Token.Buffer = _
@@ -209,7 +209,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   val far: Float = 100f
 
   val lookTranslationSpeed: Float = 2.0f
-  val lookRotationSpeed: Float = 1.0f
+  val lookRotationSpeed: Float = 50.0f
 
   var dim: (Int, Int) = _
 
@@ -296,6 +296,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
     }
 
+    val deltaPosition = mouse.deltaPosition
+    val rotX: Float = (deltaPosition.x.toFloat / width.toFloat) * -lookRotationSpeed
+    val rotY: Float = (deltaPosition.y.toFloat / height.toFloat) * -lookRotationSpeed
+    cameraRotationH += rotX
+    cameraRotationV += rotY
+
+    val cameraRotation = Matrix3f.rotation3D(cameraRotationH, new Vector3f(0, 1, 0)) * Matrix3f.rotation3D(cameraRotationV, new Vector3f(1, 0, 0)) 
+
     var transX: Float = 0
     var transY: Float = 0
     var transZ: Float = 0
@@ -306,17 +314,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     if (keyboard.isKeyDown(Key.E)) transY += fe.elapsedTime * +lookTranslationSpeed
     if (keyboard.isKeyDown(Key.C)) transY += fe.elapsedTime * -lookTranslationSpeed
     val multiplier: Float = if (keyboard.isKeyDown(Key.ShiftLeft)) 4f else 1f
-    cameraTransform = cameraTransform * Matrix4f.translate3D(new Vector3f(transX, transY, transZ) * multiplier)
-
-    val deltaPosition = mouse.deltaPosition
-    var rotX: Float = deltaPosition.x * -lookRotationSpeed
-    cameraTransform = cameraTransform * Matrix4f.rotation3D(rotX, new Vector3f(0, 1, 0))
+    cameraPosition += cameraRotation * (new Vector3f(transX, transY, transZ) * multiplier)
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     gl.useProgram(program)
 
     gl.uniformMatrix4f(projectionUniLoc, projection)
+    val cameraTransform = Matrix4f.translate3D(cameraPosition) * cameraRotation.toHomogeneous()
     val cameraTransformInv = cameraTransform.invertedCopy()
 
     gl.enableVertexAttribArray(positionAttrLoc)
