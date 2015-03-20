@@ -295,16 +295,16 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.uniformMatrix4f(cameraTransformInvUniLoc, cameraTransform.invertedCopy())
 
     gl.enableVertexAttribArray(positionAttrLoc)
-    //gl.enableVertexAttribArray(normalAttrLoc)
+    //gl.enableVertexAttribArray(normalAttrLoc) // uncomment when using normals
 
     this.meshes.foreach { mesh =>
       gl.uniformMatrix4f(transformUniLoc, mesh.transform)
 
       gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.verticesBuffer)
-      gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0) // X vertex, each vertex is 3 floats of 4 bytes
+      gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
 
-      //gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
-      //gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0) // X vertex, each vertex is 3 floats of 4 bytes
+      //gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer) // uncomment when using normals
+      //gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0) // uncomment when using normals
 
       mesh.subMeshes.foreach { submesh =>
         gl.uniform3f(colorUniLoc, submesh.diffuseColor)
@@ -314,7 +314,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
 
-    //gl.disableVertexAttribArray(normalAttrLoc)
+    //gl.disableVertexAttribArray(normalAttrLoc) // uncomment when using normals
     gl.disableVertexAttribArray(positionAttrLoc)
 
     continueCond = continueCond && itf.update()
