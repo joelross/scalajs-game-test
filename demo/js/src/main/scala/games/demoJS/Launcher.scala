@@ -27,11 +27,6 @@ object Launcher extends js.JSApp {
         //        output.appendChild(line)
         println(msg)
       }
-      def getScreenDim(): (Int, Int) = {
-        val width = canvas.width
-        val height = canvas.height
-        (width, height)
-      }
       def initGL(): GLES2 = {
         val glContext: GLES2 = new GLES2WebGL(canvas)
         glContext

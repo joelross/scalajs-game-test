@@ -14,10 +14,10 @@ import games.opengl.GLES2Debug
 import games.audio.Source3D
 import games.input.ButtonEvent
 import games.audio.AbstractSource
+import scala.collection.mutable.ArrayBuffer
 
 abstract class EngineInterface {
   def printLine(msg: String): Unit
-  def getScreenDim(): (Int, Int)
   def initGL(): GLES2
   def initAudio(): Context
   def initKeyboard(): Keyboard
@@ -25,6 +25,9 @@ abstract class EngineInterface {
   def update(): Boolean
   def close(): Unit
 }
+
+case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
+case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh], transform: Matrix4f)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   def context: games.opengl.GLES2 = gl
@@ -64,10 +67,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       uniform mat4 cameraTransformInv;
       
       attribute vec3 position;
+      attribute vec3 normal;
       
       void main(void) {
-         //gl_Position = projection * cameraTransformInv * transform * vec4(position, 1.0);
-         gl_Position = vec4(position, 1.0);
+         gl_Position = projection * cameraTransformInv * transform * vec4(position, 1.0);
+         //gl_Position = vec4(position, 1.0);
       }
       """
 
@@ -99,39 +103,25 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.useProgram(program)
 
     positionAttrLoc = gl.getAttribLocation(program, "position")
+    normalAttrLoc = gl.getAttribLocation(program, "normal")
     colorUniLoc = gl.getUniformLocation(program, "color")
     projectionUniLoc = gl.getUniformLocation(program, "projection")
     transformUniLoc = gl.getUniformLocation(program, "transform")
     cameraTransformInvUniLoc = gl.getUniformLocation(program, "cameraTransformInv")
 
-    // Prepare data
-    val verticesBufferData = GLES2.createFloatBuffer(3 * 3)
-    verticesBufferData.put(-0.2f).put(-0.2f).put(0)
-    verticesBufferData.put(0.2f).put(-0.2f).put(0)
-    verticesBufferData.put(0).put(0.2f).put(0)
-    verticesBufferData.rewind
-    verticesBuffer = gl.createBuffer()
-    gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
-    gl.bufferData(GLES2.ARRAY_BUFFER, verticesBufferData, GLES2.STATIC_DRAW)
-    gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 3 * 4, 0) // 3 vertex, each vertex is 3 floats of 4 bytes
+    gl.clearColor(0.5f, 0.5f, 0.5f, 1) // grey background
 
-    val indicesBufferData = GLES2.createShortBuffer(3 * 1)
-    indicesBufferData.put(0.toShort).put(1.toShort).put(2.toShort)
-    indicesBufferData.rewind
-    indicesBuffer = gl.createBuffer
-    gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
-    gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesBufferData, GLES2.STATIC_DRAW)
-
-    gl.clearColor(1, 0, 0, 1) // red background
+    gl.enable(GLES2.DEPTH_TEST)
+    gl.depthFunc(GLES2.LESS)
 
     val width = gl.display.width
     val height = gl.display.height
 
     dim = (width, height)
     gl.viewport(0, 0, width, height)
-    projection = Matrix4f.perspective3D(90, width.toFloat / height.toFloat, 0.1f, 100f)
+    projection = Matrix4f.perspective3D(fovy, width.toFloat / height.toFloat, near, far)
     transformStack = new MatrixStack(new Matrix4f)
-    cameraTransform = new Matrix4f
+    cameraTransform = Matrix4f.translate3D(new Vector3f(0, 0, 5)) * new Matrix4f
 
     // Load mesh
     val futureMeshObj = Utils.getTextDataFromResource(Resource("/games/demo/sphere.obj"))
@@ -147,35 +137,43 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
         val mesh = meshes("Sphere")
 
-        val verticesData = GLES2.createFloatBuffer(mesh.vertices.length * 3)
+        val meshVerticesCount = mesh.vertices.length
+
+        val verticesData = GLES2.createFloatBuffer(meshVerticesCount * 3)
         mesh.vertices.foreach { v => v.store(verticesData) }
-        verticesData.rewind()
+        verticesData.flip()
         val verticesBuffer = gl.createBuffer()
         gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
         gl.bufferData(GLES2.ARRAY_BUFFER, verticesData, GLES2.STATIC_DRAW)
 
         val normals = mesh.normals.get
-        val normalsData = GLES2.createFloatBuffer(normals.length * 3)
+        val normalsData = GLES2.createFloatBuffer(meshVerticesCount * 3); require(meshVerticesCount == normals.length)
         normals.foreach { v => v.store(normalsData) }
-        normalsData.rewind()
+        normalsData.flip()
         val normalsBuffer = gl.createBuffer()
         gl.bindBuffer(GLES2.ARRAY_BUFFER, normalsBuffer)
         gl.bufferData(GLES2.ARRAY_BUFFER, normalsData, GLES2.STATIC_DRAW)
 
-        mesh.submeshes.foreach { submesh =>
+        val openGLSubMeshes = mesh.submeshes.map { submesh =>
           val tris = submesh.tris
-          val indicesData = GLES2.createShortBuffer(tris.length * 3)
+          val submeshVerticesCount = tris.length * 3
+          val indicesData = GLES2.createShortBuffer(submeshVerticesCount)
           tris.foreach {
             case (i0, i1, i2) =>
               indicesData.put(i0.toShort)
               indicesData.put(i1.toShort)
               indicesData.put(i2.toShort)
           }
-          indicesData.rewind()
+          indicesData.flip()
           val indicesBuffer = gl.createBuffer()
           gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
           gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesData, GLES2.STATIC_DRAW)
+
+          OpenGLSubMesh(indicesBuffer, submeshVerticesCount, submesh.material.get.ambientColor.get, submesh.material.get.diffuseColor.get)
         }
+
+        val openGLMesh = OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes, new Matrix4f)
+        this.meshes += openGLMesh
 
         itf.printLine("Loading done")
     }
@@ -191,16 +189,22 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   var indicesBuffer: Token.Buffer = _
 
   var positionAttrLoc: Int = _
+  var normalAttrLoc: Int = _
   var colorUniLoc: Token.UniformLocation = _
   var projectionUniLoc: Token.UniformLocation = _
   var transformUniLoc: Token.UniformLocation = _
   var cameraTransformInvUniLoc: Token.UniformLocation = _
 
-  val triangleColor = new math.Vector3f(0, 0, 1)
+  val meshes = new ArrayBuffer[OpenGLMesh]()
+
+  val fovy: Float = 70f
+  val near: Float = 0.1f
+  val far: Float = 100f
 
   var dim: (Int, Int) = _
 
   val sampleRate = 22100
+  var audioSources: List[AbstractSource] = Nil
 
   def createMonoSound(freq: Int): ByteBuffer = {
     val bb = ByteBuffer.allocate(4 * sampleRate).order(ByteOrder.nativeOrder())
@@ -215,8 +219,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     bb.rewind()
     bb
   }
-
-  var audioSources: List[AbstractSource] = Nil
 
   def onDraw(fe: games.FrameEvent): Unit = {
     def processKeyboard() {
@@ -282,26 +284,37 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     if (curDim != dim) {
       dim = curDim
       gl.viewport(0, 0, width, height)
-      Matrix4f.setPerspective3D(90, width.toFloat / height.toFloat, 0.1f, 100f, projection)
+      Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
     }
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     gl.useProgram(program)
 
-    gl.uniform3f(colorUniLoc, triangleColor)
     gl.uniformMatrix4f(projectionUniLoc, projection)
-    gl.uniformMatrix4f(transformUniLoc, transformStack.current)
     gl.uniformMatrix4f(cameraTransformInvUniLoc, cameraTransform.invertedCopy())
 
     gl.enableVertexAttribArray(positionAttrLoc)
+    //gl.enableVertexAttribArray(normalAttrLoc)
 
-    gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
-    gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 3 * 4, 0) // 3 vertex, each vertex is 3 floats of 4 bytes
+    this.meshes.foreach { mesh =>
+      gl.uniformMatrix4f(transformUniLoc, mesh.transform)
 
-    gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
-    gl.drawElements(GLES2.TRIANGLES, 3, GLES2.UNSIGNED_SHORT, 0)
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.verticesBuffer)
+      gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0) // X vertex, each vertex is 3 floats of 4 bytes
 
+      //gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
+      //gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0) // X vertex, each vertex is 3 floats of 4 bytes
+
+      mesh.subMeshes.foreach { submesh =>
+        gl.uniform3f(colorUniLoc, submesh.diffuseColor)
+
+        gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
+        gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
+      }
+    }
+
+    //gl.disableVertexAttribArray(normalAttrLoc)
     gl.disableVertexAttribArray(positionAttrLoc)
 
     continueCond = continueCond && itf.update()

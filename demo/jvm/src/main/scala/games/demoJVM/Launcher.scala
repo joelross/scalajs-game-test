@@ -29,12 +29,6 @@ object Launcher {
       def printLine(m: String): Unit = {
         println(m)
       }
-      def getScreenDim(): (Int, Int) = {
-        val displayMode = Display.getDisplayMode()
-        val width = displayMode.getWidth()
-        val height = displayMode.getHeight()
-        (width, height)
-      }
       def initGL(): GLES2 = {
         val glContext: GLES2 = new GLES2LWJGL()
         glContext
