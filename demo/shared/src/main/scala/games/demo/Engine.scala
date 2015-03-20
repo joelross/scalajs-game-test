@@ -4,7 +4,7 @@ import transport.WebSocketUrl
 import scala.concurrent.{ Future, ExecutionContext }
 import games._
 import games.math
-import games.math.Vector3f
+import games.math.{ Vector3f, Vector4f, Matrix4f, MatrixStack }
 import games.opengl._
 import games.audio._
 import games.input._
@@ -59,10 +59,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // Prepare shaders
     val vertexSource = """
+      uniform mat4 projection;
+      uniform mat4 transform;
+      uniform mat4 cameraTransformInv;
+      
       attribute vec3 position;
       
       void main(void) {
-        gl_Position = vec4(position, 1.0);
+         //gl_Position = projection * cameraTransformInv * transform * vec4(position, 1.0);
+         gl_Position = vec4(position, 1.0);
       }
       """
 
@@ -93,8 +98,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.linkProgram(program)
     gl.useProgram(program)
 
-    positionAttribLocation = gl.getAttribLocation(program, "position")
-    colorUniformLocation = gl.getUniformLocation(program, "color")
+    positionAttrLoc = gl.getAttribLocation(program, "position")
+    colorUniLoc = gl.getUniformLocation(program, "color")
+    projectionUniLoc = gl.getUniformLocation(program, "projection")
+    transformUniLoc = gl.getUniformLocation(program, "transform")
+    cameraTransformInvUniLoc = gl.getUniformLocation(program, "cameraTransformInv")
 
     // Prepare data
     val verticesBufferData = GLES2.createFloatBuffer(3 * 3)
@@ -105,7 +113,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     verticesBuffer = gl.createBuffer()
     gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
     gl.bufferData(GLES2.ARRAY_BUFFER, verticesBufferData, GLES2.STATIC_DRAW)
-    gl.vertexAttribPointer(positionAttribLocation, 3, GLES2.FLOAT, false, 3 * 4, 0) // 3 vertex, each vertex is 3 floats of 4 bytes
+    gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 3 * 4, 0) // 3 vertex, each vertex is 3 floats of 4 bytes
 
     val indicesBufferData = GLES2.createShortBuffer(3 * 1)
     indicesBufferData.put(0.toShort).put(1.toShort).put(2.toShort)
@@ -115,6 +123,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesBufferData, GLES2.STATIC_DRAW)
 
     gl.clearColor(1, 0, 0, 1) // red background
+
+    val width = gl.display.width
+    val height = gl.display.height
+
+    dim = (width, height)
+    gl.viewport(0, 0, width, height)
+    projection = Matrix4f.perspective3D(90, width.toFloat / height.toFloat, 0.1f, 100f)
+    transformStack = new MatrixStack(new Matrix4f)
+    cameraTransform = new Matrix4f
 
     // Load mesh
     val futureMeshObj = Utils.getTextDataFromResource(Resource("/games/demo/sphere.obj"))
@@ -166,13 +183,22 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   }
 
   var program: Token.Program = _
+  var projection: Matrix4f = _
+  var transformStack: MatrixStack[Matrix4f] = _
+  var cameraTransform: Matrix4f = _
 
   var verticesBuffer: Token.Buffer = _
   var indicesBuffer: Token.Buffer = _
-  var positionAttribLocation: Int = _
-  var colorUniformLocation: Token.UniformLocation = _
-  val triangleColor1 = new math.Vector3f(0, 0, 1)
-  val triangleColor2 = new math.Vector3f(0, 1, 0)
+
+  var positionAttrLoc: Int = _
+  var colorUniLoc: Token.UniformLocation = _
+  var projectionUniLoc: Token.UniformLocation = _
+  var transformUniLoc: Token.UniformLocation = _
+  var cameraTransformInvUniLoc: Token.UniformLocation = _
+
+  val triangleColor = new math.Vector3f(0, 0, 1)
+
+  var dim: (Int, Int) = _
 
   val sampleRate = 22100
 
@@ -248,20 +274,35 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     processKeyboard()
 
-    val (width, height) = (gl.display.width, gl.display.height)
+    val width = gl.display.width
+    val height = gl.display.height
 
-    gl.viewport(0, 0, width, height)
+    val curDim = (width, height)
+
+    if (curDim != dim) {
+      dim = curDim
+      gl.viewport(0, 0, width, height)
+      Matrix4f.setPerspective3D(90, width.toFloat / height.toFloat, 0.1f, 100f, projection)
+    }
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     gl.useProgram(program)
 
-    gl.uniform3f(colorUniformLocation, if (keyboard.isKeyDown(Key.Space)) triangleColor1 else triangleColor2)
+    gl.uniform3f(colorUniLoc, triangleColor)
+    gl.uniformMatrix4f(projectionUniLoc, projection)
+    gl.uniformMatrix4f(transformUniLoc, transformStack.current)
+    gl.uniformMatrix4f(cameraTransformInvUniLoc, cameraTransform.invertedCopy())
 
-    gl.enableVertexAttribArray(positionAttribLocation)
+    gl.enableVertexAttribArray(positionAttrLoc)
+
+    gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
+    gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 3 * 4, 0) // 3 vertex, each vertex is 3 floats of 4 bytes
+
     gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
     gl.drawElements(GLES2.TRIANGLES, 3, GLES2.UNSIGNED_SHORT, 0)
-    gl.disableVertexAttribArray(positionAttribLocation)
+
+    gl.disableVertexAttribArray(positionAttrLoc)
 
     continueCond = continueCond && itf.update()
   }
