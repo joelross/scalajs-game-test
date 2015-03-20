@@ -301,7 +301,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val cameraTransformInv = cameraTransform.invertedCopy()
 
     gl.enableVertexAttribArray(positionAttrLoc)
-    gl.enableVertexAttribArray(normalAttrLoc) // uncomment when using normals
+    gl.enableVertexAttribArray(normalAttrLoc)
 
     this.meshes.foreach { mesh =>
       val modelView = cameraTransformInv * mesh.transform
@@ -312,8 +312,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.verticesBuffer)
       gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
 
-      gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer) // uncomment when using normals
-      gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0) // uncomment when using normals
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
+      gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
 
       mesh.subMeshes.foreach { submesh =>
         gl.uniform3f(diffuseColorUniLoc, submesh.diffuseColor)
@@ -323,7 +323,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
 
-    gl.disableVertexAttribArray(normalAttrLoc) // uncomment when using normals
+    gl.disableVertexAttribArray(normalAttrLoc)
     gl.disableVertexAttribArray(positionAttrLoc)
 
     continueCond = continueCond && itf.update()
