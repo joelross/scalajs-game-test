@@ -125,6 +125,7 @@ class KeyboardLWJGL() extends Keyboard {
   LWJGLKeyboard.create()
 
   override def close(): Unit = {
+    super.close()
     LWJGLKeyboard.destroy()
   }
 

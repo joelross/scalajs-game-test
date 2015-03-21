@@ -26,6 +26,7 @@ class MouseLWJGL() extends Mouse {
   LWJGLMouse.create()
 
   override def close(): Unit = {
+    super.close()
     LWJGLMouse.destroy()
   }
 

@@ -63,6 +63,7 @@ class ALRawData private[games] (ctx: ALContext, data: ByteBuffer, format: Format
   }
 
   override def close(): Unit = {
+    super.close()
     bufferReady.onSuccess {
       case alBuffer =>
         AL10.alDeleteBuffers(alBuffer)
@@ -129,6 +130,7 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
   }
 
   override def close(): Unit = {
+    super.close()
     bufferReady.onSuccess {
       case alBuffer =>
         AL10.alDeleteBuffers(alBuffer)

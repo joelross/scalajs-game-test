@@ -159,7 +159,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   }
 
   private val onPointerLockChange: js.Function = (e: js.Dynamic) => {
-    this.locked = lockRequested // If the lock state has changed against the wish of the user, change back ASAP
+    if (JsUtils.autoToggling) this.locked = lockRequested // If the lock state has changed against the wish of the user, change back ASAP
     //js.Dynamic.global.console.log("onPointerLockChange", this.locked, e)
   }
   private val onPointerLockError: js.Function = (e: js.Dynamic) => {
@@ -190,6 +190,8 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   }
 
   override def close(): Unit = {
+    super.close()
+
     element.removeEventListener("mouseup", onMouseUp, true)
     element.removeEventListener("mousedown", onMouseDown, true)
     element.oncontextmenu = js.undefined

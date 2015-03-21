@@ -83,6 +83,7 @@ class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSett
   }
 
   override def close(): Unit = {
+    super.close()
     LWJGLDisplay.destroy()
   }
 
@@ -98,6 +99,7 @@ class GLES2LWJGL(glMajor: Int = 3, glMinor: Int = 0, displaySettings: Option[Dis
   final val display: Display = new DisplayLWJGL(glMajor, glMinor, displaySettings)
 
   override def close(): Unit = {
+    super.close()
     display.close()
   }
 

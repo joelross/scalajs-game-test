@@ -85,7 +85,7 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
       canvas.height = screen.height
     }
 
-    this.fullscreen = fullscreenRequested // If the fullscreen state has changed against the wish of the user, change back ASAP
+    if (JsUtils.autoToggling) this.fullscreen = fullscreenRequested // If the fullscreen state has changed against the wish of the user, change back ASAP
     //js.Dynamic.global.console.log("onFullscreenChange", this.fullscreen, e)
   }
   private val onFullscreenError: js.Function = (e: js.Dynamic) => {
@@ -143,6 +143,8 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
   def height: Int = gl.getWebGLRenderingContext().drawingBufferHeight
 
   override def close(): Unit = {
+    super.close()
+
     this.fullscreen = false
 
     document.removeEventListener("fullscreenchange", onFullscreenChange, true)
@@ -165,6 +167,7 @@ class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext) extends GLES2 {
   final val display: Display = new DisplayGLES2(this)
 
   override def close(): Unit = {
+    super.close()
     display.close()
   }
 

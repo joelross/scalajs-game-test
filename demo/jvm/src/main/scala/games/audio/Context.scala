@@ -18,6 +18,7 @@ class ALContext extends Context {
   def createStreamingData(res: games.Resource): games.audio.StreamingData = new ALStreamingData(this, res)
 
   override def close(): Unit = {
+    super.close()
     AL.destroy()
   }
 

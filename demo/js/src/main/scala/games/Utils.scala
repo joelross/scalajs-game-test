@@ -11,6 +11,8 @@ import games.opengl.GLES2Debug
 import scala.collection.mutable.Queue
 
 object JsUtils {
+  var autoToggling = false
+
   private val userEventTasks: Queue[Runnable] = Queue()
 
   def flushUserEventTasks(): Unit = {

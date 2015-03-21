@@ -7,6 +7,8 @@ import games.math.Vector3f
 
 import java.nio.ByteBuffer
 
+import scala.collection.mutable.Set
+
 import js.Dynamic.{ global => g }
 
 class WebAudioContext extends Context {
@@ -27,11 +29,25 @@ class WebAudioContext extends Context {
   def createStreamingData(res: Resource): StreamingData = new JsStreamingData(this, res)
   def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): RawData = new JsRawData(this, data, format, channels, freq)
 
+  override def close(): Unit = {
+    super.close()
+    sources.foreach { source => source.close() }
+    sources.clear()
+  }
+
   val listener: Listener = new JsListener(this)
 
   def volume: Float = mainOutput.gain.value.asInstanceOf[Double].toFloat
   def volume_=(volume: Float) = {
     mainOutput.gain.value = volume.toDouble
+  }
+
+  private val sources: Set[AbstractSource] = Set()
+  private[games] def addSource(source: AbstractSource): Unit = {
+    sources += source
+  }
+  private[games] def removeSource(source: AbstractSource): Unit = {
+    sources -= source
   }
 }
 

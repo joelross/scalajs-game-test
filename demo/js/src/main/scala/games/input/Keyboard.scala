@@ -195,6 +195,7 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
   element.addEventListener("keydown", onKeyDown, true)
 
   override def close(): Unit = {
+    super.close()
     element.removeEventListener("keyup", onKeyUp, true)
     element.removeEventListener("keydown", onKeyDown, true)
   }
