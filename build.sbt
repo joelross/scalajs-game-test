@@ -57,7 +57,7 @@ lazy val demo = crossProject
     
 lazy val demoJVM = demo.jvm
 lazy val demoJS = demo.js
-lazy val demoAndroid = project
+/*lazy val demoAndroid = project
     .in(file("demo/android"))
     .settings(
         commonSettings: _*
@@ -84,7 +84,7 @@ lazy val demoAndroid = project
             aar("com.google.android.gms" % "play-services" % "4.0.30"),
             aar("com.android.support" % "support-v4" % "r7")
         )
-    )
+    )*/
 
 /* Spray server for the demoJS project */
 
@@ -115,7 +115,7 @@ lazy val serverDemoJS = project
 
 /* Server project */
 
-lazy val demoServer = project
+/*lazy val demoServer = project
     .in(file("demo/server"))
     .settings(
         commonSettings: _*
@@ -124,4 +124,4 @@ lazy val demoServer = project
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %% "transport-netty" % "0.1-SNAPSHOT"
         )
-    )
+    )*/
