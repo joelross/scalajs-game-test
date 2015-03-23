@@ -58,7 +58,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.keyboard = itf.initKeyboard()
     this.mouse = itf.initMouse()
 
-    audioContext.volume = 0.5f
+    audioContext.volume = 0.25f
 
     // Prepare shaders
     val vertexSource = """
@@ -263,7 +263,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                     audioSources = s :: audioSources
                     s.loop = true
                     s.position = new Vector3f(0, 0, 0)
-                    s.volume = 0.5f
+                    s.volume = 1f
                     s.play
                     itf.printLine("Adding audio source")
                 }
