@@ -7,6 +7,7 @@ lazy val commonSettings = Seq(
         persistLauncher in Compile := true,
         persistLauncher in Test := true,
         resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+        resolvers += "Spray" at "http://repo.spray.io",
         scalacOptions ++= Seq(
           "-deprecation"
         )
@@ -98,15 +99,16 @@ lazy val serverDemoJS = project
     )
     .settings(
         libraryDependencies ++= {
-            val akkaV = "2.3.6"
-            val sprayV = "1.3.2"
+            //val akkaV = "2.3.6"
+            //val sprayV = "1.3.2"
             Seq(
-                "io.spray" %% "spray-can" % sprayV,
+                /*"io.spray" %% "spray-can" % sprayV,
                 "io.spray" %% "spray-routing" % sprayV,
                 "io.spray" %% "spray-testkit" % sprayV % "test",
                 "com.typesafe.akka" %% "akka-actor" % akkaV,
                 "com.typesafe.akka" %% "akka-testkit" % akkaV % "test",
-                "org.specs2" %% "specs2-core" % "2.3.11" % "test"
+                "org.specs2" %% "specs2-core" % "2.3.11" % "test"*/
+                "com.wandoulabs.akka" %% "spray-websocket" % "0.1.4"
             )
         },
         (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data,
