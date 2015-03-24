@@ -17,20 +17,20 @@ trait MyService extends HttpService {
   val myRoute =
     path("") {
       respondWithMediaType(`text/html`) {
-        getFromFile("../demoJS-launcher/index.html")
+        getFromFile("../../demoJS-launcher/index.html")
       }
     } ~
       path("fast") {
         respondWithMediaType(`text/html`) {
-          getFromFile("../demoJS-launcher/index-fastopt.html")
+          getFromFile("../../demoJS-launcher/index-fastopt.html")
         }
       } ~
       path("code" / Rest) { file =>
-        val path = "../demo/js/target/scala-2.11/" + file
+        val path = "../js/target/scala-2.11/" + file
         getFromFile(path)
       } ~
       path("resources" / Rest) { file =>
-        val path = "../demo/shared/src/main/resources/" + file
+        val path = "../shared/src/main/resources/" + file
         getFromFile(path)
       }
 }

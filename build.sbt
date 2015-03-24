@@ -90,7 +90,7 @@ lazy val demoJS = demo.js
 /* Spray server for the demoJS project */
 
 lazy val serverDemoJS = project
-    .in(file("serverDemo"))
+    .in(file("demo/server"))
     .settings(
         spray.revolver.RevolverPlugin.Revolver.settings: _*
     )
@@ -99,31 +99,10 @@ lazy val serverDemoJS = project
     )
     .settings(
         libraryDependencies ++= {
-            //val akkaV = "2.3.6"
-            //val sprayV = "1.3.2"
             Seq(
-                /*"io.spray" %% "spray-can" % sprayV,
-                "io.spray" %% "spray-routing" % sprayV,
-                "io.spray" %% "spray-testkit" % sprayV % "test",
-                "com.typesafe.akka" %% "akka-actor" % akkaV,
-                "com.typesafe.akka" %% "akka-testkit" % akkaV % "test",
-                "org.specs2" %% "specs2-core" % "2.3.11" % "test"*/
                 "com.wandoulabs.akka" %% "spray-websocket" % "0.1.4"
             )
         },
         (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data,
         (resources in Compile) += (fullOptJS in (demoJS, Compile)).value.data
     )
-
-/* Server project */
-
-/*lazy val demoServer = project
-    .in(file("demo/server"))
-    .settings(
-        commonSettings: _*
-    )
-    .settings(
-        libraryDependencies ++= Seq(
-            "com.github.olivierblanvillain" %% "transport-netty" % "0.1-SNAPSHOT"
-        )
-    )*/
