@@ -28,15 +28,21 @@ class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor wit
   override def receive = handshaking orElse businessLogicNoUpgrade orElse closeLogic
 
   def businessLogic: Receive = {
-    // just bounce frames back for Autobahn testsuite
-    case x @ (_: BinaryFrame | _: TextFrame) => {
-      println("WebSocket data received")
+    case bf: BinaryFrame => {
       val curSender = sender()
-      curSender ! x
+      println("BinaryFrame received from " + curSender)
+    }
+    case tf: TextFrame => {
+      val curSender = sender()
+      val payload = tf.payload
+      val text = payload.utf8String
+      println("TextFrame received from " + curSender + ": " + text)
+      val message = TextFrame("Hello from server")
+      curSender ! message
     }
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
-    case x: HttpRequest => println("HttpRequest received")// do something
+    case x: HttpRequest => // do something
   }
 
   def businessLogicNoUpgrade: Receive = {

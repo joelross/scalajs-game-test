@@ -1,6 +1,8 @@
 package games.demo
 
 import transport.WebSocketUrl
+import games.demo.Specifics.WebSocketClient
+
 import scala.concurrent.{ Future, ExecutionContext }
 import games._
 import games.math
@@ -183,6 +185,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         this.meshes += openGLMesh
     }
     futureMesh.onFailure { case t => itf.printLine("Failed to load the mesh: " + t) }
+
+    // Connect to the server using WebSocket
+    val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
+    futureConnection.foreach { connection =>
+      connection.write("Hello from client (" + Specifics.platformName + ")")
+      connection.handlerPromise.success { m =>
+        println("Message received from server: " + m)
+      }
+    }
   }
 
   var program: Token.Program = _
