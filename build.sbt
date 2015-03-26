@@ -10,6 +10,9 @@ lazy val commonSettings = Seq(
         resolvers += "Spray" at "http://repo.spray.io",
         scalacOptions ++= Seq(
           "-deprecation"
+        ),
+        libraryDependencies ++= Seq(
+          "com.lihaoyi" %%% "upickle" % "0.2.8"
         )
     )
 

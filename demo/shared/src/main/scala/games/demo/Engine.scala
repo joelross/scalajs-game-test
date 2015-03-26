@@ -1,12 +1,13 @@
 package games.demo
 
+import transport.ConnectionHandle
 import transport.WebSocketUrl
 import games.demo.Specifics.WebSocketClient
 
 import scala.concurrent.{ Future, ExecutionContext }
 import games._
 import games.math
-import games.math.{ Vector3f, Vector4f, Matrix4f, Matrix3f, MatrixStack }
+import games.math.{ Vector3f, Vector4f, Matrix4f, Matrix3f }
 import games.opengl._
 import games.audio._
 import games.input._
@@ -28,8 +29,12 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
+case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
+case class NetworkData(players: Seq[PlayerData])
+
 case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
-case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh], transform: Matrix4f)
+case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
+case class Entity(mesh: OpenGLMesh, transform: Matrix4f)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   def context: games.opengl.GLES2 = gl
@@ -181,17 +186,28 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           OpenGLSubMesh(indicesBuffer, submeshVerticesCount, submesh.material.get.ambientColor.get, submesh.material.get.diffuseColor.get)
         }
 
-        val openGLMesh = OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes, new Matrix4f)
-        this.meshes += openGLMesh
+        val openGLMesh = OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes)
+        this.mainMesh = Some(openGLMesh)
     }
     futureMesh.onFailure { case t => itf.printLine("Failed to load the mesh: " + t) }
 
     // Connect to the server using WebSocket
     val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
     futureConnection.foreach { connection =>
-      connection.write("Hello from client (" + Specifics.platformName + ")")
+      itf.printLine("Websocket connection established")
+      this.connection = Some(connection)
+      connection.write("Hello world")
+      Future {
+        connection.write("Hello2")
+      }
       connection.handlerPromise.success { m =>
-        println("Message received from server: " + m)
+        println("Message received: " + m)
+        //val networkData = upickle.read[NetworkData](m)
+      }
+      connection.closedFuture.onSuccess {
+        case _ =>
+          itf.printLine("Websocket connection closed")
+          this.connection = None
       }
     }
   }
@@ -213,7 +229,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   var modelViewUniLoc: Token.UniformLocation = _
   var modelViewInvTrUniLoc: Token.UniformLocation = _
 
-  val meshes = new ArrayBuffer[OpenGLMesh]()
+  var mainMesh: Option[OpenGLMesh] = None
+  val entities = new ArrayBuffer[Entity]()
+
+  var connection: Option[ConnectionHandle] = None
 
   val fovy: Float = 60f
   val near: Float = 0.1f
@@ -341,8 +360,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.enableVertexAttribArray(positionAttrLoc)
     gl.enableVertexAttribArray(normalAttrLoc)
 
-    this.meshes.foreach { mesh =>
-      val modelView = cameraTransformInv * mesh.transform
+    this.entities.foreach { entity =>
+      val mesh = entity.mesh
+
+      val modelView = cameraTransformInv * entity.transform
       val modelViewInvTr = modelView.invertedCopy().transpose()
       gl.uniformMatrix4f(modelViewUniLoc, modelView)
       gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
