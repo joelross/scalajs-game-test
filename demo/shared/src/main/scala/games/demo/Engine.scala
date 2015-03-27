@@ -196,13 +196,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     futureConnection.foreach { connection =>
       itf.printLine("Websocket connection established")
       this.connection = Some(connection)
-      connection.write("Hello world")
-      Future {
-        connection.write("Hello2")
-      }
-      connection.handlerPromise.success { m =>
-        println("Message received: " + m)
-        //val networkData = upickle.read[NetworkData](m)
+      connection.handlerPromise.success { msg =>
+        val networkData = upickle.read[NetworkData](msg)
+        mainMesh match {
+          case Some(mesh) => {
+            networkData.players
+          }
+          case None => // nothing to do
+        }
       }
       connection.closedFuture.onSuccess {
         case _ =>
@@ -349,6 +350,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     audioContext.listener.position = cameraPosition
     audioContext.listener.setOrientation(cameraRotation * Vector3f.Front, cameraRotation * Vector3f.Up)
 
+    // Network
+    connection match {
+      case Some(conn) => conn.write(upickle.write[PlayerData](PlayerData(cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotationH, cameraRotationV)))
+      case None       => // nothing to do
+    }
+
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     gl.useProgram(program)
@@ -363,8 +370,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.entities.foreach { entity =>
       val mesh = entity.mesh
 
-      val modelView = cameraTransformInv * entity.transform
+      val transform = entity.transform
+      val modelView = cameraTransformInv * transform
       val modelViewInvTr = modelView.invertedCopy().transpose()
+
       gl.uniformMatrix4f(modelViewUniLoc, modelView)
       gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
 

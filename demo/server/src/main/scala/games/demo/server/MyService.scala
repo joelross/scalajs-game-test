@@ -16,28 +16,20 @@ import akka.actor.Props
 
 import scala.collection.mutable.Set
 
-class Service extends Actor {
+case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
+case class NetworkData(players: Seq[PlayerData])
 
-  def receive = {
-    case Http.Connected(remoteAddress, localAddress) => {
-      val curSender = sender()
-      val conn = context.actorOf(Props(classOf[ServiceWorker], curSender))
-      curSender ! Http.Register(conn)
-    }
-  }
-}
+object GlobalLogic {
+  private val players: Set[Player] = Set[Player]()
 
-object GlobalPlayerLogic {
-  private val ids: Set[Int] = Set[Int]()
-
-  def removeId(id: Int): Unit = this.synchronized {
-    ids -= id
+  def removePlayer(player: Player): Unit = this.synchronized {
+    players.remove(player)
   }
 
-  def getNewId(): Int = this.synchronized {
+  def registerPlayer(player: Player): Int = this.synchronized {
     def genId(from: Int): Int = {
-      if (!ids(from)) {
-        ids += from
+      if (!players.exists { p => p.id == from }) {
+        players += player
         from
       } else genId(from + 1)
     }
@@ -46,26 +38,24 @@ object GlobalPlayerLogic {
   }
 }
 
-class PlayerLogic(val send: String => Unit) {
-  val id = GlobalPlayerLogic.getNewId()
-
+class Player(val send: String => Unit) {
+  val id = GlobalLogic.registerPlayer(this)
   println("Player " + id + " connected")
-  send("Hello, you are player " + id)
 
   def receive(msg: String): Unit = {
-    send("Echoing back: " + msg)
+    val data = upickle.read[PlayerData](msg)
   }
 
   def disconnected(): Unit = {
     println("Player " + id + " disconnected")
-    GlobalPlayerLogic.removeId(id)
+    GlobalLogic.removePlayer(this)
   }
 }
 
 class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
   override def receive = handshaking orElse businessLogicNoUpgrade orElse closeLogic
 
-  private var logic: Option[PlayerLogic] = None
+  private var logic: Option[Player] = None
 
   private def sendMessage(msg: String): Unit = send(TextFrame(msg))
 
@@ -74,7 +64,7 @@ class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor wit
       case Some(lo) => {
         val payload = tf.payload
         val text = payload.utf8String
-        lo.receive(text)
+        if (!text.isEmpty()) lo.receive(text)
       }
       case None => println("Warning: TextFrame received from a non-upgraded connection")
     }
@@ -82,9 +72,9 @@ class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor wit
       log.error("frame command failed", x)
     }
     case UpgradedToWebSocket => {
-      logic = Some(new PlayerLogic(sendMessage))
+      logic = Some(new Player(sendMessage))
     }
-    case Http.Closed => logic match {
+    case x: Http.ConnectionClosed => logic match {
       case Some(l) => l.disconnected()
       case None    =>
     }
@@ -115,3 +105,15 @@ class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor wit
         getFromFile(path)
       }
 }
+
+class Service extends Actor {
+
+  def receive = {
+    case Http.Connected(remoteAddress, localAddress) => {
+      val curSender = sender()
+      val conn = context.actorOf(Props(classOf[ServiceWorker], curSender))
+      curSender ! Http.Register(conn)
+    }
+  }
+}
+
