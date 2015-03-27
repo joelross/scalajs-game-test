@@ -14,16 +14,33 @@ import akka.actor.ActorRefFactory
 import spray.can.Http
 import akka.actor.Props
 
-import scala.collection.mutable.Set
+import scala.collection.immutable.Set
+
+import scala.concurrent.duration._
 
 case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
 case class NetworkData(players: Seq[PlayerData])
 
+class Updater extends Actor {
+  def receive: Receive = {
+    case x => {
+      val players = GlobalLogic.players
+
+      players.foreach { currentPlayer =>
+        val others = players.filter { p => p != currentPlayer }
+        val data = others.flatMap { p => p.data }.toSeq
+        val network = NetworkData(data)
+        currentPlayer.send(upickle.write[NetworkData](network))
+      }
+    }
+  }
+}
+
 object GlobalLogic {
-  private val players: Set[Player] = Set[Player]()
+  var players: Set[Player] = Set[Player]()
 
   def removePlayer(player: Player): Unit = this.synchronized {
-    players.remove(player)
+    players -= player
   }
 
   def registerPlayer(player: Player): Int = this.synchronized {
@@ -42,8 +59,10 @@ class Player(val send: String => Unit) {
   val id = GlobalLogic.registerPlayer(this)
   println("Player " + id + " connected")
 
+  var data: Option[PlayerData] = None
+
   def receive(msg: String): Unit = {
-    val data = upickle.read[PlayerData](msg)
+    data = Some(upickle.read[PlayerData](msg))
   }
 
   def disconnected(): Unit = {

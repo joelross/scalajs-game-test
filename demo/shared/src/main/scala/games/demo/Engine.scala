@@ -198,9 +198,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       this.connection = Some(connection)
       connection.handlerPromise.success { msg =>
         val networkData = upickle.read[NetworkData](msg)
+        entities.clear()
         mainMesh match {
           case Some(mesh) => {
-            networkData.players
+            networkData.players.foreach { playerData =>
+              val transform = Matrix4f.translate3D(new Vector3f(playerData.posX, playerData.posY, playerData.posZ)) * Matrix4f.rotation3D(playerData.rotH, Vector3f.Up) * Matrix4f.rotation3D(playerData.rotV, Vector3f.Right)
+              entities += Entity(mesh, transform)
+            }
           }
           case None => // nothing to do
         }
@@ -245,7 +249,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   var dim: (Int, Int) = _
 
   val sampleRate = 22100
-  var audioSources: List[AbstractSource] = Nil
+
+  var lastTimeSent: Long = 0
 
   def createMonoSound(freq: Int): ByteBuffer = {
     val bb = ByteBuffer.allocate(4 * sampleRate).order(ByteOrder.nativeOrder())
@@ -285,28 +290,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
               itf.printLine("Decreased volume to " + audioContext.volume)
             }
             case Key.M => {
-              if (audioSources.isEmpty) {
-                //val data = audioContext.createBufferedData(Resource("/games/demo/test_mono.ogg"))
-                val data = audioContext.createRawData(createMonoSound(1000), Format.Float32, 1, sampleRate)
-                val source = data.createSource3D
-                source.onSuccess {
-                  case s =>
-                    audioSources = s :: audioSources
-                    s.loop = true
-                    s.position = new Vector3f(0, 0, 0)
-                    s.volume = 1f
-                    s.play
-                    itf.printLine("Adding audio source")
-                }
-                source.onFailure {
-                  case t =>
-                    itf.printLine("Could not load the sound: " + t)
-                }
-              } else {
-                audioSources.foreach { source => source.close() }
-                audioSources = Nil
-                itf.printLine("Closing audio sources")
-              }
+              // TODO audio
             }
             case _ => // nothing to do
           }
@@ -350,10 +334,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     audioContext.listener.position = cameraPosition
     audioContext.listener.setOrientation(cameraRotation * Vector3f.Front, cameraRotation * Vector3f.Up)
 
-    // Network
-    connection match {
-      case Some(conn) => conn.write(upickle.write[PlayerData](PlayerData(cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotationH, cameraRotationV)))
-      case None       => // nothing to do
+    connection match { // Network
+      case Some(conn) => {
+        val now = System.currentTimeMillis()
+        if (now - lastTimeSent > 40) { // 40ms before each sent (25Hz)
+          conn.write(upickle.write[PlayerData](PlayerData(cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotationH, cameraRotationV)))
+          lastTimeSent = now
+        }
+      }
+      case None => // nothing to do
     }
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
