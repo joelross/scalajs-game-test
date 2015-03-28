@@ -248,7 +248,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   var dim: (Int, Int) = _
 
-  val sampleRate = 22100
+  val sampleRate = 44100
 
   var lastTimeSent: Long = 0
 
