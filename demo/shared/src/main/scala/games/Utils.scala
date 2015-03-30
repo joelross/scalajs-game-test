@@ -29,3 +29,7 @@ object Utils extends UtilsImpl {
     text.replaceAll("\r", "").split("\n")
   }
 }
+
+package object input {
+  type Key = Int
+}

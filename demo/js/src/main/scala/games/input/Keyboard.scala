@@ -144,7 +144,7 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
     case Key.ShiftLeft | Key.ShiftRight     => selectLocatedKey(Key.ShiftLeft, Key.ShiftRight, ev.location)
     case Key.ControlLeft | Key.ControlRight => selectLocatedKey(Key.ControlLeft, Key.ControlRight, ev.location)
     case Key.AltLeft | Key.AltRight         => selectLocatedKey(Key.AltLeft, Key.AltRight, ev.location)
-    case Key.SuperLeft | Key.SuperLeft      => selectLocatedKey(Key.SuperLeft, Key.SuperLeft, ev.location)
+    case Key.SuperLeft | Key.SuperRight      => selectLocatedKey(Key.SuperLeft, Key.SuperLeft, ev.location)
     case _                                  => key
   }
 

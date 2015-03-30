@@ -7,7 +7,7 @@ import games.math.{ Vector2f, Vector3f, Vector4f, Matrix3f }
 import games.opengl.GLException
 
 object SimpleOBJParser {
-  case class TexInfo(var path: String) {
+  class TexInfo(var path: String) {
     var blendu: Boolean = true
     var blendv: Boolean = true
     var bumpMultiplier: Option[Float] = None
@@ -21,9 +21,11 @@ object SimpleOBJParser {
     var resize: Vector3f = new Vector3f(1, 1, 1)
     var turbulence: Vector3f = new Vector3f(0, 0, 0)
     var resolution: Option[Int] = None
+
+    override def toString(): String = "TexInfo(path=\"" + path + "\")"
   }
 
-  case class Material(name: String) {
+  class Material(val name: String) {
     var ambientColor: Option[Vector3f] = None
     var diffuseColor: Option[Vector3f] = None
     var specularColor: Option[Vector3f] = None
@@ -340,7 +342,7 @@ object SimpleOBJParser {
   type TmpVertex = (Int, Option[Int], Option[Int]) // position index, texture index, normal index
   type TmpFace = Array[TmpVertex]
 
-  case class OBJObjectGroupPart(material: Option[Material]) {
+  class OBJObjectGroupPart(val material: Option[Material]) {
     val faces: ArrayBuffer[TmpFace] = new ArrayBuffer[TmpFace]()
 
     override def toString(): String = material match {
@@ -349,7 +351,7 @@ object SimpleOBJParser {
     }
   }
 
-  case class OBJObjectGroup(name: String) {
+  class OBJObjectGroup(val name: String) {
     var smooth: Boolean = false
 
     val parts: ArrayBuffer[OBJObjectGroupPart] = new ArrayBuffer[OBJObjectGroupPart]()
@@ -357,7 +359,7 @@ object SimpleOBJParser {
     override def toString(): String = "ObjectGroup(name=\"" + name + "\")"
   }
 
-  case class OBJObject(name: String) {
+  class OBJObject(val name: String) {
     val vertices: ArrayBuffer[Vector4f] = new ArrayBuffer[Vector4f]()
     val texCoordinates: ArrayBuffer[Vector3f] = new ArrayBuffer[Vector3f]()
     val normals: ArrayBuffer[Vector3f] = new ArrayBuffer[Vector3f]()
@@ -659,15 +661,15 @@ object SimpleOBJParser {
   type Tri = (Int, Int, Int) // The three indices of the vertices of the triangle
   type VertexData = (Vector3f, Option[Vector2f], Option[Vector3f])
 
-  case class SubTriMesh(material: Option[Material], tris: Array[Tri]) {
+  class SubTriMesh(val material: Option[Material], val tris: Array[Tri]) {
     override def toString(): String = material match {
       case Some(mat) => "SubTriMesh(material=\"" + mat.name + "\")"
       case None      => "SubTriMesh(no material)"
     }
   }
 
-  case class TriMesh(name: String, vertices: Array[Vector3f], texCoordinates: Option[Array[Vector2f]],
-                     normals: Option[Array[Vector3f]], submeshes: Array[SubTriMesh]) {
+  class TriMesh(val name: String, val vertices: Array[Vector3f], val texCoordinates: Option[Array[Vector2f]],
+                     val normals: Option[Array[Vector3f]], val submeshes: Array[SubTriMesh]) {
     override def toString(): String = "TriMesh(name=\"" + name + "\")"
   }
 
