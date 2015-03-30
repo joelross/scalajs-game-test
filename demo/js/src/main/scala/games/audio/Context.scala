@@ -4,6 +4,7 @@ import scala.scalajs.js
 import org.scalajs.dom
 import games.Resource
 import games.math.Vector3f
+import games.JsUtils
 
 import java.nio.ByteBuffer
 
@@ -12,10 +13,7 @@ import scala.collection.mutable.Set
 import js.Dynamic.{ global => g }
 
 class WebAudioContext extends Context {
-
-  val classicAudioContext: js.UndefOr[js.Dynamic] = g.AudioContext
-  val webKitAudioContext: js.UndefOr[js.Dynamic] = g.webkitAudioContext
-  val audioContext: js.Dynamic = classicAudioContext.orElse(webKitAudioContext).getOrElse(throw new RuntimeException("Web Audio API not supported by your browser"))
+  val audioContext: js.Dynamic = JsUtils.getOptional[js.Dynamic](g, "AudioContext", "webkitAudioContext").getOrElse(throw new RuntimeException("Web Audio API not supported by your browser"))
   private[games] val webApi = js.Dynamic.newInstance(audioContext)()
 
   private[games] val mainOutput = {

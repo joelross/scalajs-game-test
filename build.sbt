@@ -106,6 +106,5 @@ lazy val serverDemoJS = project
                 "com.wandoulabs.akka" %% "spray-websocket" % "0.1.4"
             )
         },
-        (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data,
-        (resources in Compile) += (fullOptJS in (demoJS, Compile)).value.data
+        (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data
     )

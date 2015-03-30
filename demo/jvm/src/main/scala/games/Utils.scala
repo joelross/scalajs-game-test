@@ -120,23 +120,15 @@ trait UtilsImpl extends UtilsRequirements {
       val height = image.getHeight()
       val width = image.getWidth()
       val byteBuffer = GLES2.createByteBuffer(4 * width * height) // Stored as RGBA value: 4 bytes per pixel
+      val intBuffer = byteBuffer.duplicate().order(ByteOrder.BIG_ENDIAN).asIntBuffer()
       val tmp = new Array[Byte](4)
-      var y = 0
-      while (y < height) {
-        var x = 0
-        while (x < width) {
+      for (y <- 0 until height) {
+        for (x <- 0 until width) {
           val argb = image.getRGB(x, y)
-          tmp(2) = argb.toByte // blue
-          tmp(1) = (argb >> 8).toByte // green
-          tmp(0) = (argb >> 16).toByte // red
-          tmp(3) = (argb >> 24).toByte // alpha
-          byteBuffer.put(tmp)
-          x += 1
+          intBuffer.put((argb >>> 24) | (argb << 8))
         }
-        y += 1
       }
       stream.close()
-      byteBuffer.rewind
 
       (width, height, byteBuffer)
     }.map { // Execute this part with the openglExecutionContext instead of the standard one

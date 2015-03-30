@@ -126,11 +126,9 @@ class VorbisDecoder private[games] (var in: InputStream, conv: Converter) extend
       if (remainingSamples <= 0 || !(out.remaining() >= info.channels * conv.bytePerValue)) {
         count
       } else {
-        var channelNo = 0
-        while (channelNo < info.channels) {
+        for (channelNo <- 0 until info.channels) {
           val value = pcmIn(0)(channelNo)(indexIn(channelNo) + samplesRead)
           conv(value, out)
-          channelNo += 1
         }
 
         samplesRead += 1
