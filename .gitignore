@@ -23,3 +23,7 @@ project/plugins/project/
 
 .cache
 *.sjsir
+
+# benchmarking the Scala.js incremental optimizer: https://groups.google.com/forum/#!topic/scala-js/E_nSW7MF-nE
+sjs-measurements-*.log
+sjsincoptbench.sbt

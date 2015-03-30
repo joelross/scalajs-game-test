@@ -8,17 +8,17 @@
     <body>
         <h1>Demo for Scala.js-games - full-optimized version</h1>
         
-        <p>After having compiled and optimized properly the code for the application (using `sbt demoJS/fullOptJS` in the root folder), you should see the demo.</p>
+        <p>After having compiled and optimized properly the code for the application (using `serverDemoJS/re-start` from SBT), you should see the demo at the <a href="/">index page</a> (fast-optimized version available <a href="/fast">here</a>).</p>
+        
+        <canvas id="demo-canvas-main" width="1280" height="720">
+            Your browser doesn't appear to support the HTML5 canvas element.
+        </canvas>
         
         <div id="demo-output">
         </div>
         
-        <canvas id="demo-canvas-main" width="800" height="600">
-            Your browser doesn't appear to support the HTML5 canvas element.
-        </canvas>
-        
-        <script type="text/javascript" src="../demo/js/target/scala-2.11/demojs-opt.js"></script>
-        <script type="text/javascript" src="../demo/js/target/scala-2.11/demojs-launcher.js"></script>
+        <script type="text/javascript" src="/code/demojs-opt.js"></script>
+        <script type="text/javascript" src="/code/demojs-launcher.js"></script>
     </body>
 </html>
 

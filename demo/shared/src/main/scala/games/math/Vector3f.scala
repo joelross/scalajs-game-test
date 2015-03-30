@@ -147,6 +147,12 @@ class Vector3f extends Vector {
     this
   }
 
+  def toHomogeneous(): Vector4f = {
+    val ret = new Vector4f
+    Vector3f.setHomogeneous(this, ret)
+    ret
+  }
+
   override def toString = {
     "Vector3f[" + x + ", " + y + ", " + z + "]"
   }
@@ -174,6 +180,13 @@ object Vector3f {
     dst.x = src.x
     dst.y = src.y
     dst.z = src.z
+  }
+
+  def setHomogeneous(src: Vector3f, dst: Vector4f): Unit = {
+    dst.x = src.x
+    dst.y = src.y
+    dst.z = src.z
+    dst.z = 1f
   }
 
   def negate(v1: Vector3f, dst: Vector3f): Unit = {
@@ -219,4 +232,11 @@ object Vector3f {
     dst.y = v1.y / v
     dst.z = v1.z / v
   }
+
+  def Right = new Vector3f(1, 0, 0)
+  def Up = new Vector3f(0, 1, 0)
+  def Back = new Vector3f(0, 0, 1)
+  def Left = new Vector3f(-1, 0, 0)
+  def Down = new Vector3f(0, -1, 0)
+  def Front = new Vector3f(0, 0, -1)
 }

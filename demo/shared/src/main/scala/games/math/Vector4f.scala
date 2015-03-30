@@ -135,6 +135,12 @@ class Vector4f extends Vector {
     this
   }
 
+  def toCartesian(): Vector3f = {
+    val ret = new Vector3f
+    Vector4f.setCartesian(this, ret)
+    ret
+  }
+
   override def toString = {
     "Vector4f[" + x + ", " + y + ", " + z + ", " + w + "]"
   }
@@ -165,6 +171,12 @@ object Vector4f {
     dst.y = src.y
     dst.z = src.z
     dst.w = src.w
+  }
+
+  def setCartesian(src: Vector4f, dst: Vector3f): Unit = {
+    dst.x = src.x / src.w
+    dst.y = src.y / src.w
+    dst.z = src.z / src.w
   }
 
   def negate(v1: Vector4f, dst: Vector4f): Unit = {

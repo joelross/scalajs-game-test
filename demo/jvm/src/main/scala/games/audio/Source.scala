@@ -4,7 +4,7 @@ import scala.concurrent._
 import org.lwjgl.openal.AL10
 import org.lwjgl.openal.Util
 import java.io.InputStream
-import games.JvmResourceUtil
+import games.JvmUtils
 import games.Resource
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -14,12 +14,15 @@ import games.math.Vector3f
 
 trait ALSource extends AbstractSource {
   private[games] val alSource: Int
+  private[games] def masterVolumeChanged(): Unit
 }
 
 class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends Source with ALSource {
 
   private def init() = {
     val alSource = AL10.alGenSources()
+    ctx.addSource(this)
+
     AL10.alSourcei(alSource, AL10.AL_BUFFER, alBuffer)
 
     Util.checkALError()
@@ -27,18 +30,62 @@ class ALBufferedSource private[games] (ctx: ALContext, alBuffer: Int) extends So
   }
 
   private[games] val alSource = init()
+  private[games] def masterVolumeChanged(): Unit = {
+    updateVolume()
+  }
 
-  def loop: Boolean = AL10.alGetSourcei(alSource, AL10.AL_LOOPING) == AL10.AL_TRUE
-  def loop_=(loop: Boolean): Unit = AL10.alSourcei(alSource, AL10.AL_LOOPING, if (loop) AL10.AL_TRUE else AL10.AL_FALSE)
-  def pause: Unit = AL10.alSourcePause(alSource)
-  def play: Unit = AL10.alSourcePlay(alSource)
-  def pitch: Float = AL10.alGetSourcef(alSource, AL10.AL_PITCH)
-  def pitch_=(pitch: Float): Unit = AL10.alSourcef(alSource, AL10.AL_PITCH, pitch)
-  def volume: Float = AL10.alGetSourcef(alSource, AL10.AL_GAIN)
-  def volume_=(volume: Float): Unit = AL10.alSourcef(alSource, AL10.AL_GAIN, volume)
-  def playing: Boolean = AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING
+  private var thisVolume = 1f
+  this.updateVolume()
+
+  private def updateVolume(): Unit = {
+    val curVolume = ctx.masterVolume * thisVolume
+    AL10.alSourcef(alSource, AL10.AL_GAIN, curVolume)
+    Util.checkALError()
+  }
+
+  def loop: Boolean = {
+    val ret = AL10.alGetSourcei(alSource, AL10.AL_LOOPING) == AL10.AL_TRUE
+    Util.checkALError()
+    ret
+  }
+  def loop_=(loop: Boolean): Unit = {
+    AL10.alSourcei(alSource, AL10.AL_LOOPING, if (loop) AL10.AL_TRUE else AL10.AL_FALSE)
+    Util.checkALError()
+  }
+  def pause: Unit = {
+    AL10.alSourcePause(alSource)
+    Util.checkALError()
+  }
+  def play: Unit = {
+    AL10.alSourcePlay(alSource)
+    Util.checkALError()
+  }
+  def pitch: Float = {
+    val ret = AL10.alGetSourcef(alSource, AL10.AL_PITCH)
+    Util.checkALError()
+    ret
+  }
+  def pitch_=(pitch: Float): Unit = {
+    AL10.alSourcef(alSource, AL10.AL_PITCH, pitch)
+    Util.checkALError()
+  }
+  def volume: Float = {
+    //AL10.alGetSourcef(alSource, AL10.AL_GAIN)
+    thisVolume
+  }
+  def volume_=(volume: Float): Unit = {
+    thisVolume = volume
+    updateVolume()
+  }
+  def playing: Boolean = {
+    val ret = AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING
+    Util.checkALError()
+    ret
+  }
 
   override def close(): Unit = {
+    super.close()
+    ctx.removeSource(this)
     AL10.alDeleteSources(alSource)
     Util.checkALError()
   }
@@ -50,12 +97,13 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
 
   private def init() = {
     val alSource = AL10.alGenSources()
+    ctx.addSource(this)
     Util.checkALError()
 
     val streamingThread = new Thread() {
       override def run(): Unit = {
         // Init
-        var decoder = new VorbisDecoder(JvmResourceUtil.streamForResource(res), converter)
+        var decoder = new VorbisDecoder(JvmUtils.streamForResource(res), converter)
 
         val bufferedTime = 2.0f // amount of time buffered
         val numBuffers = 8 // buffers
@@ -130,7 +178,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
               // Check for looping
               if (!running && looping) {
                 decoder.close()
-                decoder = new VorbisDecoder(JvmResourceUtil.streamForResource(res), converter)
+                decoder = new VorbisDecoder(JvmUtils.streamForResource(res), converter)
                 running = true
               }
             }
@@ -155,7 +203,7 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
 
         }
 
-        AL10.alSourcePause(alSource)
+        AL10.alSourceStop(alSource)
 
         // destroy the awaiting buffers
         buffersReady.foreach { alBuffer => AL10.alDeleteBuffers(alBuffer) }
@@ -189,24 +237,60 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
     streamingThread.interrupt()
   }
 
+  private[games] def masterVolumeChanged(): Unit = {
+    updateVolume()
+  }
+
+  private var thisVolume = 1f
+  this.updateVolume()
+
+  private def updateVolume(): Unit = {
+    val curVolume = ctx.masterVolume * thisVolume
+    AL10.alSourcef(alSource, AL10.AL_GAIN, curVolume)
+    Util.checkALError()
+  }
+
   private var looping = false
   private var pitchCache = 1f
 
   def loop: Boolean = looping
   def loop_=(loop: Boolean): Unit = looping = loop
-  def pause: Unit = AL10.alSourcePause(alSource)
-  def play: Unit = AL10.alSourcePlay(alSource)
-  def pitch: Float = AL10.alGetSourcef(alSource, AL10.AL_PITCH)
+  def pause: Unit = {
+    AL10.alSourcePause(alSource)
+    Util.checkALError()
+  }
+  def play: Unit = {
+    AL10.alSourcePlay(alSource)
+    Util.checkALError()
+  }
+  def pitch: Float = {
+    val ret = AL10.alGetSourcef(alSource, AL10.AL_PITCH)
+    Util.checkALError()
+    ret
+  }
   def pitch_=(pitch: Float): Unit = {
     pitchCache = pitch
     AL10.alSourcef(alSource, AL10.AL_PITCH, pitch)
+    Util.checkALError()
     wakeUpThread() // so it can adjust to the new playback rate
   }
-  def volume: Float = AL10.alGetSourcef(alSource, AL10.AL_GAIN)
-  def volume_=(volume: Float): Unit = AL10.alSourcef(alSource, AL10.AL_GAIN, volume)
-  def playing: Boolean = AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING
+  def volume: Float = {
+    //AL10.alGetSourcef(alSource, AL10.AL_GAIN)
+    thisVolume
+  }
+  def volume_=(volume: Float): Unit = {
+    thisVolume = volume
+    updateVolume()
+  }
+  def playing: Boolean = {
+    val ret = AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING
+    Util.checkALError()
+    ret
+  }
 
   override def close(): Unit = {
+    super.close()
+    ctx.removeSource(this)
     threadRunning = false
     wakeUpThread()
   }
@@ -245,5 +329,8 @@ class ALSource3D private[games] (ctx: ALContext, source: ALSource) extends Sourc
     position.store(positionBuffer)
     positionBuffer.rewind()
     AL10.alSource(alSource, AL10.AL_POSITION, positionBuffer)
+    Util.checkALError()
   }
+
+  def masterVolumeChanged(): Unit = {} // we are wrapping an ALBufferedSource or an ALStreamingSource that will already take care of that
 }

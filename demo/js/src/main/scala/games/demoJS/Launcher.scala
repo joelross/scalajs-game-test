@@ -3,46 +3,52 @@ package games.demoJS
 import scala.scalajs.js
 import org.scalajs.dom
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
-import games.demo.Engine
-import games.audio.JsContext
-import games.Resource
-import games.JsResourceUtil
-import games.audio.Context
+
+import games._
+import games.math
 import games.math.Vector3f
+import games.opengl._
+import games.audio._
+import games.input._
+
+import games.demo._
 
 object Launcher extends js.JSApp {
   def main(): Unit = {
-    JsResourceUtil.setResourcePath("/demo/shared/src/main/resources")
+    JsUtils.setResourcePath("/resources")
 
     val output = dom.document.getElementById("demo-output")
-    def printLine(msg: String): Unit = {
-      val line = dom.document.createElement("p")
-      line.innerHTML = msg
-      output.appendChild(line)
+    val canvas = dom.document.getElementById("demo-canvas-main").asInstanceOf[dom.html.Canvas]
+
+    val itf = new EngineInterface {
+      def printLine(msg: String): Unit = {
+        //        val line = dom.document.createElement("p")
+        //        line.innerHTML = msg
+        //        output.appendChild(line)
+        println(msg)
+      }
+      def initGL(): GLES2 = {
+        val glContext: GLES2 = new GLES2WebGL(canvas)
+        glContext
+      }
+      def initAudio(): Context = {
+        val audioContext: Context = new WebAudioContext()
+        audioContext
+      }
+      def initKeyboard(): Keyboard = {
+        val keyboard = new KeyboardJS()
+        keyboard
+      }
+      def initMouse(): Mouse = {
+        val mouse = new MouseJS(canvas)
+        mouse
+      }
+      def update(): Boolean = true
+      def close(): Unit = {}
     }
 
-    printLine("Starting demo")
+    val engine = new Engine(itf)
 
-    /*val engine = new Engine(printLine)
-    engine.start()*/
-
-    val audioContext: Context = new JsContext
-    printLine("Listener is at " + audioContext.listener.position + " and looking at " + audioContext.listener.orientation + " (up is at " + audioContext.listener.up + ")")
-
-    val testResource = new Resource("/games/demo/test_mono.ogg")
-
-    val testData = audioContext.createStreamingData(testResource)
-    val s = testData.createSource3D
-    s.onSuccess {
-      case s =>
-        printLine("Resource ready")
-        s.position = new Vector3f(10, 0, 0)
-        s.play
-    }
-    s.onFailure {
-      case t =>
-        printLine("Error: " + t.getMessage)
-    }
+    Utils.startFrameListener(engine)
   }
-
 }

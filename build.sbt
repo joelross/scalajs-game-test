@@ -3,10 +3,11 @@ import android.Dependencies.aar
 
 lazy val commonSettings = Seq(
         version := "0.1-SNAPSHOT",
-        scalaVersion := "2.11.5",
+        scalaVersion := "2.11.6",
         persistLauncher in Compile := true,
         persistLauncher in Test := true,
         resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
+        resolvers += "Spray" at "http://repo.spray.io",
         scalacOptions ++= Seq(
           "-deprecation"
         )
@@ -48,7 +49,7 @@ lazy val demo = crossProject
     .jvmSettings(
         name := "demoJVM",
         connectInput in run := true,
-        resourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
+        unmanagedResourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %%% "transport-tyrus" % "0.1-SNAPSHOT",
             "org.jcraft" % "jorbis" % "0.0.17"
@@ -57,7 +58,7 @@ lazy val demo = crossProject
     
 lazy val demoJVM = demo.jvm
 lazy val demoJS = demo.js
-lazy val demoAndroid = project
+/*lazy val demoAndroid = project
     .in(file("demo/android"))
     .settings(
         commonSettings: _*
@@ -72,29 +73,36 @@ lazy val demoAndroid = project
         proguardOptions in Android ++= Seq(
             "-ignorewarnings",
             "-keep class org.glassfish.tyrus.**", // Somehow, tyrus doesn't seem to like proguard
-            "-keep class scala.Dynamic"
+            "-keep class scala.Dynamic" // TODO should be removed
         ),
         unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "scala",
         unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared" / "src" / "test" / "scala",
-        resourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
-        resourceDirectories in Test += baseDirectory.value / ".." / "shared" / "src" / "test" / "resources",
+        unmanagedResourceDirectories in Compile += baseDirectory.value / ".." / "shared" / "src" / "main" / "resources",
+        unmanagedResourceDirectories in Test += baseDirectory.value / ".." / "shared" / "src" / "test" / "resources",
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %% "transport-core" % "0.1-SNAPSHOT",
             "com.github.olivierblanvillain" %% "transport-tyrus" % "0.1-SNAPSHOT",
             aar("com.google.android.gms" % "play-services" % "4.0.30"),
             aar("com.android.support" % "support-v4" % "r7")
         )
-    )
+    )*/
 
-/* Server project */
+/* Spray server for the demoJS project */
 
-lazy val demoServer = project
+lazy val serverDemoJS = project
     .in(file("demo/server"))
+    .settings(
+        spray.revolver.RevolverPlugin.Revolver.settings: _*
+    )
     .settings(
         commonSettings: _*
     )
     .settings(
-        libraryDependencies ++= Seq(
-            "com.github.olivierblanvillain" %% "transport-netty" % "0.1-SNAPSHOT"
-        )
+        libraryDependencies ++= {
+            Seq(
+                "com.wandoulabs.akka" %% "spray-websocket" % "0.1.4"
+            )
+        },
+        (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data,
+        (resources in Compile) += (fullOptJS in (demoJS, Compile)).value.data
     )

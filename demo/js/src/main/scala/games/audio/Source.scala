@@ -7,17 +7,16 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
+import games.JsUtils
 import games.math.Vector3f
 
-class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.ArrayBuffer, outputNode: js.Dynamic) extends Source {
+class JsBufferedSource private[games] (ctx: WebAudioContext, buffer: js.Dynamic, outputNode: js.Dynamic) extends Source {
+  // Init
   private var sourceNode = ctx.webApi.createBufferSource()
   sourceNode.buffer = buffer
-
   private val gainNode = ctx.webApi.createGain()
   sourceNode.connect(gainNode)
-
   gainNode.gain.value = 1.0
-
   gainNode.connect(outputNode)
 
   private var isPlaying = false
@@ -26,7 +25,12 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
   private var nextStartTime = 0.0
   private var lastStartDate = 0.0
 
-  private def now(): Double = js.Dynamic.global.Date.now().asInstanceOf[Double]
+  ctx.addSource(this)
+
+  override def close(): Unit = {
+    super.close()
+    ctx.removeSource(this)
+  }
 
   def pause: Unit = {
     sourceNode.stop()
@@ -45,13 +49,13 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
     }
 
     sourceNode.start(0, nextStartTime)
-    lastStartDate = now()
+    lastStartDate = JsUtils.now()
     isPlaying = true
 
     sourceNode.onended = () => {
       isPlaying = false
       needRestarting = true
-      nextStartTime = (now() - lastStartDate) / 1000.0 // msec -> sec
+      nextStartTime = (JsUtils.now() - lastStartDate) / 1000.0 // msec -> sec
     }
   }
 
@@ -76,14 +80,21 @@ class JsBufferedSource private[games] (ctx: JsContext, buffer: js.typedarray.Arr
   def playing: Boolean = isPlaying
 }
 
-class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[String], outputNode: js.Dynamic) extends Source {
+class JsStreamingSource private[games] (ctx: WebAudioContext, pathFuture: Future[String], outputNode: js.Dynamic) extends Source {
+  // Init
   private val promiseReady = Promise[Unit]
-
   private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
   private val sourceNode = ctx.webApi.createMediaElementSource(audio)
   sourceNode.connect(outputNode)
 
   private var isPlaying = false
+
+  ctx.addSource(this)
+
+  override def close(): Unit = {
+    super.close()
+    ctx.removeSource(this)
+  }
 
   pathFuture.onSuccess {
     case path =>
@@ -141,7 +152,7 @@ class JsStreamingSource private[games] (ctx: JsContext, pathFuture: Future[Strin
   private[games] val ready = promiseReady.future
 }
 
-class JsSource3D private[games] (ctx: JsContext, source: AbstractSource, pannerNode: js.Dynamic) extends Source3D {
+class JsSource3D private[games] (ctx: WebAudioContext, source: AbstractSource, pannerNode: js.Dynamic) extends Source3D {
   private val positionData = new Vector3f(0, 0, 0)
 
   // Init

@@ -8,18 +8,37 @@ import games.math.Vector3f
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+import scala.collection.mutable.Set
+
 class ALContext extends Context {
   AL.create()
 
   def createBufferedData(res: games.Resource): games.audio.BufferedData = new ALBufferedData(this, res)
-  def createRawData(): games.audio.RawData = ???
+  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.RawData = new ALRawData(this, data, format, channels, freq)
   def createStreamingData(res: games.Resource): games.audio.StreamingData = new ALStreamingData(this, res)
 
   override def close(): Unit = {
+    super.close()
     AL.destroy()
   }
 
   val listener: Listener = new ALListener()
+
+  private[games] var masterVolume = 1f
+
+  def volume: Float = masterVolume
+  def volume_=(volume: Float) = {
+    masterVolume = volume
+    sources.foreach { source => source.masterVolumeChanged() }
+  }
+
+  private val sources: Set[ALSource] = Set()
+  private[games] def addSource(source: ALSource): Unit = {
+    sources += source
+  }
+  private[games] def removeSource(source: ALSource): Unit = {
+    sources -= source
+  }
 }
 
 class ALListener private[games] () extends Listener {
@@ -50,12 +69,6 @@ class ALListener private[games] () extends Listener {
     ret.load(orientationBuffer)
     ret
   }
-  def up_=(up: Vector3f): Unit = {
-    orientationBuffer.position(3)
-    up.store(orientationBuffer)
-    orientationBuffer.rewind()
-    AL10.alListener(AL10.AL_ORIENTATION, orientationBuffer)
-  }
 
   def orientation: Vector3f = {
     orientationBuffer.rewind()
@@ -63,8 +76,9 @@ class ALListener private[games] () extends Listener {
     ret.load(orientationBuffer)
     ret
   }
-  def orientation_=(orientation: Vector3f): Unit = {
+  def setOrientation(orientation: Vector3f, up: Vector3f): Unit = {
     orientationBuffer.rewind()
+    orientation.store(orientationBuffer)
     up.store(orientationBuffer)
     orientationBuffer.rewind()
     AL10.alListener(AL10.AL_ORIENTATION, orientationBuffer)

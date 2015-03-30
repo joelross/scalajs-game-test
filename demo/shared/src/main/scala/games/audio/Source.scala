@@ -18,7 +18,9 @@ abstract class AbstractSource extends Closeable {
   def pitch: Float
   def pitch_=(pitch: Float)
 
-  def close(): Unit = {}
+  def close(): Unit = {
+    this.pause
+  }
 }
 
 abstract class Source extends AbstractSource

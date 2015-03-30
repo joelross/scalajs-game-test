@@ -1,9 +1,8 @@
 package games.opengl
 
-import java.nio.{ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer}
-
-import org.lwjgl.opengl._
+import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer }
 import org.lwjgl.util.glu._
+import org.lwjgl.opengl.{ GL11, GL12, GL13, GL14, GL15, GL20, GL30, EXTFramebufferObject, ARBES2Compatibility, PixelFormat => LWJGLPixelFormat, DisplayMode => LWJGLDisplayMode, ContextAttribs => LWJGLContextAttribs, Display => LWJGLDisplay }
 
 // Auxiliary components
 
@@ -59,7 +58,50 @@ object Token {
 
 // Main componenents
 
-class GLES2LWJGL() extends GLES2 {
+case class DisplayLWJGLSettings(width: Int, height: Int, fullscreen: Boolean, vsync: Boolean)
+
+class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSettings]) extends Display {
+
+  // Init
+  {
+    val (displayMode, fullscreen, vsync) = settings match {
+      case Some(settings) => (new LWJGLDisplayMode(settings.width, settings.height), settings.fullscreen, settings.vsync)
+      case None => {
+        val modes = LWJGLDisplay.getAvailableDisplayModes()
+        val modesBySize = modes.filter { dm => dm.isFullscreenCapable() }.sortWith { (dm1, dm2) => dm1.getWidth * dm1.getHeight > dm2.getWidth * dm2.getHeight }
+        val biggestDisplayMode = modesBySize(0) // Take the biggest fullscreen config
+        (biggestDisplayMode, false, true)
+      }
+    }
+
+    val contextAttributes = new LWJGLContextAttribs(glMajor, glMinor)
+    LWJGLDisplay.setDisplayMode(displayMode)
+    LWJGLDisplay.setFullscreen(fullscreen)
+    LWJGLDisplay.setVSyncEnabled(vsync)
+    LWJGLDisplay.create(new LWJGLPixelFormat, contextAttributes)
+    LWJGLDisplay.setTitle("OpenGL window")
+  }
+
+  override def close(): Unit = {
+    super.close()
+    LWJGLDisplay.destroy()
+  }
+
+  def fullscreen: Boolean = LWJGLDisplay.isFullscreen()
+  def fullscreen_=(fullscreen: Boolean): Unit = LWJGLDisplay.setFullscreen(fullscreen)
+
+  def width: Int = LWJGLDisplay.getDisplayMode().getWidth()
+  def height: Int = LWJGLDisplay.getDisplayMode().getHeight()
+}
+
+class GLES2LWJGL(glMajor: Int = 3, glMinor: Int = 0, displaySettings: Option[DisplayLWJGLSettings] = None) extends GLES2 {
+
+  final val display: Display = new DisplayLWJGL(glMajor, glMinor, displaySettings)
+
+  override def close(): Unit = {
+    super.close()
+    display.close()
+  }
 
   /* public API */
 
@@ -176,12 +218,12 @@ class GLES2LWJGL() extends GLES2 {
   }
 
   final def compressedTexImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    data: ByteBuffer): Unit = {
+                                 data: ByteBuffer): Unit = {
     GL13.glCompressedTexImage2D(target, level, internalformat, width, height, border, data)
   }
 
   final def compressedTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, data: ByteBuffer): Unit = {
+                                    format: Int, data: ByteBuffer): Unit = {
     GL13.glCompressedTexSubImage2D(target, level, xoffset, yoffset, width, height, format, data)
   }
 
@@ -326,7 +368,7 @@ class GLES2LWJGL() extends GLES2 {
 
   final def getAttachedShaders(program: Token.Program): Array[Token.Shader] = {
     val maxCount = this.getProgramParameteri(program, GL20.GL_ATTACHED_SHADERS)
-    val buffer = GLES2.createIntData(maxCount)
+    val buffer = GLES2.createIntBuffer(maxCount)
     this.tmpInt.clear()
     GL20.glGetAttachedShaders(program, this.tmpInt, buffer)
     val count = this.tmpInt.get(0)
@@ -613,27 +655,27 @@ class GLES2LWJGL() extends GLES2 {
   }
 
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: IntBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
+                       format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int): Unit = {
+                       format: Int, `type`: Int): Unit = {
     GL11.glTexImage2D(target, level, internalformat, width, height, border, format, `type`, null: ByteBuffer)
   }
 
@@ -646,23 +688,23 @@ class GLES2LWJGL() extends GLES2 {
   }
 
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: ByteBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: ShortBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: IntBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
+                          format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
     GL11.glTexSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
   }
 
@@ -1132,23 +1174,23 @@ trait GLES2CompImpl extends GLES2CompRequirements {
 
   /* public API - methods */
 
-  final def createByteData(sz: Int): ByteBuffer = {
+  final def createByteBuffer(sz: Int): ByteBuffer = {
     org.lwjgl.BufferUtils.createByteBuffer(sz)
   }
 
-  final def createShortData(sz: Int): ShortBuffer = {
+  final def createShortBuffer(sz: Int): ShortBuffer = {
     org.lwjgl.BufferUtils.createShortBuffer(sz)
   }
 
-  final def createIntData(sz: Int): IntBuffer = {
+  final def createIntBuffer(sz: Int): IntBuffer = {
     org.lwjgl.BufferUtils.createIntBuffer(sz)
   }
 
-  final def createFloatData(sz: Int): FloatBuffer = {
+  final def createFloatBuffer(sz: Int): FloatBuffer = {
     org.lwjgl.BufferUtils.createFloatBuffer(sz)
   }
 
-  final def createDoubleData(sz: Int): DoubleBuffer = {
+  final def createDoubleBuffer(sz: Int): DoubleBuffer = {
     org.lwjgl.BufferUtils.createDoubleBuffer(sz)
   }
 

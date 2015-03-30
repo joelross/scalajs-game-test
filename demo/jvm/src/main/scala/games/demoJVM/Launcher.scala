@@ -1,41 +1,61 @@
 package games.demoJVM
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import games.demo.Engine
 import java.io.FileInputStream
 import java.io.File
-import games.audio.VorbisDecoder
 import java.io.EOFException
-import games.audio._
-import games.Resource
+
+import org.lwjgl.opengl._
+
+import games._
+import games.math
 import games.math.Vector3f
+import games.opengl._
+import games.audio._
+import games.input._
+
+import games.demo._
 
 object Launcher {
 
   def main(args: Array[String]): Unit = {
-    def printLine(m: String): Unit = {
-      println(m)
+    val glMajor = 3
+    val glMinor = 0
+    val width = 640
+    val height = 360
+    val title = "Scala.js-games"
+
+    val itf = new EngineInterface {
+      def printLine(m: String): Unit = {
+        println(m)
+      }
+      def initGL(): GLES2 = {
+        val glContext: GLES2 = new GLES2LWJGL()
+        glContext
+      }
+      def initAudio(): Context = {
+        val audioContext: Context = new ALContext()
+        audioContext
+      }
+      def initKeyboard(): Keyboard = {
+        val keyboard = new KeyboardLWJGL()
+        keyboard
+      }
+      def initMouse(): Mouse = {
+        val mouse = new MouseLWJGL()
+        mouse
+      }
+      def update(): Boolean = {
+        Display.update()
+        !Display.isCloseRequested()
+      }
+      def close(): Unit = {
+        Display.destroy()
+      }
     }
 
-    val audioContext: Context = new ALContext
-    printLine("Listener is at " + audioContext.listener.position + " and looking at " + audioContext.listener.orientation + " (up is at " + audioContext.listener.up + ")")
+    val engine = new Engine(itf)(JvmUtils.openglExecutionContext)
 
-    val testResource = new Resource("/games/demo/test_mono.ogg")
-
-    val testData = audioContext.createStreamingData(testResource)
-    val s = testData.createSource3D
-    s.onSuccess {
-      case s =>
-        printLine("Resource ready")
-        s.position = new Vector3f(10, 0, 0)
-        s.play
-    }
-    s.onFailure {
-      case t => printLine("Error: " + t.getMessage)
-    }
-
-    println("Press enter to exit")
-    System.in.read()
-    println("Client closing...")
+    Utils.startFrameListener(engine)
   }
 }

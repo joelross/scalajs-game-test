@@ -1,6 +1,7 @@
 package games.opengl
 
-import java.nio.{ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer}
+import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer }
+import java.io.Closeable
 
 // Auxiliary components
 
@@ -11,7 +12,21 @@ class GLException(msg: String) extends RuntimeException(msg)
 
 // Main components
 
-trait GLES2 {
+abstract class Display extends Closeable {
+  def fullscreen: Boolean
+  def fullscreen_=(fullscreen: Boolean): Unit
+
+  def width: Int
+  def height: Int
+
+  def close(): Unit = {}
+}
+
+trait GLES2 extends Closeable {
+
+  def display: Display
+
+  def close(): Unit = {}
 
   /* public API */
 
@@ -73,10 +88,10 @@ trait GLES2 {
    */
 
   def compressedTexImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    data: ByteBuffer): Unit
+                           data: ByteBuffer): Unit
 
   def compressedTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, data: ByteBuffer): Unit
+                              format: Int, data: ByteBuffer): Unit
   def copyTexImage2D(target: Int, level: Int, internalFormat: Int, x: Int, y: Int, width: Int, height: Int, border: Int): Unit
 
   def copyTexSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, x: Int, y: Int, width: Int, height: Int): Unit
@@ -298,32 +313,32 @@ trait GLES2 {
   def stencilOpSeparate(face: Int, sfail: Int, dpfail: Int, dppass: Int): Unit
 
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit
+                 format: Int, `type`: Int, pixels: ByteBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit
+                 format: Int, `type`: Int, pixels: ShortBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit
+                 format: Int, `type`: Int, pixels: IntBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit
+                 format: Int, `type`: Int, pixels: FloatBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit
+                 format: Int, `type`: Int, pixels: DoubleBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-    format: Int, `type`: Int): Unit
+                 format: Int, `type`: Int): Unit
 
   def texParameterf(target: Int, pname: Int, param: Float): Unit
 
   def texParameteri(target: Int, pname: Int, param: Int): Unit
 
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ByteBuffer): Unit
+                    format: Int, `type`: Int, pixels: ByteBuffer): Unit
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: ShortBuffer): Unit
+                    format: Int, `type`: Int, pixels: ShortBuffer): Unit
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: IntBuffer): Unit
+                    format: Int, `type`: Int, pixels: IntBuffer): Unit
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: FloatBuffer): Unit
+                    format: Int, `type`: Int, pixels: FloatBuffer): Unit
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-    format: Int, `type`: Int, pixels: DoubleBuffer): Unit
+                    format: Int, `type`: Int, pixels: DoubleBuffer): Unit
 
   def uniform1f(location: Token.UniformLocation, x: Float): Unit
 
@@ -396,11 +411,11 @@ trait GLES2 {
   def viewport(x: Int, y: Int, width: Int, height: Int): Unit
 
   protected val maxResultSize = 16
-  protected val tmpByte = GLES2.createByteData(maxResultSize)
-  protected val tmpShort = GLES2.createShortData(maxResultSize)
-  protected val tmpInt = GLES2.createIntData(maxResultSize)
-  protected val tmpFloat = GLES2.createFloatData(maxResultSize)
-  protected val tmpDouble = GLES2.createDoubleData(maxResultSize)
+  protected val tmpByte = GLES2.createByteBuffer(maxResultSize)
+  protected val tmpShort = GLES2.createShortBuffer(maxResultSize)
+  protected val tmpInt = GLES2.createIntBuffer(maxResultSize)
+  protected val tmpFloat = GLES2.createFloatBuffer(maxResultSize)
+  protected val tmpDouble = GLES2.createDoubleBuffer(maxResultSize)
 
   // Helper methods
 
@@ -786,11 +801,11 @@ trait GLES2CompRequirements {
 
   /* public API - methods */
 
-  def createByteData(sz: Int): ByteBuffer
-  def createShortData(sz: Int): ShortBuffer
-  def createIntData(sz: Int): IntBuffer
-  def createFloatData(sz: Int): FloatBuffer
-  def createDoubleData(sz: Int): DoubleBuffer
+  def createByteBuffer(sz: Int): ByteBuffer
+  def createShortBuffer(sz: Int): ShortBuffer
+  def createIntBuffer(sz: Int): IntBuffer
+  def createFloatBuffer(sz: Int): FloatBuffer
+  def createDoubleBuffer(sz: Int): DoubleBuffer
 }
 
 object GLES2 extends GLES2CompImpl {}
