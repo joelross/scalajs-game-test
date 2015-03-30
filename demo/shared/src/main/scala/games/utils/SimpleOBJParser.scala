@@ -177,17 +177,11 @@ object SimpleOBJParser {
     val mats: Map[String, Material] = Map()
     var curMat: Option[Material] = None
 
-    def mat(): Material = curMat match {
-      case Some(cur) => cur
-      case None      => throw new GLException("No material currently selected")
-    }
+    def mat(): Material = curMat.getOrElse(throw new GLException("No material currently selected"))
 
-    def flushCurMat(): Unit = curMat match {
-      case Some(cur) =>
-        mats += (cur.name -> cur)
-        curMat = None
-
-      case None =>
+    def flushCurMat(): Unit = for (cur <- curMat) {
+      mats += (cur.name -> cur)
+      curMat = None
     }
 
     for (currentLine <- mtlFile) {
@@ -347,74 +341,44 @@ object SimpleOBJParser {
 
     val availableMats: Map[String, Material] = Map()
 
-    def objGroupPart(): OBJObjectGroupPart = curObjGroupPart match {
-      case Some(cur) => cur
-      case None      => throw new GLException("No material currently selected for object")
+    def objGroupPart(): OBJObjectGroupPart = curObjGroupPart.getOrElse(throw new GLException("No material currently selected for object"))
+
+    def objGroup(): OBJObjectGroup = curObjGroup.getOrElse(throw new GLException("No group currently selected for object"))
+
+    def obj(): OBJObject = curObj.getOrElse(throw new GLException("No object currently selected"))
+
+    def flushCurObjGroupPart(): Unit = for (cur <- curObjGroupPart) {
+      if (!objGroup().parts.contains(cur)) objGroup().parts += cur
+      curObjGroupPart = None
     }
 
-    def objGroup(): OBJObjectGroup = curObjGroup match {
-      case Some(cur) => cur
-      case None      => throw new GLException("No group currently selected for object")
+    def flushCurObjGroup(): Unit = for (cur <- curObjGroup) {
+      flushCurObjGroupPart()
+
+      if (!obj().groups.contains(cur)) obj().groups += cur
+      curObjGroup = None
     }
 
-    def obj(): OBJObject = curObj match {
-      case Some(cur) => cur
-      case None      => throw new GLException("No object currently selected")
-    }
+    def flushCurObj(): Unit = for (cur <- curObj) {
+      flushCurObjGroup()
 
-    def flushCurObjGroupPart(): Unit = curObjGroupPart match {
-      case Some(cur) =>
-        if (!objGroup().parts.contains(cur)) objGroup().parts += cur
-        curObjGroupPart = None
-
-      case None =>
-    }
-
-    def flushCurObjGroup(): Unit = curObjGroup match {
-      case Some(cur) =>
-        flushCurObjGroupPart()
-
-        if (!obj().groups.contains(cur)) obj().groups += cur
-        curObjGroup = None
-
-      case None =>
-    }
-
-    def flushCurObj(): Unit = curObj match {
-      case Some(cur) =>
-        flushCurObjGroup()
-
-        if (!objs.contains(cur.name)) objs += (cur.name -> cur)
-        curObj = None
-
-      case None =>
+      if (!objs.contains(cur.name)) objs += (cur.name -> cur)
+      curObj = None
     }
 
     def getObjGroupPart(material: Option[Material]): OBJObjectGroupPart = {
       val existingPart = objGroup().parts.find { _.material == material }
-
-      existingPart match {
-        case Some(part) => part
-        case None       => new OBJObjectGroupPart(material)
-      }
+      existingPart.getOrElse(new OBJObjectGroupPart(material))
     }
 
     def getObjGroup(name: String): OBJObjectGroup = {
       val existingGroup = obj().groups.find { _.name == name }
-
-      existingGroup match {
-        case Some(group) => group
-        case None        => new OBJObjectGroup(name)
-      }
+      existingGroup.getOrElse(new OBJObjectGroup(name))
     }
 
     def getObj(name: String): OBJObject = {
       val existingObj = objs.get(name)
-
-      existingObj match {
-        case Some(obj) => obj
-        case None      => new OBJObject(name)
-      }
+      existingObj.getOrElse(new OBJObject(name))
     }
 
     for (currentLine <- objFile) {
@@ -617,15 +581,12 @@ object SimpleOBJParser {
   type VertexData = (Vector3f, Option[Vector2f], Option[Vector3f])
 
   class SubTriMesh(val material: Option[Material], val tris: Array[Tri]) {
-    override def toString(): String = material match {
-      case Some(mat) => "SubTriMesh(material=\"" + mat.name + "\")"
-      case None      => "SubTriMesh(no material)"
-    }
+    override def toString(): String = material.fold { "SubTriMesh(no material)" } { mat => s"""SubTriMesh(material="${mat.name}")""" }
   }
 
   class TriMesh(val name: String, val vertices: Array[Vector3f], val texCoordinates: Option[Array[Vector2f]],
                 val normals: Option[Array[Vector3f]], val submeshes: Array[SubTriMesh]) {
-    override def toString(): String = "TriMesh(name=\"" + name + "\")"
+    override def toString(): String = """TriMesh(name="${name}")"""
   }
 
   def convOBJObjectToTriMesh(objs: scala.collection.Map[String, OBJObject]): scala.collection.Map[String, TriMesh] = {

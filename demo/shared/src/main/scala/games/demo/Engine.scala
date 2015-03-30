@@ -199,14 +199,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       connection.handlerPromise.success { msg =>
         val networkData = upickle.read[NetworkData](msg)
         entities.clear()
-        mainMesh match {
-          case Some(mesh) =>
-            networkData.players.foreach { playerData =>
-              val transform = Matrix4f.translate3D(new Vector3f(playerData.posX, playerData.posY, playerData.posZ)) * Matrix4f.rotation3D(playerData.rotH, Vector3f.Up) * Matrix4f.rotation3D(playerData.rotV, Vector3f.Right)
-              entities += Entity(mesh, transform)
-            }
-
-          case None => // nothing to do
+        for (mesh <- mainMesh) {
+          networkData.players.foreach { playerData =>
+            val transform = Matrix4f.translate3D(new Vector3f(playerData.posX, playerData.posY, playerData.posZ)) * Matrix4f.rotation3D(playerData.rotH, Vector3f.Up) * Matrix4f.rotation3D(playerData.rotV, Vector3f.Right)
+            entities += Entity(mesh, transform)
+          }
         }
       }
       connection.closedFuture.onSuccess {
@@ -334,15 +331,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     audioContext.listener.position = cameraPosition
     audioContext.listener.setOrientation(cameraRotation * Vector3f.Front, cameraRotation * Vector3f.Up)
 
-    connection match { // Network
-      case Some(conn) =>
-        val now = System.currentTimeMillis()
-        if (now - lastTimeSent > 40) { // 40ms before each sent (25Hz)
-          conn.write(upickle.write[PlayerData](PlayerData(cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotationH, cameraRotationV)))
-          lastTimeSent = now
-        }
-
-      case None => // nothing to do
+    for (conn <- connection) { // Network
+      val now = System.currentTimeMillis()
+      if (now - lastTimeSent > 40) { // 40ms before each sent (25Hz)
+        conn.write(upickle.write[PlayerData](PlayerData(cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotationH, cameraRotationV)))
+        lastTimeSent = now
+      }
     }
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
