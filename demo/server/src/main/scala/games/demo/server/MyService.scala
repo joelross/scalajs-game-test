@@ -23,7 +23,7 @@ case class NetworkData(players: Seq[PlayerData])
 
 class Updater extends Actor {
   def receive: Receive = {
-    case x => {
+    case x =>
       val players = GlobalLogic.players
 
       players.foreach { currentPlayer =>
@@ -32,7 +32,7 @@ class Updater extends Actor {
         val network = NetworkData(data)
         currentPlayer.send(upickle.write[NetworkData](network))
       }
-    }
+
   }
 }
 
@@ -80,19 +80,19 @@ class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor wit
 
   def businessLogic: Receive = {
     case tf: TextFrame => logic match {
-      case Some(lo) => {
+      case Some(lo) =>
         val payload = tf.payload
         val text = payload.utf8String
         if (!text.isEmpty()) lo.receive(text)
-      }
+
       case None => println("Warning: TextFrame received from a non-upgraded connection")
     }
-    case x: FrameCommandFailed => {
+    case x: FrameCommandFailed =>
       log.error("frame command failed", x)
-    }
-    case UpgradedToWebSocket => {
+
+    case UpgradedToWebSocket =>
       logic = Some(new Player(sendMessage))
-    }
+
     case x: Http.ConnectionClosed => logic match {
       case Some(l) => l.disconnected()
       case None    =>
@@ -128,11 +128,10 @@ class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor wit
 class Service extends Actor {
 
   def receive = {
-    case Http.Connected(remoteAddress, localAddress) => {
+    case Http.Connected(remoteAddress, localAddress) =>
       val curSender = sender()
       val conn = context.actorOf(Props(classOf[ServiceWorker], curSender))
       curSender ! Http.Register(conn)
-    }
   }
 }
 

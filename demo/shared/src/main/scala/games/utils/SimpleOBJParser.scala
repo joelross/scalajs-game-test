@@ -70,119 +70,103 @@ object SimpleOBJParser {
       val remaining = tokens.size - currentShift + 1
 
       tokens(currentShift).toLowerCase() match {
-        case "-blendu" if (remaining >= 2) => {
+        case "-blendu" if (remaining >= 2) =>
           texInfo.blendu = onOff(tokens(currentShift + 1))
           currentShift += 2
-        }
 
-        case "-blendv" if (remaining >= 2) => {
+        case "-blendv" if (remaining >= 2) =>
           texInfo.blendv = onOff(tokens(currentShift + 1))
           currentShift += 2
-        }
 
-        case "-bm" if (remaining >= 2) => {
+        case "-bm" if (remaining >= 2) =>
           texInfo.bumpMultiplier = Some(tokens(currentShift + 1).toFloat)
           currentShift += 2
-        }
 
-        case "-boost" if (remaining >= 2) => {
+        case "-boost" if (remaining >= 2) =>
           texInfo.boost = Some(tokens(currentShift + 1).toFloat)
           currentShift += 2
-        }
 
-        case "-cc" if (remaining >= 2) => {
+        case "-cc" if (remaining >= 2) =>
           texInfo.colorCorrection = Some(onOff(tokens(currentShift + 1)))
           currentShift += 2
-        }
 
-        case "-clamp" if (remaining >= 2) => {
+        case "-clamp" if (remaining >= 2) =>
           texInfo.clamp = onOff(tokens(currentShift + 1))
           currentShift += 2
-        }
 
-        case "-imfchan" if (remaining >= 2) => {
+        case "-imfchan" if (remaining >= 2) =>
           texInfo.channel = Some(tokens(currentShift + 1).toLowerCase())
           currentShift += 2
-        }
 
-        case "-mm" if (remaining >= 3) => {
+        case "-mm" if (remaining >= 3) =>
           texInfo.modifierBase = tokens(currentShift + 1).toFloat
           texInfo.modifierGain = tokens(currentShift + 2).toFloat
           currentShift += 3
-        }
 
-        case "-o" if (remaining >= 2) => {
+        case "-o" if (remaining >= 2) =>
           val x = tokens(currentShift + 1).toFloat
 
           (if (remaining >= 3) parseFloat(tokens(currentShift + 2)) else None) match {
-            case None => {
+            case None =>
               texInfo.offset = new Vector3f(x, 0, 0)
               currentShift += 2
-            }
+
             case Some(y) => (if (remaining >= 4) parseFloat(tokens(currentShift + 3)) else None) match {
-              case None => {
+              case None =>
                 texInfo.offset = new Vector3f(x, y, 0)
                 currentShift += 3
-              }
-              case Some(z) => {
+
+              case Some(z) =>
                 texInfo.offset = new Vector3f(x, y, z)
                 currentShift += 4
-              }
             }
           }
-        }
 
-        case "-s" if (remaining >= 2) => {
+        case "-s" if (remaining >= 2) =>
           val x = tokens(currentShift + 1).toFloat
 
           (if (remaining >= 3) parseFloat(tokens(currentShift + 2)) else None) match {
-            case None => {
+            case None =>
               texInfo.resize = new Vector3f(x, 1, 1)
               currentShift += 2
-            }
+
             case Some(y) => (if (remaining >= 4) parseFloat(tokens(currentShift + 3)) else None) match {
-              case None => {
+              case None =>
                 texInfo.resize = new Vector3f(x, y, 1)
                 currentShift += 3
-              }
-              case Some(z) => {
+
+              case Some(z) =>
                 texInfo.resize = new Vector3f(x, y, z)
                 currentShift += 4
-              }
             }
           }
-        }
 
-        case "-t" if (remaining >= 2) => {
+        case "-t" if (remaining >= 2) =>
           val x = tokens(currentShift + 1).toFloat
 
           (if (remaining >= 3) parseFloat(tokens(currentShift + 2)) else None) match {
-            case None => {
+            case None =>
               texInfo.turbulence = new Vector3f(x, 0, 0)
               currentShift += 2
-            }
+
             case Some(y) => (if (remaining >= 4) parseFloat(tokens(currentShift + 3)) else None) match {
-              case None => {
+              case None =>
                 texInfo.turbulence = new Vector3f(x, y, 0)
                 currentShift += 3
-              }
-              case Some(z) => {
+
+              case Some(z) =>
                 texInfo.turbulence = new Vector3f(x, y, z)
                 currentShift += 4
-              }
             }
           }
-        }
 
-        case "-texres" if (remaining >= 2) => {
+        case "-texres" if (remaining >= 2) =>
           texInfo.resolution = Some(tokens(currentShift + 1).toInt)
           currentShift += 2
-        }
 
-        case _ => {
+        case _ =>
           texInfo.path = tokens(currentShift)
           currentShift += 1
-        }
       }
     }
 
@@ -199,10 +183,10 @@ object SimpleOBJParser {
     }
 
     def flushCurMat(): Unit = curMat match {
-      case Some(cur) => {
+      case Some(cur) =>
         mats += (cur.name -> cur)
         curMat = None
-      }
+
       case None =>
     }
 
@@ -213,121 +197,105 @@ object SimpleOBJParser {
       val tokens = line.split(" ", -1)
 
       (tokens(0).toLowerCase(), if (tokens.size >= 2) Some(tokens(1).toLowerCase()) else None) match {
-        case ("newmtl", _) if (tokens.size >= 2) => {
+        case ("newmtl", _) if (tokens.size >= 2) =>
           flushCurMat()
 
           val matName = tokens(1)
 
           val newMat = new Material(matName)
           curMat = Some(newMat)
-        }
 
         case ("ka", Some("spectral")) => println("Spectral Ka not supported")
 
-        case ("ka", Some("xyz")) if (tokens.size >= 5) => {
+        case ("ka", Some("xyz")) if (tokens.size >= 5) =>
           val x = tokens(2).toFloat
           val y = tokens(3).toFloat
           val z = tokens(4).toFloat
 
           val cieXYZ = new Vector3f(x, y, z)
           mat().ambientColor = Some(cieToRgb(cieXYZ))
-        }
 
-        case ("ka", _) if (tokens.size >= 4) => {
+        case ("ka", _) if (tokens.size >= 4) =>
           val r = tokens(1).toFloat
           val g = tokens(2).toFloat
           val b = tokens(3).toFloat
 
           val rgb = new Vector3f(r, g, b)
           mat().ambientColor = Some(rgb)
-        }
 
         case ("kd", Some("spectral")) => println("Spectral Kd not supported")
 
-        case ("kd", Some("xyz")) if (tokens.size >= 5) => {
+        case ("kd", Some("xyz")) if (tokens.size >= 5) =>
           val x = tokens(2).toFloat
           val y = tokens(3).toFloat
           val z = tokens(4).toFloat
 
           val cieXYZ = new Vector3f(x, y, z)
           mat().diffuseColor = Some(cieToRgb(cieXYZ))
-        }
 
-        case ("kd", _) if (tokens.size >= 4) => {
+        case ("kd", _) if (tokens.size >= 4) =>
           val r = tokens(1).toFloat
           val g = tokens(2).toFloat
           val b = tokens(3).toFloat
 
           val rgb = new Vector3f(r, g, b)
           mat().diffuseColor = Some(rgb)
-        }
 
         case ("ks", Some("spectral")) => println("Spectral Ks not supported")
 
-        case ("ks", Some("xyz")) if (tokens.size >= 5) => {
+        case ("ks", Some("xyz")) if (tokens.size >= 5) =>
           val x = tokens(2).toFloat
           val y = tokens(3).toFloat
           val z = tokens(4).toFloat
 
           val cieXYZ = new Vector3f(x, y, z)
           mat().specularColor = Some(cieToRgb(cieXYZ))
-        }
 
-        case ("ks", _) if (tokens.size >= 4) => {
+        case ("ks", _) if (tokens.size >= 4) =>
           val r = tokens(1).toFloat
           val g = tokens(2).toFloat
           val b = tokens(3).toFloat
 
           val rgb = new Vector3f(r, g, b)
           mat().specularColor = Some(rgb)
-        }
 
         case ("tf", _) => println("Transmission filter not supported")
 
-        case ("illum", _) if (tokens.size >= 2) => {
+        case ("illum", _) if (tokens.size >= 2) =>
           val illum = tokens(1).toInt
           mat().illuminationModelIndex = Some(illum)
-        }
 
-        case ("d", _) | ("tr", _) if (tokens.size >= 2) => {
+        case ("d", _) | ("tr", _) if (tokens.size >= 2) =>
           val tr = tokens(1).toFloat
           mat().transparency = Some(tr)
-        }
 
-        case ("ns", _) if (tokens.size >= 2) => {
+        case ("ns", _) if (tokens.size >= 2) =>
           val n = tokens(1).toFloat
           mat().specularCoef = Some(n)
-        }
 
-        case ("sharpness", _) if (tokens.size >= 2) => {
+        case ("sharpness", _) if (tokens.size >= 2) =>
           val sharp = tokens(1).toFloat
           mat().sharpness = sharp
-        }
 
-        case ("ni", _) if (tokens.size >= 2) => {
+        case ("ni", _) if (tokens.size >= 2) =>
           val indexOfRefraction = tokens(1).toFloat
           mat().refractionIndex = Some(indexOfRefraction)
-        }
 
-        case ("map_ka", _) if (tokens.size >= 2) => {
+        case ("map_ka", _) if (tokens.size >= 2) =>
           val texInfo = parseTex(tokens)
           mat().ambientColorTexture = Some(texInfo)
-        }
 
-        case ("map_kd", _) if (tokens.size >= 2) => {
+        case ("map_kd", _) if (tokens.size >= 2) =>
           val texInfo = parseTex(tokens)
           mat().diffuseColorTexture = Some(texInfo)
-        }
 
-        case ("map_ks", _) if (tokens.size >= 2) => {
+        case ("map_ks", _) if (tokens.size >= 2) =>
           val texInfo = parseTex(tokens)
           mat().specularColorTexture = Some(texInfo)
-        }
 
-        case ("map_ns", _) if (tokens.size >= 2) => {
+        case ("map_ns", _) if (tokens.size >= 2) =>
           val texInfo = parseTex(tokens)
           mat().specularCoefTexture = Some(texInfo)
-        }
 
         case ("", _)  => // Empty line (probably a comment), ignore
         case (arg, _) => println("Unknown or invalid MTL command \"" + arg + "\", ignoring the line")
@@ -395,30 +363,30 @@ object SimpleOBJParser {
     }
 
     def flushCurObjGroupPart(): Unit = curObjGroupPart match {
-      case Some(cur) => {
+      case Some(cur) =>
         if (!objGroup().parts.contains(cur)) objGroup().parts += cur
         curObjGroupPart = None
-      }
+
       case None =>
     }
 
     def flushCurObjGroup(): Unit = curObjGroup match {
-      case Some(cur) => {
+      case Some(cur) =>
         flushCurObjGroupPart()
 
         if (!obj().groups.contains(cur)) obj().groups += cur
         curObjGroup = None
-      }
+
       case None =>
     }
 
     def flushCurObj(): Unit = curObj match {
-      case Some(cur) => {
+      case Some(cur) =>
         flushCurObjGroup()
 
         if (!objs.contains(cur.name)) objs += (cur.name -> cur)
         curObj = None
-      }
+
       case None =>
     }
 
@@ -459,7 +427,7 @@ object SimpleOBJParser {
 
         // Vertex data
 
-        case "v" if (tokens.size >= 4) => {
+        case "v" if (tokens.size >= 4) =>
           val x = tokens(1).toFloat
           val y = tokens(2).toFloat
           val z = tokens(3).toFloat
@@ -467,34 +435,30 @@ object SimpleOBJParser {
 
           val pos = new Vector4f(x, y, z, w)
           obj().vertices += pos
-        }
 
-        case "vp" if (tokens.size >= 2) => {
+        case "vp" if (tokens.size >= 2) =>
           val u = tokens(1).toFloat
           val v = if (tokens.size >= 3) tokens(2).toFloat else 1.0f
           val w = if (tokens.size >= 4) tokens(3).toFloat else 1.0f
 
           val param = new Vector3f(u, v, w)
           obj().parameterVertices += param
-        }
 
-        case "vn" if (tokens.size >= 4) => {
+        case "vn" if (tokens.size >= 4) =>
           val x = tokens(1).toFloat
           val y = tokens(2).toFloat
           val z = tokens(3).toFloat
 
           val norm = new Vector3f(x, y, z)
           obj().normals += norm
-        }
 
-        case "vt" if (tokens.size >= 2) => {
+        case "vt" if (tokens.size >= 2) =>
           val u = tokens(1).toFloat
           val v = if (tokens.size >= 3) tokens(2).toFloat else 0.0f
           val w = if (tokens.size >= 4) tokens(3).toFloat else 0.0f
 
           val coord = new Vector3f(u, v, w)
           obj().texCoordinates += coord
-        }
 
         // Free-form curve/surface attributes
 
@@ -512,7 +476,7 @@ object SimpleOBJParser {
 
         case "l"      => println("Line element not supported")
 
-        case "f" => {
+        case "f" =>
           val face = new Array[TmpVertex](tokens.size - 1)
 
           def strToInt(str: String): Option[Int] = {
@@ -520,8 +484,7 @@ object SimpleOBJParser {
             else Some(str.toInt)
           }
 
-          var currentToken = 1
-          while (currentToken < tokens.size) {
+          for (currentToken <- 1 until tokens.size) {
             val indices = tokens(currentToken).split("/")
 
             val vertex: TmpVertex = indices.length match {
@@ -532,12 +495,9 @@ object SimpleOBJParser {
             }
 
             face(currentToken - 1) = vertex
-
-            currentToken += 1
           }
 
           objGroupPart().faces += face
-        }
 
         case "curv"  => println("Curve element not supported")
 
@@ -565,7 +525,7 @@ object SimpleOBJParser {
 
         // Grouping
 
-        case "g" if (tokens.size >= 2) => {
+        case "g" if (tokens.size >= 2) =>
           flushCurObjGroup()
 
           val groupName = tokens(1)
@@ -574,16 +534,14 @@ object SimpleOBJParser {
 
           val newObjGroupPart = getObjGroupPart(None)
           curObjGroupPart = Some(newObjGroupPart)
-        }
 
-        case "s" if (tokens.size >= 2) => {
+        case "s" if (tokens.size >= 2) =>
           val smooth = onOff(tokens(1))
           objGroup().smooth = smooth
-        }
 
         case "mg" => println("Merging group not supported")
 
-        case "o" if (tokens.size >= 2) => {
+        case "o" if (tokens.size >= 2) =>
           flushCurObj()
 
           val objName = tokens(1)
@@ -595,7 +553,6 @@ object SimpleOBJParser {
 
           val newObjGroupPart = getObjGroupPart(None)
           curObjGroupPart = Some(newObjGroupPart)
-        }
 
         // Display/render attributes
 
@@ -611,20 +568,18 @@ object SimpleOBJParser {
 
         case "usemap"   => println("Use mapping not supported")
 
-        case "usemtl" if (tokens.size >= 2) => {
+        case "usemtl" if (tokens.size >= 2) =>
           flushCurObjGroupPart()
 
           val selectedMatName = tokens(1)
           val selectedMat = availableMats(selectedMatName)
           val newSubObj = getObjGroupPart(Some(selectedMat))
           curObjGroupPart = Some(newSubObj)
-        }
 
-        case "mtllib" if (tokens.size >= 2) => {
+        case "mtllib" if (tokens.size >= 2) =>
           val mtlFileContent = extraFiles(tokens(1))
 
           availableMats ++= parseMTL(mtlFileContent)
-        }
 
         case "shadow_obj" => println("Shadow object not supported")
 
@@ -669,7 +624,7 @@ object SimpleOBJParser {
   }
 
   class TriMesh(val name: String, val vertices: Array[Vector3f], val texCoordinates: Option[Array[Vector2f]],
-                     val normals: Option[Array[Vector3f]], val submeshes: Array[SubTriMesh]) {
+                val normals: Option[Array[Vector3f]], val submeshes: Array[SubTriMesh]) {
     override def toString(): String = "TriMesh(name=\"" + name + "\")"
   }
 
@@ -686,53 +641,48 @@ object SimpleOBJParser {
         val (vertex, texCoordinate, normal) = vertexData
 
         val index = (texCoordinate, normal) match {
-          case (Some(tex), Some(norm)) => {
-            var i = 0
-            while (i < vertices.size) {
+          case (Some(tex), Some(norm)) =>
+            for (i <- 0 until vertices.size) {
               if (vertices(i) == vertex && texCoordinates(i) == tex && normals(i) == norm) return i
-              i += 1
             }
             // No matching vertex data found, add it at the end
             vertices += vertex
             texCoordinates += tex
             normals += norm
-            i
-          }
-          case (None, Some(norm)) => {
-            var i = 0
-            while (i < vertices.size) {
+
+            vertices.size - 1 // return index of the new vertex
+
+          case (None, Some(norm)) =>
+            for (i <- 0 until vertices.size) {
               if (vertices(i) == vertex && normals(i) == norm) return i
-              i += 1
             }
 
             // No matching vertex data found, add it at the end
             vertices += vertex
             normals += norm
-            i
-          }
-          case (Some(tex), None) => {
-            var i = 0
-            while (i < vertices.size) {
+
+            vertices.size - 1 // return index of the new vertex
+
+          case (Some(tex), None) =>
+            for (i <- 0 until vertices.size) {
               if (vertices(i) == vertex && texCoordinates(i) == tex) return i
-              i += 1
             }
 
             // No matching vertex data found, add it at the end
             vertices += vertex
             texCoordinates += tex
-            i
-          }
-          case (None, None) => {
-            var i = 0
-            while (i < vertices.size) {
+
+            vertices.size - 1 // return index of the new vertex
+
+          case (None, None) =>
+            for (i <- 0 until vertices.size) {
               if (vertices(i) == vertex) return i
-              i += 1
             }
 
             // No matching vertex data found, add it at the end
             vertices += vertex
-            i
-          }
+
+            vertices.size - 1 // return index of the new vertex
         }
 
         val formatErr = "The vertex data format is not uniform accross the vertices"
@@ -776,14 +726,14 @@ object SimpleOBJParser {
 
           part.faces.foreach { face =>
             face.size match {
-              case 3 => {
+              case 3 =>
                 val v0 = face(0)
                 val v1 = face(1)
                 val v2 = face(2)
 
                 addTri(v0, v1, v2)
-              }
-              case 4 => {
+
+              case 4 =>
                 val v0 = face(0)
                 val v1 = face(1)
                 val v2 = face(2)
@@ -791,7 +741,7 @@ object SimpleOBJParser {
 
                 addTri(v0, v1, v3)
                 addTri(v1, v2, v3)
-              }
+
               case _ => throw new GLException("Only faces composed of 3 of 4 vertices are supported")
             }
           }

@@ -200,12 +200,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val networkData = upickle.read[NetworkData](msg)
         entities.clear()
         mainMesh match {
-          case Some(mesh) => {
+          case Some(mesh) =>
             networkData.players.foreach { playerData =>
               val transform = Matrix4f.translate3D(new Vector3f(playerData.posX, playerData.posY, playerData.posZ)) * Matrix4f.rotation3D(playerData.rotH, Vector3f.Up) * Matrix4f.rotation3D(playerData.rotV, Vector3f.Right)
               entities += Entity(mesh, transform)
             }
-          }
+
           case None => // nothing to do
         }
       }
@@ -270,32 +270,32 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     def processKeyboard() {
       val event = keyboard.nextEvent()
       event match {
-        case Some(KeyboardEvent(key, down)) => {
+        case Some(KeyboardEvent(key, down)) =>
           if (down) key match {
-            case Key.L => {
+            case Key.L =>
               mouse.locked = !mouse.locked
               itf.printLine("Pointer lock toggled")
-            }
+
             case Key.Escape => continueCond = false
-            case Key.F => {
+            case Key.F =>
               gl.display.fullscreen = !gl.display.fullscreen
               itf.printLine("Fullscreen toggled")
-            }
-            case Key.NumAdd => {
+
+            case Key.NumAdd =>
               audioContext.volume *= 1.25f
               itf.printLine("Increased volume to " + audioContext.volume)
-            }
-            case Key.NumSubstract => {
+
+            case Key.NumSubstract =>
               audioContext.volume /= 1.25f
               itf.printLine("Decreased volume to " + audioContext.volume)
-            }
-            case Key.M => {
-              // TODO audio
-            }
-            case _ => // nothing to do
+
+            case Key.M =>
+            // TODO audio
+
+            case _     => // nothing to do
           }
           processKeyboard()
-        }
+
         case None => // nothing to do
       }
     }
@@ -335,13 +335,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     audioContext.listener.setOrientation(cameraRotation * Vector3f.Front, cameraRotation * Vector3f.Up)
 
     connection match { // Network
-      case Some(conn) => {
+      case Some(conn) =>
         val now = System.currentTimeMillis()
         if (now - lastTimeSent > 40) { // 40ms before each sent (25Hz)
           conn.write(upickle.write[PlayerData](PlayerData(cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotationH, cameraRotationV)))
           lastTimeSent = now
         }
-      }
+
       case None => // nothing to do
     }
 

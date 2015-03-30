@@ -1002,10 +1002,10 @@ private[games] object JSTypeHelper {
     typeName match {
       case "Boolean" => value.asInstanceOf[Boolean]
       case "Number"  => this.jsNumberToBoolean(value.asInstanceOf[Double])
-      case "Array" => {
+      case "Array" =>
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toBoolean(jsArray(0))
-      }
+
       case "Int8Array"    => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Int8Array](0))
       case "Uint8Array"   => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Uint8Array](0))
       case "Int16Array"   => this.jsNumberToBoolean(value.asInstanceOf[js.typedarray.Int16Array](0))
@@ -1023,10 +1023,10 @@ private[games] object JSTypeHelper {
     typeName match {
       case "Boolean" => this.booleanToInt(value.asInstanceOf[Boolean])
       case "Number"  => value.asInstanceOf[Double].toInt
-      case "Array" => {
+      case "Array" =>
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toInt(jsArray(0))
-      }
+
       case "Int8Array"    => value.asInstanceOf[js.typedarray.Int8Array](0).toInt
       case "Uint8Array"   => value.asInstanceOf[js.typedarray.Uint8Array](0).toInt
       case "Int16Array"   => value.asInstanceOf[js.typedarray.Int16Array](0).toInt
@@ -1044,10 +1044,10 @@ private[games] object JSTypeHelper {
     typeName match {
       case "Boolean" => this.booleanToShort(value.asInstanceOf[Boolean])
       case "Number"  => value.asInstanceOf[Double].toShort
-      case "Array" => {
+      case "Array" =>
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toShort(jsArray(0))
-      }
+
       case "Int8Array"    => value.asInstanceOf[js.typedarray.Int8Array](0).toShort
       case "Uint8Array"   => value.asInstanceOf[js.typedarray.Uint8Array](0).toShort
       case "Int16Array"   => value.asInstanceOf[js.typedarray.Int16Array](0).toShort
@@ -1065,10 +1065,10 @@ private[games] object JSTypeHelper {
     typeName match {
       case "Boolean" => this.booleanToFloat(value.asInstanceOf[Boolean])
       case "Number"  => value.asInstanceOf[Double].toFloat
-      case "Array" => {
+      case "Array" =>
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toFloat(jsArray(0))
-      }
+
       case "Int8Array"    => this.signedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Int8Array](0).toByte).toFloat
       case "Uint8Array"   => this.unsignedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint8Array](0).toByte).toFloat
       case "Int16Array"   => this.signedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Int16Array](0).toShort).toFloat
@@ -1086,10 +1086,10 @@ private[games] object JSTypeHelper {
     typeName match {
       case "Boolean" => this.booleanToFloat(value.asInstanceOf[Boolean])
       case "Number"  => value.asInstanceOf[Double].toDouble
-      case "Array" => {
+      case "Array" =>
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         toDouble(jsArray(0))
-      }
+
       case "Int8Array"    => this.signedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Int8Array](0).toByte).toDouble
       case "Uint8Array"   => this.unsignedByteToNormalizedFloat(value.asInstanceOf[js.typedarray.Uint8Array](0).toByte).toDouble
       case "Int16Array"   => this.signedShortToNormalizedFloat(value.asInstanceOf[js.typedarray.Int16Array](0).toShort).toDouble
@@ -1109,7 +1109,7 @@ private[games] object JSTypeHelper {
     typeName match {
       case "Boolean" => slice.put(this.booleanToByte(value.asInstanceOf[Boolean]))
       case "Number"  => slice.put(this.booleanToByte(this.jsNumberToBoolean(value.asInstanceOf[Double])))
-      case "Array" => {
+      case "Array" =>
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         val length = jsArray.length.toInt
         val containedType = JsUtils.typeName(jsArray(0))
@@ -1117,16 +1117,12 @@ private[games] object JSTypeHelper {
         require(slice.remaining >= length)
 
         containedType match {
-          case "Boolean" => {
-            jsArray.foreach { e => slice.put(this.booleanToByte(e.asInstanceOf[Boolean])) }
-          }
-          case "Number" => {
-            jsArray.foreach { e => slice.put(this.booleanToByte(this.jsNumberToBoolean(e.asInstanceOf[Double]))) }
-          }
-          case _ => throw new RuntimeException("Cannot convert array of " + containedType + " to booleans")
+          case "Boolean" => jsArray.foreach { e => slice.put(this.booleanToByte(e.asInstanceOf[Boolean])) }
+          case "Number"  => jsArray.foreach { e => slice.put(this.booleanToByte(this.jsNumberToBoolean(e.asInstanceOf[Double]))) }
+          case _         => throw new RuntimeException("Cannot convert array of " + containedType + " to booleans")
         }
-      }
-      case "Int8Array" => {
+
+      case "Int8Array" =>
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         val array = value.asInstanceOf[js.typedarray.Int8Array]
         val l = array
@@ -1135,8 +1131,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           data.put(this.booleanToByte(this.jsNumberToBoolean(array(i).asInstanceOf[Double])))
         }
-      }
-      case "Uint8Array" => {
+
+      case "Uint8Array" =>
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         val array = value.asInstanceOf[js.typedarray.Uint8Array]
         val l = array
@@ -1145,8 +1141,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           data.put(this.booleanToByte(this.jsNumberToBoolean(array(i).asInstanceOf[Double])))
         }
-      }
-      case "Int16Array" => {
+
+      case "Int16Array" =>
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         val array = value.asInstanceOf[js.typedarray.Int16Array]
         val l = array
@@ -1155,8 +1151,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           data.put(this.booleanToByte(this.jsNumberToBoolean(array(i).asInstanceOf[Double])))
         }
-      }
-      case "Uint16Array" => {
+
+      case "Uint16Array" =>
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         val array = value.asInstanceOf[js.typedarray.Uint16Array]
         val l = array
@@ -1165,8 +1161,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           data.put(this.booleanToByte(this.jsNumberToBoolean(array(i).asInstanceOf[Double])))
         }
-      }
-      case "Int32Array" => {
+
+      case "Int32Array" =>
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         val array = value.asInstanceOf[js.typedarray.Int32Array]
         val l = array
@@ -1175,8 +1171,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           data.put(this.booleanToByte(this.jsNumberToBoolean(array(i).asInstanceOf[Double])))
         }
-      }
-      case "Uint32Array" => {
+
+      case "Uint32Array" =>
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         val array = value.asInstanceOf[js.typedarray.Uint32Array]
         val l = array
@@ -1185,8 +1181,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           data.put(this.booleanToByte(this.jsNumberToBoolean(array(i).asInstanceOf[Double])))
         }
-      }
-      case "Float32Array" => {
+
+      case "Float32Array" =>
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         val array = value.asInstanceOf[js.typedarray.Float32Array]
         val l = array
@@ -1195,8 +1191,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           data.put(this.booleanToByte(this.jsNumberToBoolean(array(i).asInstanceOf[Double])))
         }
-      }
-      case "Float64Array" => {
+
+      case "Float64Array" =>
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         val array = value.asInstanceOf[js.typedarray.Float64Array]
         val l = array
@@ -1205,7 +1201,7 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           data.put(this.booleanToByte(this.jsNumberToBoolean(array(i).asInstanceOf[Double])))
         }
-      }
+
       case _ => throw new RuntimeException("Cannot convert type " + typeName + " to booleans")
     }
   }
@@ -1217,7 +1213,7 @@ private[games] object JSTypeHelper {
     typeName match {
       case "Boolean" => slice.put(this.booleanToByte(value.asInstanceOf[Boolean]))
       case "Number"  => slice.put(value.asInstanceOf[Double].toInt)
-      case "Array" => {
+      case "Array" =>
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         val length = jsArray.length.toInt
         val containedType = JsUtils.typeName(jsArray(0))
@@ -1225,16 +1221,12 @@ private[games] object JSTypeHelper {
         require(slice.remaining >= length)
 
         containedType match {
-          case "Boolean" => {
-            jsArray.foreach { e => slice.put(this.booleanToByte(e.asInstanceOf[Boolean])) }
-          }
-          case "Number" => {
-            jsArray.foreach { e => slice.put(e.asInstanceOf[Double].toInt) }
-          }
-          case _ => throw new RuntimeException("Cannot convert array of " + containedType + " to ints")
+          case "Boolean" => jsArray.foreach { e => slice.put(this.booleanToByte(e.asInstanceOf[Boolean])) }
+          case "Number"  => jsArray.foreach { e => slice.put(e.asInstanceOf[Double].toInt) }
+          case _         => throw new RuntimeException("Cannot convert array of " + containedType + " to ints")
         }
-      }
-      case "Int8Array" => {
+
+      case "Int8Array" =>
         val array = value.asInstanceOf[js.typedarray.Int8Array]
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         require(slice.remaining >= length)
@@ -1242,8 +1234,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(array(i).toInt)
         }
-      }
-      case "Uint8Array" => {
+
+      case "Uint8Array" =>
         val array = value.asInstanceOf[js.typedarray.Uint8Array]
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         require(slice.remaining >= length)
@@ -1251,8 +1243,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(array(i).toInt)
         }
-      }
-      case "Int16Array" => {
+
+      case "Int16Array" =>
         val array = value.asInstanceOf[js.typedarray.Int16Array]
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         require(slice.remaining >= length)
@@ -1260,8 +1252,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(array(i).toInt)
         }
-      }
-      case "Uint16Array" => {
+
+      case "Uint16Array" =>
         val array = value.asInstanceOf[js.typedarray.Uint16Array]
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         require(slice.remaining >= length)
@@ -1269,8 +1261,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(array(i).toInt)
         }
-      }
-      case "Int32Array" => {
+
+      case "Int32Array" =>
         val array = value.asInstanceOf[js.typedarray.Int32Array]
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         require(slice.remaining >= length)
@@ -1282,8 +1274,8 @@ private[games] object JSTypeHelper {
             slice.put(array(i).toInt)
           }
         }
-      }
-      case "Uint32Array" => {
+
+      case "Uint32Array" =>
         val array = value.asInstanceOf[js.typedarray.Uint32Array]
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         require(slice.remaining >= length)
@@ -1291,8 +1283,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(array(i).toInt)
         }
-      }
-      case "Float32Array" => {
+
+      case "Float32Array" =>
         val array = value.asInstanceOf[js.typedarray.Float32Array]
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         require(slice.remaining >= length)
@@ -1300,8 +1292,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(this.normalizedFloatToSignedInt(array(i).toFloat))
         }
-      }
-      case "Float64Array" => {
+
+      case "Float64Array" =>
         val array = value.asInstanceOf[js.typedarray.Float64Array]
         val length = value.asInstanceOf[js.Dynamic].length.asInstanceOf[Double].toInt
         require(slice.remaining >= length)
@@ -1309,7 +1301,7 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(this.normalizedFloatToSignedInt(array(i).toDouble))
         }
-      }
+
       case _ => throw new RuntimeException("Cannot convert type " + typeName + " to ints")
     }
   }
@@ -1321,7 +1313,7 @@ private[games] object JSTypeHelper {
     typeName match {
       case "Boolean" => slice.put(this.booleanToByte(value.asInstanceOf[Boolean]))
       case "Number"  => slice.put(value.asInstanceOf[Double].toFloat)
-      case "Array" => {
+      case "Array" =>
         val jsArray = value.asInstanceOf[js.Array[js.Any]]
         val length = jsArray.length.toInt
         val containedType = JsUtils.typeName(jsArray(0))
@@ -1329,16 +1321,12 @@ private[games] object JSTypeHelper {
         require(slice.remaining >= length)
 
         containedType match {
-          case "Boolean" => {
-            jsArray.foreach { e => slice.put(this.booleanToByte(e.asInstanceOf[Boolean])) }
-          }
-          case "Number" => {
-            jsArray.foreach { e => slice.put(e.asInstanceOf[Double].toFloat) }
-          }
-          case _ => throw new RuntimeException("Cannot convert array of " + containedType + " to floats")
+          case "Boolean" => jsArray.foreach { e => slice.put(this.booleanToByte(e.asInstanceOf[Boolean])) }
+          case "Number"  => jsArray.foreach { e => slice.put(e.asInstanceOf[Double].toFloat) }
+          case _         => throw new RuntimeException("Cannot convert array of " + containedType + " to floats")
         }
-      }
-      case "Int8Array" => {
+
+      case "Int8Array" =>
         val array = value.asInstanceOf[js.typedarray.Int8Array]
         val length = array.length
         require(slice.remaining >= length)
@@ -1346,8 +1334,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(this.signedByteToNormalizedFloat(array(i).toByte).toFloat)
         }
-      }
-      case "Uint8Array" => {
+
+      case "Uint8Array" =>
         val array = value.asInstanceOf[js.typedarray.Uint8Array]
         val length = array.length
         require(slice.remaining >= length)
@@ -1355,8 +1343,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(this.unsignedByteToNormalizedFloat(array(i).toByte).toFloat)
         }
-      }
-      case "Int16Array" => {
+
+      case "Int16Array" =>
         val array = value.asInstanceOf[js.typedarray.Int16Array]
         val length = array.length
         require(slice.remaining >= length)
@@ -1364,8 +1352,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(this.signedShortToNormalizedFloat(array(i).toShort).toFloat)
         }
-      }
-      case "Uint16Array" => {
+
+      case "Uint16Array" =>
         val array = value.asInstanceOf[js.typedarray.Uint16Array]
         val length = array.length
         require(slice.remaining >= length)
@@ -1373,8 +1361,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(this.unsignedShortToNormalizedFloat(array(i).toShort).toFloat)
         }
-      }
-      case "Int32Array" => {
+
+      case "Int32Array" =>
         val array = value.asInstanceOf[js.typedarray.Int32Array]
         val length = array.length
         require(slice.remaining >= length)
@@ -1382,8 +1370,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(this.signedIntToNormalizedFloat(array(i).toInt).toFloat)
         }
-      }
-      case "Uint32Array" => {
+
+      case "Uint32Array" =>
         val array = value.asInstanceOf[js.typedarray.Uint32Array]
         val length = array.length
         require(slice.remaining >= length)
@@ -1391,8 +1379,8 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(this.unsignedIntToNormalizedFloat(array(i).toInt).toFloat)
         }
-      }
-      case "Float32Array" => {
+
+      case "Float32Array" =>
         val array = value.asInstanceOf[js.typedarray.Float32Array]
         val length = array.length
         require(slice.remaining >= length)
@@ -1404,8 +1392,8 @@ private[games] object JSTypeHelper {
             slice.put(array(i).toFloat)
           }
         }
-      }
-      case "Float64Array" => {
+
+      case "Float64Array" =>
         val array = value.asInstanceOf[js.typedarray.Float64Array]
         val length = array.length
         require(slice.remaining >= length)
@@ -1413,7 +1401,7 @@ private[games] object JSTypeHelper {
         for (i <- 0 until length) {
           slice.put(array(i).toFloat)
         }
-      }
+
       case _ => throw new RuntimeException("Cannot convert type " + typeName + " to floats")
     }
   }
