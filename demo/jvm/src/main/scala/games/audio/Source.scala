@@ -158,11 +158,10 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
           // if we are using this streaming thread...
           if (running) {
             // Retrieve the used buffer
-            var processed = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_PROCESSED)
-            while (processed > 0) {
+            val processed = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_PROCESSED)
+            for (i <- 0 until processed) {
               val alBuffer = AL10.alSourceUnqueueBuffers(alSource)
               buffersReady = alBuffer :: buffersReady
-              processed -= 1
             }
 
             // Fill the buffer and send them to OpenAL again
@@ -209,11 +208,10 @@ class ALStreamingSource private[games] (ctx: ALContext, res: Resource) extends S
         buffersReady.foreach { alBuffer => AL10.alDeleteBuffers(alBuffer) }
 
         // destroy the buffers still in use
-        var queuedBuffers = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED)
-        while (queuedBuffers > 0) {
+        val queuedBuffers = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED)
+        for (i <- 0 until queuedBuffers) {
           val alBuffer = AL10.alSourceUnqueueBuffers(alSource)
           AL10.alDeleteBuffers(alBuffer)
-          queuedBuffers -= 1
         }
 
         AL10.alDeleteSources(alSource)

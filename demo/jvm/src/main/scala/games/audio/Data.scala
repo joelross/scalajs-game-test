@@ -34,16 +34,11 @@ class ALRawData private[games] (ctx: ALContext, data: ByteBuffer, format: Format
 
     val alBuffer = AL10.alGenBuffers()
 
-    var sampleCur = 0
-    while (sampleCur < sampleCount) {
-      var channelCur = 0
-      while (channelCur < channels) {
+    for (sampleCur <- 0 until sampleCount) {
+      for (channelCur <- 0 until channels) {
         val value = fb.get()
         converter(value, openalData)
-        channelCur += 1
       }
-
-      sampleCur += 1
     }
 
     openalData.rewind()

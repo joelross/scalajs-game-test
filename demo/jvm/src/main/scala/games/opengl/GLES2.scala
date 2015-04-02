@@ -66,12 +66,11 @@ class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSett
   {
     val (displayMode, fullscreen, vsync) = settings match {
       case Some(settings) => (new LWJGLDisplayMode(settings.width, settings.height), settings.fullscreen, settings.vsync)
-      case None => {
+      case None =>
         val modes = LWJGLDisplay.getAvailableDisplayModes()
         val modesBySize = modes.filter { dm => dm.isFullscreenCapable() }.sortWith { (dm1, dm2) => dm1.getWidth * dm1.getHeight > dm2.getWidth * dm2.getHeight }
         val biggestDisplayMode = modesBySize(0) // Take the biggest fullscreen config
         (biggestDisplayMode, false, true)
-      }
     }
 
     val contextAttributes = new LWJGLContextAttribs(glMajor, glMinor)

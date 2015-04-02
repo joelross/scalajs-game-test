@@ -10,6 +10,9 @@ lazy val commonSettings = Seq(
         resolvers += "Spray" at "http://repo.spray.io",
         scalacOptions ++= Seq(
           "-deprecation"
+        ),
+        libraryDependencies ++= Seq(
+          "com.lihaoyi" %%% "upickle" % "0.2.8"
         )
     )
 
@@ -103,6 +106,5 @@ lazy val serverDemoJS = project
                 "com.wandoulabs.akka" %% "spray-websocket" % "0.1.4"
             )
         },
-        (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data,
-        (resources in Compile) += (fullOptJS in (demoJS, Compile)).value.data
+        (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data
     )

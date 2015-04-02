@@ -102,7 +102,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     xmlRequest.onload = (e: dom.Event) => {
       val code = xmlRequest.status
-      if (code >= 200 && code < 400) { // HTTP Code 2xx or 3xx, Ok
+      if (code >= 200 && code < 300 || code == 304) { // HTTP Code 2xx or 304, Ok
         val arrayBuffer = xmlRequest.response.asInstanceOf[js.typedarray.ArrayBuffer]
         val byteBuffer = js.typedarray.TypedArrayBuffer.wrap(arrayBuffer)
         promise.success(byteBuffer)
@@ -133,7 +133,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     xmlRequest.onload = (e: dom.Event) => {
       val code = xmlRequest.status
-      if (code >= 200 && code < 400) { // HTTP Code 2xx or 3xx, Ok
+      if (code >= 200 && code < 300 || code == 304) { // HTTP Code 2xx or 304, Ok
         val text: String = xmlRequest.responseText
         promise.success(text)
       } else {

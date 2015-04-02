@@ -34,7 +34,7 @@ class VorbisDecoder private[games] (var in: InputStream, conv: Converter) extend
 
   private def getNextPage(): Page = {
     syncState.pageout(page) match {
-      case 0 => { // need more data
+      case 0 => // need more data
         val index = syncState.buffer(readBufferSize)
         val buffer = syncState.data
         var read = in.read(buffer, index, readBufferSize)
@@ -45,8 +45,8 @@ class VorbisDecoder private[games] (var in: InputStream, conv: Converter) extend
         val code = syncState.wrote(read)
         if (code < 0) throw new RuntimeException("Could not load the buffer. Code " + code)
         else getNextPage() // once the buffer is loaded successfully, try again
-      }
-      case 1 => { // page ok
+
+      case 1 => // page ok
         if (firstPage) {
           firstPage = false
           streamState.init(page.serialno())
@@ -59,17 +59,17 @@ class VorbisDecoder private[games] (var in: InputStream, conv: Converter) extend
         if (lastPage) System.err.println("Warning: EOS page already reached")
         else lastPage = page.eos() != 0
         page
-      }
+
       case x => throw new RuntimeException("Could not retrieve page from buffer. Code " + x)
     }
   }
 
   def getNextPacket(): Packet = streamState.packetout(packet) match {
-    case 0 => { // need a new page
+    case 0 => // need a new page
       val code = streamState.pagein(getNextPage())
       if (code < 0) throw new RuntimeException("Could not load the page. Code " + code)
       else getNextPacket() // once a new page is loaded successfully, try again
-    }
+
     case 1 => packet // packet ok
     case x => throw new RuntimeException("Could not retrieve packet from page. Code " + x)
   }
@@ -126,11 +126,9 @@ class VorbisDecoder private[games] (var in: InputStream, conv: Converter) extend
       if (remainingSamples <= 0 || !(out.remaining() >= info.channels * conv.bytePerValue)) {
         count
       } else {
-        var channelNo = 0
-        while (channelNo < info.channels) {
+        for (channelNo <- 0 until info.channels) {
           val value = pcmIn(0)(channelNo)(indexIn(channelNo) + samplesRead)
           conv(value, out)
-          channelNo += 1
         }
 
         samplesRead += 1

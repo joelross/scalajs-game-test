@@ -116,7 +116,8 @@ object KeyboardLWJGL {
     (Key.AltLeft, LWJGLKeyboard.KEY_LMENU),
     (Key.AltRight, LWJGLKeyboard.KEY_RMENU),
     (Key.SuperLeft, LWJGLKeyboard.KEY_LMETA),
-    (Key.SuperRight, LWJGLKeyboard.KEY_RMETA) //(Key.MenuLeft, 184 ???),
+    (Key.SuperRight, LWJGLKeyboard.KEY_RMETA)
+    //(Key.MenuLeft, 184 ???),
     //(Key.MenuRight, ???),
     )
 }
@@ -141,10 +142,10 @@ class KeyboardLWJGL() extends Keyboard {
     if (LWJGLKeyboard.next()) {
       val keyCode = LWJGLKeyboard.getEventKey
       KeyboardLWJGL.mapper.getForRemote(keyCode) match {
-        case Some(key) => {
+        case Some(key) =>
           val down = LWJGLKeyboard.getEventKeyState()
           Some(KeyboardEvent(key, down))
-        }
+
         case None => nextEvent() // unsupported key, skip to the next event
       }
     } else None

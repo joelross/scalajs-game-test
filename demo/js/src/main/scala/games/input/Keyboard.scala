@@ -134,17 +134,14 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
   private def selectLocatedKey(leftKey: Key, rightKey: Key, location: Int) = location match {
     case 1 => leftKey
     case 2 => rightKey
-    case x => {
-      //println("Unknown location " + x + " for key " + leftKey + " or " + rightKey)
-      leftKey // just default to the left one
-    }
+    case x => leftKey // just default to the left one
   }
 
   private def locateKeyIfNecessary(key: Key, ev: dom.raw.KeyboardEvent): Key = key match {
     case Key.ShiftLeft | Key.ShiftRight     => selectLocatedKey(Key.ShiftLeft, Key.ShiftRight, ev.location)
     case Key.ControlLeft | Key.ControlRight => selectLocatedKey(Key.ControlLeft, Key.ControlRight, ev.location)
     case Key.AltLeft | Key.AltRight         => selectLocatedKey(Key.AltLeft, Key.AltRight, ev.location)
-    case Key.SuperLeft | Key.SuperLeft      => selectLocatedKey(Key.SuperLeft, Key.SuperLeft, ev.location)
+    case Key.SuperLeft | Key.SuperRight     => selectLocatedKey(Key.SuperLeft, Key.SuperRight, ev.location)
     case _                                  => key
   }
 

@@ -32,20 +32,14 @@ class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: 
 
     var channelsData = new Array[js.typedarray.Float32Array](channels)
 
-    var channelCur = 0
-    while (channelCur < channels) {
+    for (channelCur <- 0 until channels) {
       channelsData(channelCur) = buffer.getChannelData(channelCur).asInstanceOf[js.typedarray.Float32Array]
-      channelCur += 1
     }
 
-    var sampleCur = 0
-    while (sampleCur < sampleCount) {
-      channelCur = 0
-      while (channelCur < channels) {
+    for (sampleCur <- 0 until sampleCount) {
+      for (channelCur <- 0 until channels) {
         channelsData(channelCur)(sampleCur) = floatBuffer.get()
-        channelCur += 1
       }
-      sampleCur += 1
     }
 
     buffer

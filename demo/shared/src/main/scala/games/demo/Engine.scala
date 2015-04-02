@@ -1,10 +1,13 @@
 package games.demo
 
+import transport.ConnectionHandle
 import transport.WebSocketUrl
+import games.demo.Specifics.WebSocketClient
+
 import scala.concurrent.{ Future, ExecutionContext }
 import games._
 import games.math
-import games.math.{ Vector3f, Vector4f, Matrix4f, Matrix3f, MatrixStack }
+import games.math.{ Vector3f, Vector4f, Matrix4f, Matrix3f }
 import games.opengl._
 import games.audio._
 import games.input._
@@ -26,8 +29,12 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
+case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
+case class NetworkData(players: Seq[PlayerData])
+
 case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
-case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh], transform: Matrix4f)
+case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
+case class Entity(mesh: OpenGLMesh, transform: Matrix4f)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   def context: games.opengl.GLES2 = gl
@@ -179,10 +186,32 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           OpenGLSubMesh(indicesBuffer, submeshVerticesCount, submesh.material.get.ambientColor.get, submesh.material.get.diffuseColor.get)
         }
 
-        val openGLMesh = OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes, new Matrix4f)
-        this.meshes += openGLMesh
+        val openGLMesh = OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes)
+        this.mainMesh = Some(openGLMesh)
     }
     futureMesh.onFailure { case t => itf.printLine("Failed to load the mesh: " + t) }
+
+    // Connect to the server using WebSocket
+    val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
+    futureConnection.foreach { connection =>
+      itf.printLine("Websocket connection established")
+      this.connection = Some(connection)
+      connection.handlerPromise.success { msg =>
+        val networkData = upickle.read[NetworkData](msg)
+        entities.clear()
+        for (mesh <- mainMesh) {
+          networkData.players.foreach { playerData =>
+            val transform = Matrix4f.translate3D(new Vector3f(playerData.posX, playerData.posY, playerData.posZ)) * Matrix4f.rotation3D(playerData.rotH, Vector3f.Up) * Matrix4f.rotation3D(playerData.rotV, Vector3f.Right)
+            entities += Entity(mesh, transform)
+          }
+        }
+      }
+      connection.closedFuture.onSuccess {
+        case _ =>
+          itf.printLine("Websocket connection closed")
+          this.connection = None
+      }
+    }
   }
 
   var program: Token.Program = _
@@ -202,7 +231,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   var modelViewUniLoc: Token.UniformLocation = _
   var modelViewInvTrUniLoc: Token.UniformLocation = _
 
-  val meshes = new ArrayBuffer[OpenGLMesh]()
+  var mainMesh: Option[OpenGLMesh] = None
+  val entities = new ArrayBuffer[Entity]()
+
+  var connection: Option[ConnectionHandle] = None
 
   val fovy: Float = 60f
   val near: Float = 0.1f
@@ -213,8 +245,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   var dim: (Int, Int) = _
 
-  val sampleRate = 22100
-  var audioSources: List[AbstractSource] = Nil
+  val sampleRate = 44100
+
+  var lastTimeSent: Long = 0
 
   def createMonoSound(freq: Int): ByteBuffer = {
     val bb = ByteBuffer.allocate(4 * sampleRate).order(ByteOrder.nativeOrder())
@@ -234,53 +267,32 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     def processKeyboard() {
       val event = keyboard.nextEvent()
       event match {
-        case Some(KeyboardEvent(key, down)) => {
+        case Some(KeyboardEvent(key, down)) =>
           if (down) key match {
-            case Key.L => {
+            case Key.L =>
               mouse.locked = !mouse.locked
               itf.printLine("Pointer lock toggled")
-            }
+
             case Key.Escape => continueCond = false
-            case Key.F => {
+            case Key.F =>
               gl.display.fullscreen = !gl.display.fullscreen
               itf.printLine("Fullscreen toggled")
-            }
-            case Key.NumAdd => {
+
+            case Key.NumAdd =>
               audioContext.volume *= 1.25f
               itf.printLine("Increased volume to " + audioContext.volume)
-            }
-            case Key.NumSubstract => {
+
+            case Key.NumSubstract =>
               audioContext.volume /= 1.25f
               itf.printLine("Decreased volume to " + audioContext.volume)
-            }
-            case Key.M => {
-              if (audioSources.isEmpty) {
-                //val data = audioContext.createBufferedData(Resource("/games/demo/test_mono.ogg"))
-                val data = audioContext.createRawData(createMonoSound(1000), Format.Float32, 1, sampleRate)
-                val source = data.createSource3D
-                source.onSuccess {
-                  case s =>
-                    audioSources = s :: audioSources
-                    s.loop = true
-                    s.position = new Vector3f(0, 0, 0)
-                    s.volume = 1f
-                    s.play
-                    itf.printLine("Adding audio source")
-                }
-                source.onFailure {
-                  case t =>
-                    itf.printLine("Could not load the sound: " + t)
-                }
-              } else {
-                audioSources.foreach { source => source.close() }
-                audioSources = Nil
-                itf.printLine("Closing audio sources")
-              }
-            }
-            case _ => // nothing to do
+
+            case Key.M =>
+            // TODO audio
+
+            case _     => // nothing to do
           }
           processKeyboard()
-        }
+
         case None => // nothing to do
       }
     }
@@ -319,6 +331,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     audioContext.listener.position = cameraPosition
     audioContext.listener.setOrientation(cameraRotation * Vector3f.Front, cameraRotation * Vector3f.Up)
 
+    for (conn <- connection) { // Network
+      val now = System.currentTimeMillis()
+      if (now - lastTimeSent > 40) { // 40ms before each sent (25Hz)
+        conn.write(upickle.write[PlayerData](PlayerData(cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotationH, cameraRotationV)))
+        lastTimeSent = now
+      }
+    }
+
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     gl.useProgram(program)
@@ -330,9 +350,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.enableVertexAttribArray(positionAttrLoc)
     gl.enableVertexAttribArray(normalAttrLoc)
 
-    this.meshes.foreach { mesh =>
-      val modelView = cameraTransformInv * mesh.transform
+    this.entities.foreach { entity =>
+      val mesh = entity.mesh
+
+      val transform = entity.transform
+      val modelView = cameraTransformInv * transform
       val modelViewInvTr = modelView.invertedCopy().transpose()
+
       gl.uniformMatrix4f(modelViewUniLoc, modelView)
       gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
 
