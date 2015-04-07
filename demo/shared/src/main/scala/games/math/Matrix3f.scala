@@ -255,6 +255,12 @@ class Matrix3f extends Matrix {
     ret
   }
 
+  def toCartesian(): Matrix2f = {
+    val ret = new Matrix2f
+    Matrix3f.setCartesian(this, ret)
+    ret
+  }
+
   def toHomogeneous(): Matrix4f = {
     val ret = new Matrix4f
     Matrix3f.setHomogeneous(this, ret)
@@ -306,6 +312,14 @@ object Matrix3f {
     dst.m20 = src.m20
     dst.m21 = src.m21
     dst.m22 = src.m22
+  }
+
+  def setCartesian(src: Matrix3f, dst: Matrix2f): Unit = {
+    dst.m00 = src.m00 / src.m22
+    dst.m01 = src.m01 / src.m22
+
+    dst.m10 = src.m10 / src.m22
+    dst.m11 = src.m11 / src.m22
   }
 
   def setHomogeneous(src: Matrix3f, dst: Matrix4f): Unit = {
