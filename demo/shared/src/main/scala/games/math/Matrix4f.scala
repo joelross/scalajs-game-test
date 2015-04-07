@@ -495,7 +495,7 @@ object Matrix4f {
 
     case _ => throw new IndexOutOfBoundsException
   }
-  
+
   def setColumn(src: Vector4f, dst: Matrix4f, colIdx: Int): Unit = colIdx match {
     case 0 =>
       dst.m00 = src.x
@@ -525,10 +525,10 @@ object Matrix4f {
   }
   def setRow(src: Vector4f, dst: Matrix4f, rowIdx: Int): Unit = rowIdx match {
     case 0 =>
-       dst.m00 = src.x
-       dst.m10 = src.y
-       dst.m20 = src.z
-       dst.m30 = src.w
+      dst.m00 = src.x
+      dst.m10 = src.y
+      dst.m20 = src.z
+      dst.m30 = src.w
 
     case 1 =>
       dst.m01 = src.x
@@ -541,7 +541,7 @@ object Matrix4f {
       dst.m12 = src.y
       dst.m22 = src.z
       dst.m32 = src.w
-      
+
     case 3 =>
       dst.m03 = src.x
       dst.m13 = src.y

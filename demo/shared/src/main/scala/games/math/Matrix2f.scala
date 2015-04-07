@@ -286,8 +286,8 @@ object Matrix2f {
   }
   def setRow(src: Vector2f, dst: Matrix2f, rowIdx: Int): Unit = rowIdx match {
     case 0 =>
-       dst.m00 = src.x
-       dst.m10 = src.y
+      dst.m00 = src.x
+      dst.m10 = src.y
 
     case 1 =>
       dst.m01 = src.x

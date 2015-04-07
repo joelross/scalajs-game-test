@@ -377,7 +377,7 @@ object Matrix3f {
 
     case _ => throw new IndexOutOfBoundsException
   }
-  
+
   def setColumn(src: Vector3f, dst: Matrix3f, colIdx: Int): Unit = colIdx match {
     case 0 =>
       dst.m00 = src.x
@@ -398,9 +398,9 @@ object Matrix3f {
   }
   def setRow(src: Vector3f, dst: Matrix3f, rowIdx: Int): Unit = rowIdx match {
     case 0 =>
-       dst.m00 = src.x
-       dst.m10 = src.y
-       dst.m20 = src.z
+      dst.m00 = src.x
+      dst.m10 = src.y
+      dst.m20 = src.z
 
     case 1 =>
       dst.m01 = src.x

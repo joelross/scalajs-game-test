@@ -28,7 +28,7 @@ object Utils {
 
     val newR3 = r1.cross(newR2)
     newR3.normalise()
-    
+
     // TODO
   }
 

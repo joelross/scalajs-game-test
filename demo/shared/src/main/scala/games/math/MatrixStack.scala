@@ -9,7 +9,7 @@ class MatrixStack[T <: Matrix](var current: T) {
     stack += current.copy.asInstanceOf[T]
   }
 
-  def pop: T = if(empty) {
+  def pop: T = if (empty) {
     throw new RuntimeException("Stack empty")
   } else {
     stack.remove(stack.size - 1)
