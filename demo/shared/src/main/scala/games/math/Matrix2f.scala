@@ -83,6 +83,17 @@ class Matrix2f extends Matrix {
     this
   }
 
+  def column(colIdx: Int): Vector2f = {
+    val ret = new Vector2f
+    Matrix2f.setColumn(this, colIdx, ret)
+    ret
+  }
+  def row(rowIdx: Int): Vector2f = {
+    val ret = new Vector2f
+    Matrix2f.setRow(this, rowIdx, ret)
+    ret
+  }
+
   def invert(): Matrix2f = {
     Matrix2f.invert(this, this)
     this

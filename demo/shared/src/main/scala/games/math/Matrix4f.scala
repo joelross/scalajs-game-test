@@ -223,6 +223,17 @@ class Matrix4f extends Matrix {
     this
   }
 
+  def column(colIdx: Int): Vector4f = {
+    val ret = new Vector4f
+    Matrix4f.setColumn(this, colIdx, ret)
+    ret
+  }
+  def row(rowIdx: Int): Vector4f = {
+    val ret = new Vector4f
+    Matrix4f.setRow(this, rowIdx, ret)
+    ret
+  }
+
   def invert(): Matrix4f = {
     Matrix4f.invert(this, this)
     this

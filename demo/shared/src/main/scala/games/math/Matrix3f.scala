@@ -148,6 +148,17 @@ class Matrix3f extends Matrix {
     this
   }
 
+  def column(colIdx: Int): Vector3f = {
+    val ret = new Vector3f
+    Matrix3f.setColumn(this, colIdx, ret)
+    ret
+  }
+  def row(rowIdx: Int): Vector3f = {
+    val ret = new Vector3f
+    Matrix3f.setRow(this, rowIdx, ret)
+    ret
+  }
+
   def invert(): Matrix3f = {
     Matrix3f.invert(this, this)
     this
