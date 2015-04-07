@@ -36,6 +36,30 @@ class Matrix4f extends Matrix {
     m33 = a33
   }
 
+  def this(a0: Vector4f, a1: Vector4f, a2: Vector4f, a3: Vector4f) = {
+    this()
+
+    m00 = a0.x
+    m01 = a0.y
+    m02 = a0.z
+    m03 = a0.w
+
+    m10 = a1.x
+    m11 = a1.y
+    m12 = a1.z
+    m13 = a1.w
+
+    m20 = a2.x
+    m21 = a2.y
+    m22 = a2.z
+    m23 = a2.w
+
+    m30 = a3.x
+    m31 = a3.y
+    m32 = a3.z
+    m33 = a3.w
+  }
+
   def this(m: Matrix4f) = {
     this()
     Matrix4f.set(m, this)
@@ -225,12 +249,12 @@ class Matrix4f extends Matrix {
 
   def column(colIdx: Int): Vector4f = {
     val ret = new Vector4f
-    Matrix4f.setColumn(this, colIdx, ret)
+    Matrix4f.getColumn(this, colIdx, ret)
     ret
   }
   def row(rowIdx: Int): Vector4f = {
     val ret = new Vector4f
-    Matrix4f.setRow(this, rowIdx, ret)
+    Matrix4f.getRow(this, rowIdx, ret)
     ret
   }
 
@@ -416,7 +440,7 @@ object Matrix4f {
     dst.m33 = src.m33
   }
 
-  def setColumn(src: Matrix4f, colIdx: Int, dst: Vector4f): Unit = colIdx match {
+  def getColumn(src: Matrix4f, colIdx: Int, dst: Vector4f): Unit = colIdx match {
     case 0 =>
       dst.x = src.m00
       dst.y = src.m01
@@ -444,7 +468,7 @@ object Matrix4f {
     case _ => throw new IndexOutOfBoundsException
   }
 
-  def setRow(src: Matrix4f, rowIdx: Int, dst: Vector4f): Unit = rowIdx match {
+  def getRow(src: Matrix4f, rowIdx: Int, dst: Vector4f): Unit = rowIdx match {
     case 0 =>
       dst.x = src.m00
       dst.y = src.m10
@@ -468,6 +492,61 @@ object Matrix4f {
       dst.y = src.m13
       dst.z = src.m23
       dst.w = src.m33
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+  
+  def setColumn(src: Vector4f, dst: Matrix4f, colIdx: Int): Unit = colIdx match {
+    case 0 =>
+      dst.m00 = src.x
+      dst.m01 = src.y
+      dst.m02 = src.z
+      dst.m03 = src.w
+
+    case 1 =>
+      dst.m10 = src.x
+      dst.m11 = src.y
+      dst.m12 = src.z
+      dst.m13 = src.w
+
+    case 2 =>
+      dst.m20 = src.x
+      dst.m21 = src.y
+      dst.m22 = src.z
+      dst.m23 = src.w
+
+    case 3 =>
+      dst.m30 = src.x
+      dst.m31 = src.y
+      dst.m32 = src.z
+      dst.m33 = src.w
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+  def setRow(src: Vector4f, dst: Matrix4f, rowIdx: Int): Unit = rowIdx match {
+    case 0 =>
+       dst.m00 = src.x
+       dst.m10 = src.y
+       dst.m20 = src.z
+       dst.m30 = src.w
+
+    case 1 =>
+      dst.m01 = src.x
+      dst.m11 = src.y
+      dst.m21 = src.z
+      dst.m31 = src.w
+
+    case 2 =>
+      dst.m02 = src.x
+      dst.m12 = src.y
+      dst.m22 = src.z
+      dst.m32 = src.w
+      
+    case 3 =>
+      dst.m03 = src.x
+      dst.m13 = src.y
+      dst.m23 = src.z
+      dst.m33 = src.w
 
     case _ => throw new IndexOutOfBoundsException
   }

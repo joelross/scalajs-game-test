@@ -25,6 +25,22 @@ class Matrix3f extends Matrix {
     m22 = a22
   }
 
+  def this(col0: Vector3f, col1: Vector3f, col2: Vector3f) = {
+    this()
+
+    m00 = col0.x
+    m01 = col0.y
+    m02 = col0.z
+
+    m10 = col1.x
+    m11 = col1.y
+    m12 = col1.z
+
+    m20 = col2.x
+    m21 = col2.y
+    m22 = col2.z
+  }
+
   def this(m: Matrix3f) = {
     this()
     Matrix3f.set(m, this)
@@ -150,12 +166,12 @@ class Matrix3f extends Matrix {
 
   def column(colIdx: Int): Vector3f = {
     val ret = new Vector3f
-    Matrix3f.setColumn(this, colIdx, ret)
+    Matrix3f.getColumn(this, colIdx, ret)
     ret
   }
   def row(rowIdx: Int): Vector3f = {
     val ret = new Vector3f
-    Matrix3f.setRow(this, rowIdx, ret)
+    Matrix3f.getRow(this, rowIdx, ret)
     ret
   }
 
@@ -325,7 +341,7 @@ object Matrix3f {
     dst.m22 = src.m22
   }
 
-  def setColumn(src: Matrix3f, colIdx: Int, dst: Vector3f): Unit = colIdx match {
+  def getColumn(src: Matrix3f, colIdx: Int, dst: Vector3f): Unit = colIdx match {
     case 0 =>
       dst.x = src.m00
       dst.y = src.m01
@@ -343,8 +359,7 @@ object Matrix3f {
 
     case _ => throw new IndexOutOfBoundsException
   }
-
-  def setRow(src: Matrix3f, rowIdx: Int, dst: Vector3f): Unit = rowIdx match {
+  def getRow(src: Matrix3f, rowIdx: Int, dst: Vector3f): Unit = rowIdx match {
     case 0 =>
       dst.x = src.m00
       dst.y = src.m10
@@ -359,6 +374,43 @@ object Matrix3f {
       dst.x = src.m02
       dst.y = src.m12
       dst.z = src.m22
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+  
+  def setColumn(src: Vector3f, dst: Matrix3f, colIdx: Int): Unit = colIdx match {
+    case 0 =>
+      dst.m00 = src.x
+      dst.m01 = src.y
+      dst.m02 = src.z
+
+    case 1 =>
+      dst.m10 = src.x
+      dst.m11 = src.y
+      dst.m12 = src.z
+
+    case 2 =>
+      dst.m20 = src.x
+      dst.m21 = src.y
+      dst.m22 = src.z
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+  def setRow(src: Vector3f, dst: Matrix3f, rowIdx: Int): Unit = rowIdx match {
+    case 0 =>
+       dst.m00 = src.x
+       dst.m10 = src.y
+       dst.m20 = src.z
+
+    case 1 =>
+      dst.m01 = src.x
+      dst.m11 = src.y
+      dst.m21 = src.z
+
+    case 2 =>
+      dst.m02 = src.x
+      dst.m12 = src.y
+      dst.m22 = src.z
 
     case _ => throw new IndexOutOfBoundsException
   }

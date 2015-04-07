@@ -18,6 +18,16 @@ class Matrix2f extends Matrix {
     m11 = a11
   }
 
+  def this(col0: Vector2f, col1: Vector2f) = {
+    this()
+
+    m00 = col0.x
+    m01 = col0.y
+
+    m10 = col1.x
+    m11 = col1.y
+  }
+
   def this(m: Matrix2f) = {
     this()
     Matrix2f.set(m, this)
@@ -85,12 +95,12 @@ class Matrix2f extends Matrix {
 
   def column(colIdx: Int): Vector2f = {
     val ret = new Vector2f
-    Matrix2f.setColumn(this, colIdx, ret)
+    Matrix2f.getColumn(this, colIdx, ret)
     ret
   }
   def row(rowIdx: Int): Vector2f = {
     val ret = new Vector2f
-    Matrix2f.setRow(this, rowIdx, ret)
+    Matrix2f.getRow(this, rowIdx, ret)
     ret
   }
 
@@ -239,7 +249,7 @@ object Matrix2f {
     dst.m11 = src.m11
   }
 
-  def setColumn(src: Matrix2f, colIdx: Int, dst: Vector2f): Unit = colIdx match {
+  def getColumn(src: Matrix2f, colIdx: Int, dst: Vector2f): Unit = colIdx match {
     case 0 =>
       dst.x = src.m00
       dst.y = src.m01
@@ -251,7 +261,7 @@ object Matrix2f {
     case _ => throw new IndexOutOfBoundsException
   }
 
-  def setRow(src: Matrix2f, rowIdx: Int, dst: Vector2f): Unit = rowIdx match {
+  def getRow(src: Matrix2f, rowIdx: Int, dst: Vector2f): Unit = rowIdx match {
     case 0 =>
       dst.x = src.m00
       dst.y = src.m10
@@ -259,6 +269,29 @@ object Matrix2f {
     case 1 =>
       dst.x = src.m01
       dst.y = src.m11
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
+  def setColumn(src: Vector2f, dst: Matrix2f, colIdx: Int): Unit = colIdx match {
+    case 0 =>
+      dst.m00 = src.x
+      dst.m01 = src.y
+
+    case 1 =>
+      dst.m10 = src.x
+      dst.m11 = src.y
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+  def setRow(src: Vector2f, dst: Matrix2f, rowIdx: Int): Unit = rowIdx match {
+    case 0 =>
+       dst.m00 = src.x
+       dst.m10 = src.y
+
+    case 1 =>
+      dst.m01 = src.x
+      dst.m11 = src.y
 
     case _ => throw new IndexOutOfBoundsException
   }
