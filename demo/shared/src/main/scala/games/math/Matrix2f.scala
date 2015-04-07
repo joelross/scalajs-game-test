@@ -228,6 +228,30 @@ object Matrix2f {
     dst.m11 = src.m11
   }
 
+  def setColumn(src: Matrix2f, colIdx: Int, dst: Vector2f): Unit = colIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m01
+
+    case 1 =>
+      dst.x = src.m10
+      dst.y = src.m11
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
+  def setRow(src: Matrix2f, rowIdx: Int, dst: Vector2f): Unit = rowIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m10
+
+    case 1 =>
+      dst.x = src.m01
+      dst.y = src.m11
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
   def setHomogeneous(src: Matrix2f, dst: Matrix3f): Unit = {
     dst.m00 = src.m00
     dst.m01 = src.m01

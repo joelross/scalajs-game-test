@@ -314,6 +314,44 @@ object Matrix3f {
     dst.m22 = src.m22
   }
 
+  def setColumn(src: Matrix3f, colIdx: Int, dst: Vector3f): Unit = colIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m01
+      dst.z = src.m02
+
+    case 1 =>
+      dst.x = src.m10
+      dst.y = src.m11
+      dst.z = src.m12
+
+    case 2 =>
+      dst.x = src.m20
+      dst.y = src.m21
+      dst.z = src.m22
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
+  def setRow(src: Matrix3f, rowIdx: Int, dst: Vector3f): Unit = rowIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m10
+      dst.z = src.m20
+
+    case 1 =>
+      dst.x = src.m01
+      dst.y = src.m11
+      dst.z = src.m21
+
+    case 2 =>
+      dst.x = src.m02
+      dst.y = src.m12
+      dst.z = src.m22
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
   def setCartesian(src: Matrix3f, dst: Matrix2f): Unit = {
     dst.m00 = src.m00 / src.m22
     dst.m01 = src.m01 / src.m22

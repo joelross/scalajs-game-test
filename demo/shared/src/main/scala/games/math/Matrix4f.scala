@@ -405,6 +405,62 @@ object Matrix4f {
     dst.m33 = src.m33
   }
 
+  def setColumn(src: Matrix4f, colIdx: Int, dst: Vector4f): Unit = colIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m01
+      dst.z = src.m02
+      dst.w = src.m03
+
+    case 1 =>
+      dst.x = src.m10
+      dst.y = src.m11
+      dst.z = src.m12
+      dst.w = src.m13
+
+    case 2 =>
+      dst.x = src.m20
+      dst.y = src.m21
+      dst.z = src.m22
+      dst.w = src.m23
+
+    case 3 =>
+      dst.x = src.m30
+      dst.y = src.m31
+      dst.z = src.m32
+      dst.w = src.m33
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
+  def setRow(src: Matrix4f, rowIdx: Int, dst: Vector4f): Unit = rowIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m10
+      dst.z = src.m20
+      dst.w = src.m30
+
+    case 1 =>
+      dst.x = src.m01
+      dst.y = src.m11
+      dst.z = src.m21
+      dst.w = src.m31
+
+    case 2 =>
+      dst.x = src.m02
+      dst.y = src.m12
+      dst.z = src.m22
+      dst.w = src.m32
+
+    case 3 =>
+      dst.x = src.m03
+      dst.y = src.m13
+      dst.z = src.m23
+      dst.w = src.m33
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
   def setCartesian(src: Matrix4f, dst: Matrix3f): Unit = {
     dst.m00 = src.m00 / src.m33
     dst.m01 = src.m01 / src.m33
