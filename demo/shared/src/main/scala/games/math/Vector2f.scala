@@ -140,8 +140,8 @@ class Vector2f extends Vector {
   }
 
   override def hashCode(): Int = {
-    x.toInt ^
-      y.toInt
+    x.hashCode ^
+      y.hashCode
   }
 }
 

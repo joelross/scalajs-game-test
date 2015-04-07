@@ -386,10 +386,10 @@ class Matrix4f extends Matrix {
   }
 
   override def hashCode(): Int = {
-    m00.toInt ^ m01.toInt ^ m02.toInt ^ m03.toInt ^
-      m10.toInt ^ m11.toInt ^ m12.toInt ^ m13.toInt ^
-      m20.toInt ^ m21.toInt ^ m22.toInt ^ m23.toInt ^
-      m30.toInt ^ m31.toInt ^ m32.toInt ^ m33.toInt
+    m00.hashCode ^ m01.hashCode ^ m02.hashCode ^ m03.hashCode ^
+      m10.hashCode ^ m11.hashCode ^ m12.hashCode ^ m13.hashCode ^
+      m20.hashCode ^ m21.hashCode ^ m22.hashCode ^ m23.hashCode ^
+      m30.hashCode ^ m31.hashCode ^ m32.hashCode ^ m33.hashCode
   }
 }
 

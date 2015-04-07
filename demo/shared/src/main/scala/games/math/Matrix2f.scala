@@ -227,7 +227,7 @@ class Matrix2f extends Matrix {
   }
 
   override def hashCode(): Int = {
-    m00.toInt ^ m01.toInt ^ m10.toInt ^ m11.toInt
+    m00.hashCode ^ m01.hashCode ^ m10.hashCode ^ m11.hashCode
   }
 }
 

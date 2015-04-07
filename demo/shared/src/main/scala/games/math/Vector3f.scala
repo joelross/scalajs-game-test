@@ -169,9 +169,9 @@ class Vector3f extends Vector {
   }
 
   override def hashCode(): Int = {
-    x.toInt ^
-      y.toInt ^
-      z.toInt
+    x.hashCode ^
+      y.hashCode ^
+      z.hashCode
   }
 }
 
