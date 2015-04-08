@@ -1,5 +1,5 @@
-import android.Keys._
-import android.Dependencies.aar
+//import android.Keys._
+//import android.Dependencies.aar
 
 lazy val commonSettings = Seq(
         version := "0.1-SNAPSHOT",
