@@ -29,7 +29,9 @@ object Utils {
     val newR3 = r1.cross(newR2)
     newR3.normalise()
 
-    // TODO
+    Matrix3f.setColumn(r1, mat, 0)
+    Matrix3f.setColumn(newR2, mat, 1)
+    Matrix3f.setColumn(newR3, mat, 2)
   }
 
 }
