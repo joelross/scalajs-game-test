@@ -93,8 +93,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // TODO
     val sendData = TA("Hello")
     val sendMsg = upickle.write(sendData)
-    //val readData = upickle.read[T0](sendMsg)
-    //println(readData.asInstanceOf[TA].ta)
+    val readData = upickle.read[T0](sendMsg)
+    println(readData.asInstanceOf[TA].ta)
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {

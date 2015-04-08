@@ -9,7 +9,8 @@ lazy val commonSettings = Seq(
         resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
         resolvers += "Spray" at "http://repo.spray.io",
         scalacOptions ++= Seq(
-          "-deprecation"
+          "-deprecation",
+          "-feature"
         ),
         libraryDependencies ++= Seq(
           "com.lihaoyi" %%% "upickle" % "0.2.8"
