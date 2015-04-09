@@ -32,9 +32,13 @@ abstract class EngineInterface {
 case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
 case class NetworkData(players: Seq[PlayerData])
 
-sealed trait T0
-case class TA(ta: String) extends T0
-case class TB(tb: Int) extends T0
+sealed trait A
+case class AA(aa: String) extends A
+case class AB(ab: Int) extends A
+
+sealed trait B
+case class BA(ba: A) extends B
+case class BB(bb: Int) extends B
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   def context: games.opengl.GLES2 = gl
@@ -91,14 +95,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     // TODO
-    val sendData = TA("Hello")
+    val sendData = BA(AA("Hello"))
     val sendMsg = upickle.write(sendData)
-    val readData = upickle.read[T0](sendMsg)
-    println(readData.asInstanceOf[TA].ta)
+    println(sendMsg)
+    val readData = upickle.read[B](sendMsg)
+    println(readData)
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {
-    if (keyboard.isKeyDown(Key.P)) {
+    if (keyboard.isKeyDown(Key.Escape)) {
       continueCond = false
     }
 
