@@ -25,33 +25,20 @@ import scala.collection.mutable
 
 import scala.concurrent.duration._
 
-sealed trait LocalMessage
-case class Disconnected() extends LocalMessage
-case class RoomJoined()
+case object Disconnected
+case object RoomJoined
 
 case class RegisterPlayer(playerData: PlayerData)
 case class RemovePlayer(player: Player)
 
-case class RoomFull()
+case object RoomFull
 case class PlayerRegistered(actor: ActorRef)
-case class RoomLaunched()
+case object RoomLaunched
+
+case object PingReminder
+case object SendPing
 
 class PlayerData(val worker: ServiceWorker, val sendFun: String => Unit)
-
-class Updater extends Actor {
-  def receive: Receive = {
-    case x =>
-      val players = GlobalLogic.players
-
-      players.foreach { currentPlayer =>
-        val others = players.filter { p => p != currentPlayer }
-        val data = others.flatMap { p => p.data }.toSeq
-        //        val network = NetworkData(data)
-        //        currentPlayer.send(upickle.write[NetworkData](network))
-      }
-
-  }
-}
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
@@ -90,11 +77,15 @@ object GlobalLogic {
 }
 
 class Room(val id: Int) extends Actor {
+  println("Creating room " + id)
   val players: mutable.Set[ActorRef] = mutable.Set[ActorRef]()
 
   private var nextPlayerId = 1
-
   private var reportedFull = false
+
+  private val pingIntervalMs = 10000
+
+  private val pingScheduler = this.context.system.scheduler.schedule(pingIntervalMs milliseconds, pingIntervalMs milliseconds, this.self, PingReminder)
 
   def receive: Receive = {
     case RegisterPlayer(playerData) =>
@@ -105,7 +96,7 @@ class Room(val id: Int) extends Actor {
         val newPlayerId = nextPlayerId
         nextPlayerId += 1
 
-        val player = context.actorOf(Props(classOf[Player], playerData, newPlayerId, this), name = "room" + id + "player" + nextPlayerId)
+        val player = context.actorOf(Props(classOf[Player], playerData, newPlayerId, this), name = "room" + id + "player" + newPlayerId)
 
         playerData.worker.playerActor = Some(player)
         players += player
@@ -116,13 +107,18 @@ class Room(val id: Int) extends Actor {
       }
 
     case RemovePlayer(player) =>
+      println("Player " + player.id + " disconnected from room " + id)
+
       players -= player.self
       if (reportedFull && players.size == 0) {
-        context.stop(self) // This room will not receive further players, let's kill it
+        // This room will not receive further players, let's kill it
+        pingScheduler.cancel()
+        context.stop(self)
         println("Closing room " + id)
       }
 
-      println("Player " + player.id + " disconnected from room " + id)
+    case PingReminder =>
+      players.foreach { player => player ! SendPing }
   }
 }
 
@@ -131,6 +127,9 @@ class Player(playerData: PlayerData, val id: Int, room: Room) extends Actor {
 
   var data: Option[demo.ClientUpdate] = None
 
+  private var lastPingTime: Option[Long] = None
+  private var latency: Option[Int] = None
+
   def send(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
     playerData.sendFun(data)
@@ -138,8 +137,15 @@ class Player(playerData: PlayerData, val id: Int, room: Room) extends Actor {
 
   def receive: Receive = {
     // Client Message
-    case demo.Pong()          => // client's response
-    case demo.KeepAlive()     => // nothing to do
+    case demo.Pong => // client's response
+      for (time <- lastPingTime) {
+        val elapsed = (System.currentTimeMillis() - time) / 2
+        println("Latency of " + self.path.name + " is " + elapsed + " ms")
+        latency = Some(elapsed.toInt)
+
+        lastPingTime = None
+      }
+    case demo.KeepAlive       => // nothing to do
     case x: demo.ClientUpdate => data = Some(x) // update local data of the player
     case x: demo.BulletShot   => // handle data
 
@@ -147,6 +153,9 @@ class Player(playerData: PlayerData, val id: Int, room: Room) extends Actor {
     case Disconnected =>
       room.self ! RemovePlayer(this)
     //context.stop(self) // Done by the parent Room?
+    case SendPing =>
+      lastPingTime = Some(System.currentTimeMillis())
+      send(demo.Ping)
   }
 }
 

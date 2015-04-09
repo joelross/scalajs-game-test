@@ -98,8 +98,8 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
           val serverMsg = upickle.read[ServerMessage](msg)
 
           serverMsg match {
-            case Ping() => // answer that ASAP
-              sendMsg(Pong())
+            case Ping => // answer that ASAP
+              sendMsg(Pong)
 
             case Hello(playerId, initPos, initDir) =>
               localPlayerId = playerId
