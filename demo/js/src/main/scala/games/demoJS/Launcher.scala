@@ -2,7 +2,6 @@ package games.demoJS
 
 import scala.scalajs.js
 import org.scalajs.dom
-import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 import games._
 import games.math
@@ -47,7 +46,9 @@ object Launcher extends js.JSApp {
       def close(): Unit = {}
     }
 
-    val engine = new Engine(itf)
+    val ec = scalajs.concurrent.JSExecutionContext.Implicits.queue
+
+    val engine = new Engine(itf, ec, ec)
 
     Utils.startFrameListener(engine)
   }

@@ -29,7 +29,9 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
+class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionContext) extends games.FrameListener {
+  private implicit val standardEC = localEC
+
   def context: games.opengl.GLES2 = gl
 
   private var continueCond = true

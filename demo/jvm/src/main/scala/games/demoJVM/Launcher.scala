@@ -1,6 +1,5 @@
 package games.demoJVM
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.FileInputStream
 import java.io.File
 import java.io.EOFException
@@ -54,7 +53,10 @@ object Launcher {
       }
     }
 
-    val engine = new Engine(itf)(JvmUtils.openglExecutionContext)
+    val localEC = JvmUtils.openglExecutionContext
+    val parEC = scala.concurrent.ExecutionContext.Implicits.global
+
+    val engine = new Engine(itf, localEC, parEC)
 
     Utils.startFrameListener(engine)
   }
