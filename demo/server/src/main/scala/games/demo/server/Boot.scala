@@ -10,7 +10,7 @@ import spray.can.server.UHttp
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Boot extends App {
-  implicit val system = ActorSystem("on-spray-can")
+  implicit val system = ActorSystem("SprayServer")
 
   val updater = system.actorOf(Props(classOf[Updater]))
   system.scheduler.schedule(0 milliseconds, 100 milliseconds, updater, "update")

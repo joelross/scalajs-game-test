@@ -2,8 +2,13 @@ package games.demo.server
 
 import games.demo
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import akka.pattern.ask
 import akka.actor.ActorRef
 import akka.actor.Actor
+import scala.concurrent.duration._
+import akka.util.Timeout
 import spray.routing._
 import spray.http._
 import MediaTypes._
@@ -16,14 +21,22 @@ import akka.actor.ActorRefFactory
 import spray.can.Http
 import akka.actor.Props
 
-import scala.collection.immutable.Set
+import scala.collection.mutable
 
 import scala.concurrent.duration._
 
-case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
-
 sealed trait LocalMessage
 case class Disconnected() extends LocalMessage
+case class RoomJoined()
+
+case class RegisterPlayer(playerData: PlayerData)
+case class RemovePlayer(player: Player)
+
+case class RoomFull()
+case class PlayerRegistered(actor: ActorRef)
+case class RoomLaunched()
+
+class PlayerData(val worker: ServiceWorker, val sendFun: String => Unit)
 
 class Updater extends Actor {
   def receive: Receive = {
@@ -42,58 +55,85 @@ class Updater extends Actor {
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
-  var currentRoom: Room = new Room(0)
 
-  def newRoom(): ActorRef = {
-    ???
+  private var nextRoomId = 0
+  private val system = akka.actor.ActorSystem("GlobalLogic")
+
+  private var currentRoom = newRoom()
+
+  private def newRoom() = {
+    val actor = system.actorOf(Props(classOf[Room], nextRoomId), name = "room" + nextRoomId)
+    nextRoomId += 1
+    actor
   }
 
-  def removePlayer(player: Player): Unit = this.synchronized {
-    players -= player
-  }
+  def registerPlayer(playerData: PlayerData): Unit = this.synchronized {
+    implicit val timeout = Timeout(5.seconds)
 
-  def registerPlayer(player: Player): Unit = this.synchronized {
-    val newPlayerId = currentRoom.registerPlayer(player)
-    val newPlayerRoom = currentRoom
+    def tryRegister(): Unit = {
+      val playerRegistered = currentRoom ? RegisterPlayer(playerData)
+      playerRegistered.onSuccess {
+        case PlayerRegistered =>
 
-    if (currentRoom.players.size >= 2) { // Current room is full, create a new one
-      currentRoom = new Room(currentRoom.id + 1)
+        case RoomFull =>
+          currentRoom = newRoom()
+          tryRegister()
+      }
     }
 
-    player.id = newPlayerId
-    player.room = newPlayerRoom
+    tryRegister()
+  }
+
+  def renewRoom(): Unit = this.synchronized {
+    currentRoom = newRoom()
   }
 }
 
-class Room(val id: Int) {
-  var players: Set[Player] = Set[Player]()
+class Room(val id: Int) extends Actor {
+  val players: mutable.Set[ActorRef] = mutable.Set[ActorRef]()
 
-  def registerPlayer(player: Player): Int = {
-    def genId(from: Int): Int = {
-      if (!players.exists { p => p.id == from }) {
+  private var nextPlayerId = 1
+
+  private var reportedFull = false
+
+  def receive: Receive = {
+    case RegisterPlayer(playerData) =>
+      if (players.size >= 2 || reportedFull) {
+        reportedFull = true
+        sender ! RoomFull
+      } else {
+        val newPlayerId = nextPlayerId
+        nextPlayerId += 1
+
+        val player = context.actorOf(Props(classOf[Player], playerData, newPlayerId, this), name = "room" + id + "player" + nextPlayerId)
+
+        playerData.worker.playerActor = Some(player)
         players += player
-        from
-      } else genId(from + 1)
-    }
 
-    genId(1)
+        sender ! PlayerRegistered(player)
+
+        println("Player " + newPlayerId + " connected to room " + id)
+      }
+
+    case RemovePlayer(player) =>
+      players -= player.self
+      if (reportedFull && players.size == 0) {
+        context.stop(self) // This room will not receive further players, let's kill it
+        println("Closing room " + id)
+      }
+
+      println("Player " + player.id + " disconnected from room " + id)
   }
 }
 
-class Player(sendFun: String => Unit) extends Actor {
-  var id: Int = 0
-  var room: Room = _
-
-  GlobalLogic.registerPlayer(this)
-
-  println("Player " + id + " connected to room " + room.id)
+class Player(playerData: PlayerData, val id: Int, room: Room) extends Actor {
   send(demo.Hello(id, demo.Vector3(0, 0, 0), demo.Vector3(0, 0, 0)))
 
   var data: Option[demo.ClientUpdate] = None
 
   def send(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
-    sendFun(data)
+    playerData.sendFun(data)
   }
 
   def receive: Receive = {
@@ -105,15 +145,15 @@ class Player(sendFun: String => Unit) extends Actor {
 
     // Local message
     case Disconnected =>
-      println("Player " + id + " disconnected from room " + room.id)
-      GlobalLogic.removePlayer(this)
+      room.self ! RemovePlayer(this)
+    //context.stop(self) // Done by the parent Room?
   }
 }
 
 class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
   override def receive = handshaking orElse businessLogicNoUpgrade orElse closeLogic
 
-  private var playerActor: Option[ActorRef] = None
+  var playerActor: Option[ActorRef] = None
 
   private def sendMessage(msg: String): Unit = send(TextFrame(msg))
 
@@ -133,12 +173,12 @@ class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor wit
       log.error("frame command failed", x)
 
     case UpgradedToWebSocket =>
-      val actor = context.actorOf(Props(classOf[Player], sendMessage _))
-      playerActor = Some(actor)
+      val playerData = new PlayerData(this, sendMessage _)
+      GlobalLogic.registerPlayer(playerData)
 
-    case x: Http.ConnectionClosed => playerActor match {
-      case Some(actor) => actor ! Disconnected
-      case None        =>
+    case x: Http.ConnectionClosed => for (actor <- playerActor) {
+      actor ! Disconnected
+      playerActor = None
     }
   }
 
