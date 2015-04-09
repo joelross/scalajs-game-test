@@ -44,6 +44,13 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
   private var connection: Option[ConnectionHandle] = None
   private var localPlayerId: Option[Int] = None
 
+  def sendMsg(msg: ClientMessage): Unit = connection match {
+    case None => throw new RuntimeException("Websocket not connected")
+    case Some(conn) =>
+      val data = upickle.write(msg)
+      conn.write(data)
+  }
+
   def continue(): Boolean = continueCond
 
   def onClose(): Unit = {
@@ -77,16 +84,19 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
         itf.printLine("Websocket connection established")
         this.connection = Some(conn)
         conn.handlerPromise.success { msg =>
-          /*val serverMsg = upickle.read[ServerMessage](msg)
+          val serverMsg = upickle.read[ServerMessage](msg)
 
           serverMsg match {
+            case Ping() => // answer that ASAP
+              sendMsg(Pong())
+
             case Hello(playerId) =>
               localPlayerId = Some(playerId)
               itf.printLine("You are player " + playerId)
 
             case ServerUpdate(players, newEvents) =>
             // TODO process update
-          }*/
+          }
         }
         conn.closedFuture.onSuccess {
           case _ =>
@@ -96,6 +106,7 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
     }
 
     // TODO
+
     None
   }
 

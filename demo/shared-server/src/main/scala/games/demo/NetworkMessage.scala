@@ -11,8 +11,10 @@ sealed trait NetworkMessage
 sealed trait ClientMessage extends NetworkMessage
 sealed trait ServerMessage extends NetworkMessage
 // Server -> Client
+case class Ping() extends ServerMessage
 case class Hello(playerId: Int) extends ServerMessage
 case class ServerUpdate(players: Seq[PlayerServerUpdate], newEvents: Seq[Event]) extends ServerMessage
 // Server <- Client
+case class Pong() extends ClientMessage
 case class KeepAlive() extends ClientMessage
 case class ClientUpdate(position: Vector3, velocity: Vector3, orientation: Vector3, rotation: Vector3) extends ClientMessage

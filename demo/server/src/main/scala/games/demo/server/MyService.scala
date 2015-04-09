@@ -1,5 +1,7 @@
 package games.demo.server
 
+import games.demo
+
 import akka.actor.ActorRef
 import akka.actor.Actor
 import spray.routing._
@@ -19,7 +21,6 @@ import scala.collection.immutable.Set
 import scala.concurrent.duration._
 
 case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
-case class NetworkData(players: Seq[PlayerData])
 
 class Updater extends Actor {
   def receive: Receive = {
@@ -29,8 +30,8 @@ class Updater extends Actor {
       players.foreach { currentPlayer =>
         val others = players.filter { p => p != currentPlayer }
         val data = others.flatMap { p => p.data }.toSeq
-        val network = NetworkData(data)
-        currentPlayer.send(upickle.write[NetworkData](network))
+        //        val network = NetworkData(data)
+        //        currentPlayer.send(upickle.write[NetworkData](network))
       }
 
   }
@@ -55,14 +56,26 @@ object GlobalLogic {
   }
 }
 
-class Player(val send: String => Unit) {
+class Player(sendFun: String => Unit) {
   val id = GlobalLogic.registerPlayer(this)
   println("Player " + id + " connected")
+  send(demo.Hello(id))
 
-  var data: Option[PlayerData] = None
+  var data: Option[demo.ClientUpdate] = None
+
+  def send(msg: demo.ServerMessage): Unit = {
+    val data = upickle.write(msg)
+    sendFun(data)
+  }
 
   def receive(msg: String): Unit = {
-    data = Some(upickle.read[PlayerData](msg))
+    val clientMsg = upickle.read[demo.ClientMessage](msg)
+
+    clientMsg match {
+      case demo.Pong()          => // client's response
+      case demo.KeepAlive()     => // nothing to do
+      case x: demo.ClientUpdate => data = Some(x) // update local data of the player
+    }
   }
 
   def disconnected(): Unit = {
