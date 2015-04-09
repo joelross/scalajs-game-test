@@ -22,6 +22,9 @@ import scala.concurrent.duration._
 
 case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
 
+sealed trait LocalMessage
+case class Disconnected() extends LocalMessage
+
 class Updater extends Actor {
   def receive: Receive = {
     case x =>
@@ -39,12 +42,33 @@ class Updater extends Actor {
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
+  var currentRoom: Room = new Room(0)
+
+  def newRoom(): ActorRef = {
+    ???
+  }
 
   def removePlayer(player: Player): Unit = this.synchronized {
     players -= player
   }
 
-  def registerPlayer(player: Player): Int = this.synchronized {
+  def registerPlayer(player: Player): Unit = this.synchronized {
+    val newPlayerId = currentRoom.registerPlayer(player)
+    val newPlayerRoom = currentRoom
+
+    if (currentRoom.players.size >= 2) { // Current room is full, create a new one
+      currentRoom = new Room(currentRoom.id + 1)
+    }
+
+    player.id = newPlayerId
+    player.room = newPlayerRoom
+  }
+}
+
+class Room(val id: Int) {
+  var players: Set[Player] = Set[Player]()
+
+  def registerPlayer(player: Player): Int = {
     def genId(from: Int): Int = {
       if (!players.exists { p => p.id == from }) {
         players += player
@@ -56,10 +80,14 @@ object GlobalLogic {
   }
 }
 
-class Player(sendFun: String => Unit) {
-  val id = GlobalLogic.registerPlayer(this)
-  println("Player " + id + " connected")
-  send(demo.Hello(id))
+class Player(sendFun: String => Unit) extends Actor {
+  var id: Int = 0
+  var room: Room = _
+
+  GlobalLogic.registerPlayer(this)
+
+  println("Player " + id + " connected to room " + room.id)
+  send(demo.Hello(id, demo.Vector3(0, 0, 0), demo.Vector3(0, 0, 0)))
 
   var data: Option[demo.ClientUpdate] = None
 
@@ -68,35 +96,36 @@ class Player(sendFun: String => Unit) {
     sendFun(data)
   }
 
-  def receive(msg: String): Unit = {
-    val clientMsg = upickle.read[demo.ClientMessage](msg)
+  def receive: Receive = {
+    // Client Message
+    case demo.Pong()          => // client's response
+    case demo.KeepAlive()     => // nothing to do
+    case x: demo.ClientUpdate => data = Some(x) // update local data of the player
+    case x: demo.BulletShot   => // handle data
 
-    clientMsg match {
-      case demo.Pong()          => // client's response
-      case demo.KeepAlive()     => // nothing to do
-      case x: demo.ClientUpdate => data = Some(x) // update local data of the player
-    }
-  }
-
-  def disconnected(): Unit = {
-    println("Player " + id + " disconnected")
-    GlobalLogic.removePlayer(this)
+    // Local message
+    case Disconnected =>
+      println("Player " + id + " disconnected from room " + room.id)
+      GlobalLogic.removePlayer(this)
   }
 }
 
 class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
   override def receive = handshaking orElse businessLogicNoUpgrade orElse closeLogic
 
-  private var logic: Option[Player] = None
+  private var playerActor: Option[ActorRef] = None
 
   private def sendMessage(msg: String): Unit = send(TextFrame(msg))
 
   def businessLogic: Receive = {
-    case tf: TextFrame => logic match {
-      case Some(lo) =>
+    case tf: TextFrame => playerActor match {
+      case Some(actor) =>
         val payload = tf.payload
         val text = payload.utf8String
-        if (!text.isEmpty()) lo.receive(text)
+        if (!text.isEmpty()) {
+          val msg = upickle.read[demo.ClientMessage](text)
+          actor ! msg
+        }
 
       case None => println("Warning: TextFrame received from a non-upgraded connection")
     }
@@ -104,11 +133,12 @@ class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor wit
       log.error("frame command failed", x)
 
     case UpgradedToWebSocket =>
-      logic = Some(new Player(sendMessage))
+      val actor = context.actorOf(Props(classOf[Player], sendMessage _))
+      playerActor = Some(actor)
 
-    case x: Http.ConnectionClosed => logic match {
-      case Some(l) => l.disconnected()
-      case None    =>
+    case x: Http.ConnectionClosed => playerActor match {
+      case Some(actor) => actor ! Disconnected
+      case None        =>
     }
   }
 

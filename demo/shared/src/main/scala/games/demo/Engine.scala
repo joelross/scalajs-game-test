@@ -17,6 +17,7 @@ import games.opengl.GLES2Debug
 import games.audio.Source3D
 import games.input.ButtonEvent
 import games.audio.AbstractSource
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 abstract class EngineInterface {
@@ -42,7 +43,17 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
   private var mouse: Mouse = _
 
   private var connection: Option[ConnectionHandle] = None
-  private var localPlayerId: Option[Int] = None
+  private var localPlayerId: Int = 0
+
+  private var currentPosition: Vector3f = _
+  private var currentOrientationX: Float = _
+  private var currentOrientationY: Float = _
+  private var currentOrientationZ: Float = _
+
+  private var otherPlayers: Seq[PlayerServerUpdate] = Seq()
+
+  private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
+  private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
 
   def sendMsg(msg: ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
@@ -90,11 +101,16 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
             case Ping() => // answer that ASAP
               sendMsg(Pong())
 
-            case Hello(playerId) =>
-              localPlayerId = Some(playerId)
+            case Hello(playerId, initPos, initDir) =>
+              localPlayerId = playerId
+              currentPosition = conv(initPos)
+              currentOrientationX = initDir.x
+              currentOrientationY = initDir.y
+              currentOrientationZ = initDir.z
               itf.printLine("You are player " + playerId)
 
             case ServerUpdate(players, newEvents) =>
+              otherPlayers = players.filter { _.id != localPlayerId }
             // TODO process update
           }
         }
