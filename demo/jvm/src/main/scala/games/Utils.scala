@@ -2,7 +2,7 @@ package games
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.io.InputStream
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ Await, Future, ExecutionContext }
 import java.io.ByteArrayOutputStream
 import java.nio.{ ByteBuffer, ByteOrder }
 import org.lwjgl.opengl._
@@ -154,7 +154,17 @@ trait UtilsImpl extends UtilsRequirements {
     val frameListenerThread = new Thread(new Runnable {
       def run() {
         var lastLoopTime: Long = System.nanoTime()
-        fl.onCreate()
+        val readyOptFuture = fl.onCreate()
+
+        readyOptFuture match {
+          case None => // just continue
+          case Some(future) => // wait for it
+            while (!future.isCompleted) Thread.sleep(100) // TODO is there a better method than this?
+
+            if (future.value.get.isFailure) {
+              return // stop the thread here
+            }
+        }
 
         while (fl.continue()) {
           // Execute the pending tasks

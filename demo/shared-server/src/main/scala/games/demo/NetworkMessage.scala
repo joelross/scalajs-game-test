@@ -8,10 +8,11 @@ case class BulletCreation(id: Int, playerId: Int, initialPosition: Vector3, dire
 case class BulletHit(playerId: Int, shotId: Int, playerDestroyed: Boolean) extends Event
 
 sealed trait NetworkMessage
-// Server <> Client
-case class KeepAlive() extends NetworkMessage
+sealed trait ClientMessage extends NetworkMessage
+sealed trait ServerMessage extends NetworkMessage
 // Server -> Client
-case class Hello(playerId: Int) extends NetworkMessage
-case class ServerUpdate(players: Seq[PlayerServerUpdate], newEvents: Seq[Event]) extends NetworkMessage
+case class Hello(playerId: Int) extends ServerMessage
+case class ServerUpdate(players: Seq[PlayerServerUpdate], newEvents: Seq[Event]) extends ServerMessage
 // Server <- Client
-case class ClientUpdate(position: Vector3, velocity: Vector3, orientation: Vector3, rotation: Vector3) extends NetworkMessage
+case class KeepAlive() extends ClientMessage
+case class ClientUpdate(position: Vector3, velocity: Vector3, orientation: Vector3, rotation: Vector3) extends ClientMessage

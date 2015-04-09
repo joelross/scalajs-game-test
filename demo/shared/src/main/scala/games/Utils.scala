@@ -11,7 +11,7 @@ case class FrameEvent(elapsedTime: Float)
 trait FrameListener {
   def context: GLES2
 
-  def onCreate(): Unit
+  def onCreate(): Option[Future[Unit]]
   def continue(): Boolean
   def onDraw(fe: FrameEvent): Unit
   def onClose(): Unit

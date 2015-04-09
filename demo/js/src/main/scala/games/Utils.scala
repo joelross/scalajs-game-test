@@ -205,8 +205,19 @@ trait UtilsImpl extends UtilsRequirements {
     }
 
     def loopInit(timeStamp: js.Any): Unit = {
-      fl.onCreate()
-      loop(timeStamp)
+      val readyOptFuture = fl.onCreate()
+      readyOptFuture match {
+        case None => loop(timeStamp) // ready right now
+
+        case Some(future) => // wait for the future to complete
+          future.onSuccess {
+            case _ =>
+              loop(timeStamp)
+          }(scalajs.concurrent.JSExecutionContext.Implicits.runNow)
+
+        // Don't start the loop in case of failure of the given future
+      }
+
     }
 
     // Start listener

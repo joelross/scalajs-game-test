@@ -59,7 +59,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
   }
 
-  def onCreate(): Unit = {
+  def onCreate(): Option[Future[Unit]] = {
     itf.printLine("Starting...")
     this.gl = new GLES2Debug(itf.initGL()) // Init OpenGL (Enable automatic error checking by encapsuling it in GLES2Debug)
     this.audioContext = itf.initAudio() // Init Audio
@@ -75,7 +75,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         itf.printLine("Websocket connection established")
         this.connection = Some(conn)
         conn.handlerPromise.success { msg =>
-          val serverMsg = upickle.read[NetworkMessage](msg)
+          /*val serverMsg = upickle.read[ServerMessage](msg)
 
           serverMsg match {
             case Hello(playerId) =>
@@ -84,7 +84,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
             case ServerUpdate(players, newEvents) =>
             // TODO process update
-          }
+          }*/
         }
         conn.closedFuture.onSuccess {
           case _ =>
@@ -94,6 +94,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     // TODO
+    None
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {
