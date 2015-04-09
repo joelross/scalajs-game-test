@@ -31,7 +31,9 @@ lazy val demo = crossProject
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %%% "transport-core" % "0.1-SNAPSHOT",
             "com.lihaoyi" %%% "utest" % "0.3.0" % "test"
-        )
+        ),
+        unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared-server" / "src" / "main" / "scala",
+        unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared-server" / "src" / "test" / "scala"
     )
     
     /* JavaScript settings */
@@ -107,5 +109,7 @@ lazy val serverDemoJS = project
                 "com.wandoulabs.akka" %% "spray-websocket" % "0.1.4"
             )
         },
+        unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared-server" / "src" / "main" / "scala",
+        unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared-server" / "src" / "test" / "scala",
         (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data
     )

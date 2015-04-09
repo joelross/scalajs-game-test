@@ -29,17 +29,6 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
-case class NetworkData(players: Seq[PlayerData])
-
-sealed trait A
-case class AA(aa: String) extends A
-case class AB(ab: Int) extends A
-
-sealed trait B
-case class BA(ba: A) extends B
-case class BB(bb: Int) extends B
-
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   def context: games.opengl.GLES2 = gl
 
@@ -51,6 +40,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var mouse: Mouse = _
 
   private var connection: Option[ConnectionHandle] = None
+  private var localPlayerId: Option[Int] = None
 
   def continue(): Boolean = continueCond
 
@@ -85,7 +75,16 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         itf.printLine("Websocket connection established")
         this.connection = Some(conn)
         conn.handlerPromise.success { msg =>
-          val networkData = upickle.read[NetworkData](msg)
+          val serverMsg = upickle.read[NetworkMessage](msg)
+
+          serverMsg match {
+            case Hello(playerId) =>
+              localPlayerId = Some(playerId)
+              itf.printLine("You are player " + playerId)
+
+            case ServerUpdate(players, newEvents) =>
+            // TODO process update
+          }
         }
         conn.closedFuture.onSuccess {
           case _ =>
@@ -95,11 +94,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     // TODO
-    val sendData = BA(AA("Hello"))
-    val sendMsg = upickle.write(sendData)
-    println(sendMsg)
-    val readData = upickle.read[B](sendMsg)
-    println(readData)
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {
