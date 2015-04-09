@@ -210,12 +210,16 @@ trait UtilsImpl extends UtilsRequirements {
         case None => loop(timeStamp) // ready right now
 
         case Some(future) => // wait for the future to complete
+          val exe = scalajs.concurrent.JSExecutionContext.Implicits.runNow
           future.onSuccess {
             case _ =>
               loop(timeStamp)
-          }(scalajs.concurrent.JSExecutionContext.Implicits.runNow)
+          }(exe)
+          future.onFailure {
+            case t => // Don't start the loop in case of failure of the given future
+              fl.onClose()
+          }(exe)
 
-        // Don't start the loop in case of failure of the given future
       }
 
     }

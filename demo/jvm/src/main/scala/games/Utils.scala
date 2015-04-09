@@ -162,6 +162,7 @@ trait UtilsImpl extends UtilsRequirements {
             while (!future.isCompleted) Thread.sleep(100) // TODO is there a better method than this?
 
             if (future.value.get.isFailure) {
+              fl.onClose()
               return // stop the thread here
             }
         }
