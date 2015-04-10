@@ -138,12 +138,23 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
     val now = System.currentTimeMillis()
     val elapsedSinceLastFrame = fe.elapsedTime
 
+    val width = gl.display.width
+    val height = gl.display.height
+
     // Update from inputs
     val delta = mouse.deltaPosition
 
-    if (keyboard.isKeyDown(Key.Escape)) {
-      continueCond = false
+    def processKeyboard() {
+      val optKeyEvent = keyboard.nextEvent()
+      for (keyEvent <- optKeyEvent) {
+        if (keyEvent.down) keyEvent.key match {
+          case Key.Escape => continueCond = false
+        }
+
+        processKeyboard() // process next event
+      }
     }
+    processKeyboard()
 
     // Simulation
 

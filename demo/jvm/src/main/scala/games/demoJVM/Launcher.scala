@@ -45,7 +45,6 @@ object Launcher {
         mouse
       }
       def update(): Boolean = {
-        Display.update()
         !Display.isCloseRequested()
       }
       def close(): Unit = {

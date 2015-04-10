@@ -142,15 +142,6 @@ trait UtilsImpl extends UtilsRequirements {
     }(JvmUtils.openglExecutionContext)
   }
   def startFrameListener(fl: games.FrameListener): Unit = {
-    def screenDim(): (Int, Int) = {
-      val displayMode = Display.getDisplayMode()
-
-      val width = displayMode.getWidth()
-      val height = displayMode.getHeight()
-
-      (width, height)
-    }
-
     val frameListenerThread = new Thread(new Runnable {
       def run() {
         var lastLoopTime: Long = System.nanoTime()
@@ -177,6 +168,8 @@ trait UtilsImpl extends UtilsRequirements {
           lastLoopTime = currentTime
           val frameEvent = FrameEvent(diff)
           fl.onDraw(frameEvent)
+
+          Display.update()
         }
         fl.onClose()
       }
