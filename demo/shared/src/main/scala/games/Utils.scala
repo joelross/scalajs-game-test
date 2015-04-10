@@ -24,19 +24,37 @@ trait UtilsRequirements {
 }
 
 object Utils extends UtilsImpl {
+  /**
+   * Trivial ExecutionContext that simply execute the Runnable immediately in the same thread
+   */
+  val immediateExecutionContext: ExecutionContext = new ExecutionContext {
+    def execute(runnable: Runnable): Unit = {
+      try { runnable.run() }
+      catch { case t: Throwable => this.reportFailure(t) }
+    }
+    def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
+  }
+
+  /**
+   * Trivial function that cut a string into lines
+   */
   def lines(text: String): Array[String] = {
     text.replaceAll("\r", "").split("\n")
   }
 
+  /**
+   * Function reducing a Future[Future[T]] to a Future[T]
+   */
   def reduceFuture[T](orig: Future[Future[T]])(implicit ec: ExecutionContext): Future[T] = {
     val promise = Promise[T]
 
+    // Using immediateExecutionContext to reduce threading overhead
     orig.onSuccess {
       case inner =>
-        inner.onSuccess { case value => promise.success(value) }
-        inner.onFailure { case t => promise.failure(t) }
-    }
-    orig.onFailure { case t => promise.failure(t) }
+        inner.onSuccess { case value => promise.success(value) }(immediateExecutionContext)
+        inner.onFailure { case t => promise.failure(t) }(immediateExecutionContext)
+    }(immediateExecutionContext)
+    orig.onFailure { case t => promise.failure(t) }(immediateExecutionContext)
 
     promise.future
   }

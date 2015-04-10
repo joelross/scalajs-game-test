@@ -16,20 +16,6 @@ import games.opengl.GLES2
 object JvmUtils {
   private val pendingTaskList = new ConcurrentLinkedQueue[Runnable]
 
-  /**
-   * Trivial ExecutionContext that simply execute the Runnable immediately in the same thread
-   */
-  val immediateExecutionContext: ExecutionContext = new ExecutionContext {
-    def execute(runnable: Runnable): Unit = {
-      try {
-        runnable.run()
-      } catch {
-        case t: Throwable => this.reportFailure(t)
-      }
-    }
-    def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
-  }
-
   implicit val openglExecutionContext: ExecutionContext = new ExecutionContext {
     def execute(runnable: Runnable): Unit = addPendingTask(runnable)
     def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
