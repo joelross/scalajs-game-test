@@ -11,7 +11,7 @@ import scala.collection.mutable
 case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
 case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
 
-object DemoUtils {
+object Rendering {
   def loadModelFromResourceFolder(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[OpenGLMesh] = {
     val mainResource = Resource(resourceFolder + "/main")
     val mainFileFuture = Utils.getTextDataFromResource(mainResource)
