@@ -34,7 +34,7 @@ case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambien
 case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
 
 class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionContext) extends games.FrameListener {
-  private implicit val standardEC = localEC
+  private implicit val standardEC = parEC
   private val updateIntervalMs = 25 // Resend position at 40Hz
 
   def context: games.opengl.GLES2 = gl
@@ -70,13 +70,13 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
 
   def loadModelFromResource(resourceFolder: String): Future[OpenGLMesh] = {
     val mainResource = Resource(resourceFolder + "/main")
-    val mainFileFuture = Utils.getTextDataFromResource(mainResource)(parEC)
-    val ret = mainFileFuture.map { mainFile =>
+    val mainFileFuture = Utils.getTextDataFromResource(mainResource)
+    val mainFuture = for (mainFile <- mainFileFuture) yield {
       val mainLines = Utils.lines(mainFile)
 
       var nameOpt: Option[String] = None
       var objPathOpt: Option[String] = None
-      var mtlPathOpt: Option[String] = None
+      val mtlPaths: mutable.Queue[String] = mutable.Queue()
 
       mainLines.foreach { line =>
         val tokens = line.split("=", 2)
@@ -87,22 +87,75 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
         key match {
           case "name" => nameOpt = Some(value)
           case "obj"  => objPathOpt = Some(value)
-          case "mtl"  => mtlPathOpt = Some(value)
+          case "mtl"  => mtlPaths += value
           case _      => Console.err.println("Warning: unknown model key in line: \"" + line + "\"")
         }
       }
 
-      def missing(missingKey: String) = throw new RuntimeException("Missing key \"" + missingKey + "\" in model")
+      def missing(missingKey: String) = throw new RuntimeException("Missing key for " + missingKey + " in model")
 
-      val (name, objPath, mtlPath) = (nameOpt.getOrElse(missing("name")), objPathOpt.getOrElse(missing("obj path")), mtlPathOpt.getOrElse(missing("mtl path")))
+      val name = nameOpt.getOrElse(missing("name"))
+      val objPath = objPathOpt.getOrElse(missing("obj path"))
 
       val objResource = Resource(resourceFolder + "/" + objPath)
-      val objFileFuture = Utils.getTextDataFromResource(objResource)(parEC)
+      val objFileFuture = Utils.getTextDataFromResource(objResource)
 
-      objFileFuture
-    }(parEC)
+      val mtlFileFutures = for (mtlPath <- mtlPaths) yield {
+        val mtlResource = Resource(resourceFolder + "/" + mtlPath)
+        val mtlFileFuture = Utils.getTextDataFromResource(mtlResource)
+        mtlFileFuture
+      }
 
-    ???
+      val mtlFilesFuture = Future.sequence(mtlFileFutures)
+
+      for (
+        objFile <- objFileFuture;
+        mtlFiles <- mtlFilesFuture
+      ) yield {
+        val objLines = Utils.lines(objFile)
+        val mtlLines = mtlPaths.zip(mtlFiles.map(Utils.lines(_))).toMap
+
+        val objs = SimpleOBJParser.parseOBJ(objLines, mtlLines)
+        val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
+
+        val mesh = meshes(name)
+
+        val meshVerticesCount = mesh.vertices.length
+        val verticesData = GLES2.createFloatBuffer(meshVerticesCount * 3)
+        mesh.vertices.foreach { v => v.store(verticesData) }
+        verticesData.flip()
+        val verticesBuffer = gl.createBuffer()
+        gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
+        gl.bufferData(GLES2.ARRAY_BUFFER, verticesData, GLES2.STATIC_DRAW)
+        val normals = mesh.normals.get
+        val normalsData = GLES2.createFloatBuffer(meshVerticesCount * 3); require(meshVerticesCount == normals.length)
+        normals.foreach { v => v.store(normalsData) }
+        normalsData.flip()
+        val normalsBuffer = gl.createBuffer()
+        gl.bindBuffer(GLES2.ARRAY_BUFFER, normalsBuffer)
+        gl.bufferData(GLES2.ARRAY_BUFFER, normalsData, GLES2.STATIC_DRAW)
+        val openGLSubMeshes = mesh.submeshes.map { submesh =>
+          val tris = submesh.tris
+          val submeshVerticesCount = tris.length * 3
+          val indicesData = GLES2.createShortBuffer(submeshVerticesCount)
+          tris.foreach {
+            case (i0, i1, i2) =>
+              indicesData.put(i0.toShort)
+              indicesData.put(i1.toShort)
+              indicesData.put(i2.toShort)
+          }
+          indicesData.flip()
+          val indicesBuffer = gl.createBuffer()
+          gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+          gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesData, GLES2.STATIC_DRAW)
+          OpenGLSubMesh(indicesBuffer, submeshVerticesCount, submesh.material.get.ambientColor.get, submesh.material.get.diffuseColor.get)
+        }
+
+        OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes)
+      }
+    }
+
+    Utils.reduceFuture(mainFuture)
   }
 
   def continue(): Boolean = continueCond
