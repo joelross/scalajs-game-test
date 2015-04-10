@@ -3,6 +3,7 @@ package games
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.io.InputStream
 import scala.concurrent.{ Await, Future, ExecutionContext }
+import scala.util.{ Success, Failure }
 import java.io.ByteArrayOutputStream
 import java.nio.{ ByteBuffer, ByteOrder }
 import org.lwjgl.opengl._
@@ -152,9 +153,14 @@ trait UtilsImpl extends UtilsRequirements {
           case Some(future) => // wait for it
             while (!future.isCompleted) Thread.sleep(100) // TODO is there a better method than this?
 
-            if (future.value.get.isFailure) {
-              fl.onClose()
-              return // stop the thread here
+            future.value.get match {
+              case Success(_) => // Ok, nothing to do, just continue
+              case Failure(t) =>
+                Console.err.println("Could not init FrameListener")
+                t.printStackTrace(Console.err)
+
+                fl.onClose()
+                return // stop the thread here
             }
         }
 

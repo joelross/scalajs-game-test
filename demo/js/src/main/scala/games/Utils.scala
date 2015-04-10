@@ -217,6 +217,9 @@ trait UtilsImpl extends UtilsRequirements {
           }(exe)
           future.onFailure {
             case t => // Don't start the loop in case of failure of the given future
+              Console.err.println("Could not init FrameListener")
+              t.printStackTrace(Console.err)
+
               fl.onClose()
           }(exe)
 
