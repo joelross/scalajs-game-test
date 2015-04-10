@@ -85,7 +85,7 @@ class Room(val id: Int) extends Actor {
 
   private val pingIntervalMs = 10000
 
-  private val pingScheduler = this.context.system.scheduler.schedule(pingIntervalMs milliseconds, pingIntervalMs milliseconds, this.self, PingReminder)
+  private val pingScheduler = this.context.system.scheduler.schedule(pingIntervalMs.milliseconds, pingIntervalMs.milliseconds, this.self, PingReminder)
 
   def receive: Receive = {
     case RegisterPlayer(playerData) =>
