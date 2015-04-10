@@ -25,8 +25,10 @@ import scala.collection.mutable
 
 import scala.concurrent.duration._
 
+class PlayerInitData(val worker: ServiceWorker, val sendFun: String => Unit)
+
 // Room messages
-case class RegisterPlayer(playerData: PlayerData) // request to register the player (expect responses)
+case class RegisterPlayer(playerData: PlayerInitData) // request to register the player (expect responses)
 case class RemovePlayer(player: Player) // request to remove the player
 case object PingReminder // Room should ping its players
 
@@ -37,8 +39,6 @@ case class RoomJoined(playerActor: ActorRef) // The room has accepted the player
 // Player messages
 case object SendPing // Request a ping to the client
 case object Disconnected // Signal that the client has disconnected
-
-class PlayerData(val worker: ServiceWorker, val sendFun: String => Unit)
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
@@ -54,7 +54,7 @@ object GlobalLogic {
     actor
   }
 
-  def registerPlayer(playerData: PlayerData): Unit = this.synchronized {
+  def registerPlayer(playerData: PlayerInitData): Unit = this.synchronized {
     implicit val timeout = Timeout(5.seconds)
 
     def tryRegister(): Unit = {
@@ -122,7 +122,7 @@ class Room(val id: Int) extends Actor {
   }
 }
 
-class Player(playerData: PlayerData, val id: Int, room: Room) extends Actor {
+class Player(playerData: PlayerInitData, val id: Int, room: Room) extends Actor {
   sendToClient(demo.Hello(id, demo.Vector3(0, 0, 0), demo.Vector3(0, 0, 0)))
 
   var data: Option[demo.ClientUpdate] = None
@@ -182,7 +182,7 @@ class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor wit
       log.error("frame command failed", x)
 
     case UpgradedToWebSocket =>
-      val playerData = new PlayerData(this, sendMessage _)
+      val playerData = new PlayerInitData(this, sendMessage _)
       GlobalLogic.registerPlayer(playerData)
 
     case x: Http.ConnectionClosed => for (actor <- playerActor) {
