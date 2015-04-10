@@ -25,13 +25,11 @@ import scala.collection.mutable
 
 import scala.concurrent.duration._
 
-class PlayerInitData(val worker: ConnectionWorker, val sendFun: String => Unit)
-
 sealed trait LocalMessage
 
 // Room messages
 sealed trait ToRoomMessage
-case class RegisterPlayer(playerActor: ConnectionWorker) extends ToRoomMessage // request to register the player (expect responses)
+case class RegisterPlayer(playerActor: ConnectionActor) extends ToRoomMessage // request to register the player (expect responses)
 case class RemovePlayer(player: Player) extends ToRoomMessage // request to remove the player
 case object PingReminder extends ToRoomMessage // Room should ping its players
 
@@ -58,7 +56,7 @@ object GlobalLogic {
     actor
   }
 
-  def registerPlayer(playerActor: ConnectionWorker): Unit = this.synchronized {
+  def registerPlayer(playerActor: ConnectionActor): Unit = this.synchronized {
     implicit val timeout = Timeout(5.seconds)
 
     def tryRegister(): Unit = {
@@ -117,8 +115,8 @@ class Room(val id: Int) extends Actor {
 
     case RemovePlayer(player) =>
       players -= player
-      if (reportedFull && players.size == 0) {
-        // This room will not receive further players, let's kill it
+      if (players.isEmpty && reportedFull) {
+        // This room is empty and will not receive further players, let's kill it
         pingScheduler.cancel()
         context.stop(self)
         println("Closing room " + id)
@@ -130,7 +128,7 @@ class Room(val id: Int) extends Actor {
   }
 }
 
-class Player(val actor: ConnectionWorker, val id: Int, val room: Room) {
+class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
   actor.playerLogic = Some(this)
 
   sendToClient(demo.Hello(id, demo.Vector3(0, 0, 0), demo.Vector3(0, 0, 0)))
@@ -169,7 +167,7 @@ class Player(val actor: ConnectionWorker, val id: Int, val room: Room) {
   }
 }
 
-class ConnectionWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
+class ConnectionActor(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
   override def receive = handshaking orElse businessLogicNoUpgrade orElse closeLogic
 
   var playerLogic: Option[Player] = None
@@ -238,7 +236,7 @@ class Service extends Actor {
   def receive = {
     case Http.Connected(remoteAddress, localAddress) =>
       val curSender = sender()
-      val conn = context.actorOf(Props(classOf[ConnectionWorker], curSender))
+      val conn = context.actorOf(Props(classOf[ConnectionActor], curSender))
       curSender ! Http.Register(conn)
   }
 }
