@@ -84,7 +84,15 @@ class Room(val id: Int) extends Actor {
   println("Creating room " + id)
   val players: mutable.Set[Player] = mutable.Set[Player]()
 
-  private var nextPlayerId = 1
+  private def nextPlayerId(): Int = {
+    def tryFrom(v: Int): Int = {
+      if (players.forall { p => p.id != v }) v
+      else tryFrom(v + 1)
+    }
+
+    tryFrom(1)
+  }
+
   private var reportedFull = false
 
   private val pingIntervalMs = 10000
@@ -97,9 +105,7 @@ class Room(val id: Int) extends Actor {
         reportedFull = true
         sender ! RoomFull
       } else {
-        val newPlayerId = nextPlayerId
-        nextPlayerId += 1
-
+        val newPlayerId = nextPlayerId()
         val player = new Player(playerActor, newPlayerId, this)
 
         players += player
@@ -110,8 +116,6 @@ class Room(val id: Int) extends Actor {
       }
 
     case RemovePlayer(player) =>
-      println("Player " + player.id + " disconnected from room " + id)
-
       players -= player
       if (reportedFull && players.size == 0) {
         // This room will not receive further players, let's kill it
@@ -119,6 +123,7 @@ class Room(val id: Int) extends Actor {
         context.stop(self)
         println("Closing room " + id)
       }
+      println("Player " + player.id + " disconnected from room " + id)
 
     case PingReminder =>
       players.foreach { player => player.actor.self ! SendPing }
@@ -172,6 +177,11 @@ class ConnectionWorker(val serverConnection: ActorRef) extends HttpServiceActor 
   def sendString(msg: String): Unit = send(TextFrame(msg))
 
   def businessLogic: Receive = {
+    case localMsg: ToPlayerMessage => playerLogic match {
+      case Some(logic) => logic.handleLocalMessage(localMsg)
+      case None        => println("Warning: connection not yet upgraded to player; can not process local message")
+    }
+
     case tf: TextFrame => playerLogic match {
       case Some(logic) =>
         val payload = tf.payload
@@ -182,20 +192,18 @@ class ConnectionWorker(val serverConnection: ActorRef) extends HttpServiceActor 
         }
       case None => println("Warning: connection not yet upgraded to player; can not process client message")
     }
+
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
 
-    case UpgradedToWebSocket =>
-      GlobalLogic.registerPlayer(this)
+    case UpgradedToWebSocket => playerLogic match {
+      case None => GlobalLogic.registerPlayer(this)
+      case _    => println("Warning: the connection has already been upgraded to player")
+    }
 
     case x: Http.ConnectionClosed => for (logic <- playerLogic) {
       logic.handleLocalMessage(Disconnected)
       playerLogic = None
-    }
-
-    case localMsg: ToPlayerMessage => playerLogic match {
-      case Some(logic) => logic.handleLocalMessage(localMsg)
-      case None        => println("Warning: connection not yet upgraded to player; can not process local message")
     }
   }
 
