@@ -10,4 +10,4 @@ Run ```sbt "demoJVM/run"```
 
 #### Scala.js
 
-Run ```sbt```. Once in SBT, enter ```serverDemoJS/re-start```, open your browser (preferably Chrome or Firefox) to the specified address (normally [http://localhost:8080/](http://localhost:8080/)) (press Ctrl + C to stop the server and exit SBT)
+Run ```sbt```. Once in SBT, enter ```serverDemoJS/reStart```, open your browser (preferably Chrome or Firefox) to the specified address (normally [http://localhost:8080/](http://localhost:8080/)) (press Ctrl + C to stop the server and exit SBT)
