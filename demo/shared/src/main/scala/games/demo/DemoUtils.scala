@@ -8,7 +8,7 @@ import games.utils.SimpleOBJParser
 import scala.collection.mutable
 
 object DemoUtils {
-  def loadModelFromResourceFolder(resourceFolder: String, gl: GLES2)(implicit ec: ExecutionContext): Future[OpenGLMesh] = {
+  def loadModelFromResourceFolder(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[OpenGLMesh] = {
     val mainResource = Resource(resourceFolder + "/main")
     val mainFileFuture = Utils.getTextDataFromResource(mainResource)
     val mainFuture = for (mainFile <- mainFileFuture) yield {
@@ -48,7 +48,7 @@ object DemoUtils {
 
       val mtlFilesFuture = Future.sequence(mtlFileFutures)
 
-      for (
+      val meshFuture = for (
         objFile <- objFileFuture;
         mtlFiles <- mtlFilesFuture
       ) yield {
@@ -60,6 +60,11 @@ object DemoUtils {
 
         val mesh = meshes(name)
 
+        mesh
+      }
+
+      // Execute the last in the OpenGL context
+      meshFuture.map { mesh =>
         val meshVerticesCount = mesh.vertices.length
         val verticesData = GLES2.createFloatBuffer(meshVerticesCount * 3)
         mesh.vertices.foreach { v => v.store(verticesData) }
@@ -95,7 +100,7 @@ object DemoUtils {
         }
 
         OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes)
-      }
+      }(openglContext)
     }
 
     Utils.reduceFuture(mainFuture)

@@ -95,7 +95,7 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
     audioContext.volume = 0.25f // Lower the initial global volume
 
     // Loading data
-    val sphereFuture = DemoUtils.loadModelFromResourceFolder("/games/demo/sphere", gl)(parEC)
+    val sphereFuture = DemoUtils.loadModelFromResourceFolder("/games/demo/sphere", gl, localEC)
     sphereFuture.onSuccess { case mesh => Console.println("Sphere loaded successfully") }
     sphereFuture.onFailure { case t => t.printStackTrace() }
 
