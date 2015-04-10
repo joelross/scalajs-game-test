@@ -176,7 +176,6 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
         latency = Some(elapsed.toInt)
         lastPingTime = None
       }
-    case demo.KeepAlive       => // nothing to do
     case x: demo.ClientUpdate => positionData = Some(x)
     case x: demo.BulletShot   => // handle data
   }
