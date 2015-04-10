@@ -22,6 +22,7 @@ import spray.can.Http
 import akka.actor.Props
 
 import scala.collection.mutable
+import scala.collection.immutable
 
 import scala.concurrent.duration._
 
@@ -32,6 +33,7 @@ sealed trait ToRoomMessage
 case class RegisterPlayer(playerActor: ConnectionActor) extends ToRoomMessage // request to register the player (expect responses)
 case class RemovePlayer(player: Player) extends ToRoomMessage // request to remove the player
 case object PingReminder extends ToRoomMessage // Room should ping its players
+case object UpdateReminder extends ToRoomMessage // Room should update the data of its players
 
 // Room responses to RegisterPlayer
 case object RoomFull extends LocalMessage // The room is full and can not accept more players
@@ -39,7 +41,7 @@ case object RoomJoined extends LocalMessage // The room has accepted the player
 
 // Player messages
 sealed trait ToPlayerMessage
-case object SendPing extends ToPlayerMessage // Request a ping to the client
+case object SendPing extends ToPlayerMessage // Request a ping sent to the client
 case object Disconnected extends ToPlayerMessage // Signal that the client has disconnected
 
 object GlobalLogic {
@@ -76,7 +78,9 @@ object GlobalLogic {
 
 class Room(val id: Int) extends Actor {
   println("Creating room " + id)
-  val players: mutable.Set[Player] = mutable.Set[Player]()
+
+  val players: mutable.Set[Player] = mutable.Set()
+  var events: mutable.Queue[demo.Event] = mutable.Queue()
 
   private def nextPlayerId(): Int = {
     def tryFrom(v: Int): Int = {
@@ -89,9 +93,11 @@ class Room(val id: Int) extends Actor {
 
   private var reportedFull = false
 
-  private val pingIntervalMs = 10000
-
+  private val pingIntervalMs = 5000 // Once every 5 seconds
   private val pingScheduler = this.context.system.scheduler.schedule(pingIntervalMs.milliseconds, pingIntervalMs.milliseconds, this.self, PingReminder)
+
+  private val updateIntervalMs = 50 // 20Hz refresh rate
+  private val updateScheduler = this.context.system.scheduler.schedule(updateIntervalMs.milliseconds, updateIntervalMs.milliseconds, this.self, UpdateReminder)
 
   def receive: Receive = {
     case RegisterPlayer(playerActor) =>
@@ -111,16 +117,27 @@ class Room(val id: Int) extends Actor {
 
     case RemovePlayer(player) =>
       players -= player
+      println("Player " + player.id + " disconnected from room " + id)
       if (players.isEmpty && reportedFull) {
         // This room is empty and will not receive further players, let's kill it
         pingScheduler.cancel()
+        updateScheduler.cancel()
         context.stop(self)
         println("Closing room " + id)
       }
-      println("Player " + player.id + " disconnected from room " + id)
 
     case PingReminder =>
       players.foreach { player => player.actor.self ! SendPing }
+
+    case UpdateReminder =>
+      val newEvents = immutable.Seq() ++ this.events // Events may be a bit empty for now...
+      val playersData = immutable.Seq() ++ players.flatMap { player =>
+        player.positionData.map { data => demo.PlayerServerUpdate(player.id, data.position, data.velocity, data.orientation, data.rotation) }
+      }
+      val updateMsg = demo.ServerUpdate(playersData, newEvents)
+      players.foreach { player =>
+        player.sendToClient(updateMsg)
+      }
   }
 }
 
@@ -131,8 +148,10 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
 
   private var lastPingTime: Option[Long] = None
 
-  var data: Option[demo.ClientUpdate] = None
   var latency: Option[Int] = None
+
+  var positionData: Option[demo.ClientUpdate] = None
+  var bulletsData: immutable.Queue[demo.BulletShot] = immutable.Queue()
 
   def sendToClient(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
@@ -153,12 +172,12 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
     case demo.Pong => // client's response
       for (time <- lastPingTime) {
         val elapsed = (System.currentTimeMillis() - time) / 2
-        println("Latency of player " + id + " in room " + room.id + " is " + elapsed + " ms")
+        //println("Latency of player " + id + " in room " + room.id + " is " + elapsed + " ms")
         latency = Some(elapsed.toInt)
         lastPingTime = None
       }
     case demo.KeepAlive       => // nothing to do
-    case x: demo.ClientUpdate => data = Some(x) // update local data of the player
+    case x: demo.ClientUpdate => positionData = Some(x)
     case x: demo.BulletShot   => // handle data
   }
 }
