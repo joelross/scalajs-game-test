@@ -72,10 +72,6 @@ object GlobalLogic {
 
     tryRegister()
   }
-
-  def renewRoom(): Unit = this.synchronized {
-    currentRoom = newRoom()
-  }
 }
 
 class Room(val id: Int) extends Actor {
@@ -129,14 +125,14 @@ class Room(val id: Int) extends Actor {
 }
 
 class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
+  // Init
   actor.playerLogic = Some(this)
-
   sendToClient(demo.Hello(id, demo.Vector3(0, 0, 0), demo.Vector3(0, 0, 0)))
 
-  var data: Option[demo.ClientUpdate] = None
-
   private var lastPingTime: Option[Long] = None
-  private var latency: Option[Int] = None
+
+  var data: Option[demo.ClientUpdate] = None
+  var latency: Option[Int] = None
 
   def sendToClient(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
