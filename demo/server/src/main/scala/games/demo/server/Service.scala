@@ -132,7 +132,7 @@ class Room(val id: Int) extends Actor {
     case UpdateReminder =>
       val newEvents = immutable.Seq() ++ this.events // Events may be a bit empty for now...
       val playersData = immutable.Seq() ++ players.flatMap { player =>
-        player.positionData.map { data => demo.PlayerServerUpdate(player.id, data.position, data.velocity, data.orientation, data.rotation) }
+        player.positionData.map { data => demo.PlayerServerUpdate(player.id, player.latency.getOrElse(0), data.position, data.velocity, data.orientation, data.rotation) }
       }
       val updateMsg = demo.ServerUpdate(playersData, newEvents)
       players.foreach { player =>

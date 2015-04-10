@@ -32,6 +32,7 @@ abstract class EngineInterface {
 
 class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionContext) extends games.FrameListener {
   private implicit val standardEC = localEC
+  private val updateIntervalMs = 25 // Resend position at 40Hz
 
   def context: games.opengl.GLES2 = gl
 
@@ -45,12 +46,14 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
   private var connection: Option[ConnectionHandle] = None
   private var localPlayerId: Int = 0
 
-  private var currentPosition: Vector3f = _
-  private var currentOrientationX: Float = _
-  private var currentOrientationY: Float = _
-  private var currentOrientationZ: Float = _
+  private var currentPosition: Vector3f = new Vector3f(0, 0, 0)
+  private var currentOrientationX: Float = 0
+  private var currentOrientationY: Float = 0
+  private var currentOrientationZ: Float = 0
 
   private var otherPlayers: Seq[PlayerServerUpdate] = Seq()
+  private var lastTimeUpdateFromServer: Option[Long] = None
+  private var lastTimeUpdateToServer: Option[Long] = None
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
@@ -79,7 +82,7 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
     }
   }
 
-  def onCreate(): Option[Future[Unit]] = {
+  def onCreate(): Option[Future[Unit]] = try {
     itf.printLine("Starting...")
     this.gl = new GLES2Debug(itf.initGL()) // Init OpenGL (Enable automatic error checking by encapsuling it in GLES2Debug)
     this.audioContext = itf.initAudio() // Init Audio
@@ -110,8 +113,11 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
               itf.printLine("You are player " + playerId)
 
             case ServerUpdate(players, newEvents) =>
+              lastTimeUpdateFromServer = Some(System.currentTimeMillis())
               otherPlayers = players.filter { _.id != localPlayerId }
-            // TODO process update
+              newEvents.foreach { event =>
+                // TODO process event
+              }
           }
         }
         conn.closedFuture.onSuccess {
@@ -124,14 +130,40 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
     // TODO
 
     None
+  } catch {
+    case t: Throwable => Some(Future.failed(throw new RuntimeException("Could not init game engine", t)))
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {
+    val now = System.currentTimeMillis()
+    val elapsedSinceLastFrame = fe.elapsedTime
+
+    // Update from inputs
+    val delta = mouse.deltaPosition
+
     if (keyboard.isKeyDown(Key.Escape)) {
       continueCond = false
     }
 
-    // TODO
+    // Simulation
+
+    // Network (if necessary)
+    for (conn <- connection) {
+      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
+        val position = Vector3(currentPosition.x, currentPosition.y, currentPosition.z)
+        val velocity = 0f
+        val orientation = Vector3(currentOrientationX, currentOrientationY, currentOrientationZ)
+        val rotation = Vector3(0, 0, 0)
+        val clientUpdate = ClientUpdate(position, velocity, orientation, rotation)
+
+        val msgText = upickle.write(clientUpdate)
+        conn.write(msgText)
+
+        lastTimeUpdateToServer = Some(now)
+      }
+    }
+
+    // Rendering
 
     continueCond = continueCond && itf.update()
   }

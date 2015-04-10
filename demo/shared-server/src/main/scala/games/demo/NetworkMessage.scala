@@ -2,7 +2,7 @@ package games.demo
 
 case class Vector3(x: Float, y: Float, z: Float)
 
-case class PlayerServerUpdate(id: Int, position: Vector3, velocity: Float, orientation: Vector3, rotation: Vector3)
+case class PlayerServerUpdate(id: Int, latency: Int, position: Vector3, velocity: Float, orientation: Vector3, rotation: Vector3)
 sealed trait Event
 case class BulletCreation(id: Int, playerId: Int, initialPosition: Vector3, initialOrientation: Vector3) extends Event
 case class BulletHit(playerId: Int, shotId: Int, playerDestroyed: Boolean) extends Event
