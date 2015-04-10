@@ -25,18 +25,18 @@ import scala.collection.mutable
 
 import scala.concurrent.duration._
 
-case object Disconnected
-case object RoomJoined
+// Room messages
+case class RegisterPlayer(playerData: PlayerData) // request to register the player (expect responses)
+case class RemovePlayer(player: Player) // request to remove the player
+case object PingReminder // Room should ping its players
 
-case class RegisterPlayer(playerData: PlayerData)
-case class RemovePlayer(player: Player)
+// Room responses to RegisterPlayer
+case object RoomFull // The room is full and can not accept more players
+case class RoomJoined(playerActor: ActorRef) // The room has accepted the player
 
-case object RoomFull
-case class PlayerRegistered(actor: ActorRef)
-case object RoomLaunched
-
-case object PingReminder
-case object SendPing
+// Player messages
+case object SendPing // Request a ping to the client
+case object Disconnected // Signal that the client has disconnected
 
 class PlayerData(val worker: ServiceWorker, val sendFun: String => Unit)
 
@@ -60,7 +60,7 @@ object GlobalLogic {
     def tryRegister(): Unit = {
       val playerRegistered = currentRoom ? RegisterPlayer(playerData)
       playerRegistered.onSuccess {
-        case PlayerRegistered =>
+        case RoomJoined(playerActor) => // Ok, nothing to do
 
         case RoomFull =>
           currentRoom = newRoom()
@@ -101,7 +101,7 @@ class Room(val id: Int) extends Actor {
         playerData.worker.playerActor = Some(player)
         players += player
 
-        sender ! PlayerRegistered(player)
+        sender ! RoomJoined(player)
 
         println("Player " + newPlayerId + " connected to room " + id)
       }
