@@ -30,9 +30,6 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
-case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
-
 class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionContext) extends games.FrameListener {
   private implicit val standardEC = parEC
   private val updateIntervalMs = 25 // Resend position at 40Hz

@@ -2,10 +2,14 @@ package games.demo
 
 import scala.concurrent.{ Future, ExecutionContext }
 import games.{ Utils, Resource }
-import games.opengl.GLES2
+import games.opengl.{ Token, GLES2 }
+import games.math.Vector3f
 import games.utils.SimpleOBJParser
 
 import scala.collection.mutable
+
+case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
+case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
 
 object DemoUtils {
   def loadModelFromResourceFolder(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[OpenGLMesh] = {
