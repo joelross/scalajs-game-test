@@ -25,20 +25,24 @@ import scala.collection.mutable
 
 import scala.concurrent.duration._
 
-class PlayerInitData(val worker: ServiceWorker, val sendFun: String => Unit)
+class PlayerInitData(val worker: ConnectionWorker, val sendFun: String => Unit)
+
+sealed trait LocalMessage
 
 // Room messages
-case class RegisterPlayer(playerData: PlayerInitData) // request to register the player (expect responses)
-case class RemovePlayer(player: Player) // request to remove the player
-case object PingReminder // Room should ping its players
+sealed trait ToRoomMessage
+case class RegisterPlayer(playerActor: ConnectionWorker) extends ToRoomMessage // request to register the player (expect responses)
+case class RemovePlayer(player: Player) extends ToRoomMessage // request to remove the player
+case object PingReminder extends ToRoomMessage // Room should ping its players
 
 // Room responses to RegisterPlayer
-case object RoomFull // The room is full and can not accept more players
-case class RoomJoined(playerActor: ActorRef) // The room has accepted the player
+case object RoomFull extends LocalMessage // The room is full and can not accept more players
+case object RoomJoined extends LocalMessage // The room has accepted the player
 
 // Player messages
-case object SendPing // Request a ping to the client
-case object Disconnected // Signal that the client has disconnected
+sealed trait ToPlayerMessage
+case object SendPing extends ToPlayerMessage // Request a ping to the client
+case object Disconnected extends ToPlayerMessage // Signal that the client has disconnected
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
@@ -54,15 +58,15 @@ object GlobalLogic {
     actor
   }
 
-  def registerPlayer(playerData: PlayerInitData): Unit = this.synchronized {
+  def registerPlayer(playerActor: ConnectionWorker): Unit = this.synchronized {
     implicit val timeout = Timeout(5.seconds)
 
     def tryRegister(): Unit = {
-      val playerRegistered = currentRoom ? RegisterPlayer(playerData)
+      val playerRegistered = currentRoom ? RegisterPlayer(playerActor)
       playerRegistered.onSuccess {
-        case RoomJoined(playerActor) => // Ok, nothing to do
+        case RoomJoined => // Ok, nothing to do
 
-        case RoomFull =>
+        case RoomFull => // Room rejected the player, create a new room and try again
           currentRoom = newRoom()
           tryRegister()
       }
@@ -78,7 +82,7 @@ object GlobalLogic {
 
 class Room(val id: Int) extends Actor {
   println("Creating room " + id)
-  val players: mutable.Set[ActorRef] = mutable.Set[ActorRef]()
+  val players: mutable.Set[Player] = mutable.Set[Player]()
 
   private var nextPlayerId = 1
   private var reportedFull = false
@@ -88,7 +92,7 @@ class Room(val id: Int) extends Actor {
   private val pingScheduler = this.context.system.scheduler.schedule(pingIntervalMs.milliseconds, pingIntervalMs.milliseconds, this.self, PingReminder)
 
   def receive: Receive = {
-    case RegisterPlayer(playerData) =>
+    case RegisterPlayer(playerActor) =>
       if (players.size >= 2 || reportedFull) {
         reportedFull = true
         sender ! RoomFull
@@ -96,12 +100,11 @@ class Room(val id: Int) extends Actor {
         val newPlayerId = nextPlayerId
         nextPlayerId += 1
 
-        val player = context.actorOf(Props(classOf[Player], playerData, newPlayerId, this), name = "room" + id + "player" + newPlayerId)
+        val player = new Player(playerActor, newPlayerId, this)
 
-        playerData.worker.playerActor = Some(player)
         players += player
 
-        sender ! RoomJoined(player)
+        sender ! RoomJoined
 
         println("Player " + newPlayerId + " connected to room " + id)
       }
@@ -109,7 +112,7 @@ class Room(val id: Int) extends Actor {
     case RemovePlayer(player) =>
       println("Player " + player.id + " disconnected from room " + id)
 
-      players -= player.self
+      players -= player
       if (reportedFull && players.size == 0) {
         // This room will not receive further players, let's kill it
         pingScheduler.cancel()
@@ -118,11 +121,13 @@ class Room(val id: Int) extends Actor {
       }
 
     case PingReminder =>
-      players.foreach { player => player ! SendPing }
+      players.foreach { player => player.actor.self ! SendPing }
   }
 }
 
-class Player(playerData: PlayerInitData, val id: Int, room: Room) extends Actor {
+class Player(val actor: ConnectionWorker, val id: Int, val room: Room) {
+  actor.playerLogic = Some(this)
+
   sendToClient(demo.Hello(id, demo.Vector3(0, 0, 0), demo.Vector3(0, 0, 0)))
 
   var data: Option[demo.ClientUpdate] = None
@@ -132,62 +137,65 @@ class Player(playerData: PlayerInitData, val id: Int, room: Room) extends Actor 
 
   def sendToClient(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
-    playerData.sendFun(data)
+    actor.sendString(data)
   }
 
-  def receive: Receive = {
-    // Client Message
+  def handleLocalMessage(msg: ToPlayerMessage): Unit = msg match {
+    case Disconnected =>
+      room.self ! RemovePlayer(this)
+    //context.stop(self) // Done by the server at connection's termination?
+
+    case SendPing =>
+      lastPingTime = Some(System.currentTimeMillis())
+      sendToClient(demo.Ping)
+  }
+
+  def handleClientMessage(msg: demo.ClientMessage): Unit = msg match {
     case demo.Pong => // client's response
       for (time <- lastPingTime) {
         val elapsed = (System.currentTimeMillis() - time) / 2
-        println("Latency of " + self.path.name + " is " + elapsed + " ms")
+        println("Latency of player " + id + " in room " + room.id + " is " + elapsed + " ms")
         latency = Some(elapsed.toInt)
-
         lastPingTime = None
       }
     case demo.KeepAlive       => // nothing to do
     case x: demo.ClientUpdate => data = Some(x) // update local data of the player
     case x: demo.BulletShot   => // handle data
-
-    // Local message
-    case Disconnected =>
-      room.self ! RemovePlayer(this)
-    //context.stop(self) // Done by the parent Room?
-    case SendPing =>
-      lastPingTime = Some(System.currentTimeMillis())
-      sendToClient(demo.Ping)
   }
 }
 
-class ServiceWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
+class ConnectionWorker(val serverConnection: ActorRef) extends HttpServiceActor with websocket.WebSocketServerWorker {
   override def receive = handshaking orElse businessLogicNoUpgrade orElse closeLogic
 
-  var playerActor: Option[ActorRef] = None
+  var playerLogic: Option[Player] = None
 
-  private def sendMessage(msg: String): Unit = send(TextFrame(msg))
+  def sendString(msg: String): Unit = send(TextFrame(msg))
 
   def businessLogic: Receive = {
-    case tf: TextFrame => playerActor match {
-      case Some(actor) =>
+    case tf: TextFrame => playerLogic match {
+      case Some(logic) =>
         val payload = tf.payload
         val text = payload.utf8String
         if (!text.isEmpty()) {
-          val msg = upickle.read[demo.ClientMessage](text)
-          actor ! msg
+          val clientMsg = upickle.read[demo.ClientMessage](text)
+          logic.handleClientMessage(clientMsg)
         }
-
-      case None => println("Warning: TextFrame received from a non-upgraded connection")
+      case None => println("Warning: connection not yet upgraded to player; can not process client message")
     }
     case x: FrameCommandFailed =>
       log.error("frame command failed", x)
 
     case UpgradedToWebSocket =>
-      val playerData = new PlayerInitData(this, sendMessage _)
-      GlobalLogic.registerPlayer(playerData)
+      GlobalLogic.registerPlayer(this)
 
-    case x: Http.ConnectionClosed => for (actor <- playerActor) {
-      actor ! Disconnected
-      playerActor = None
+    case x: Http.ConnectionClosed => for (logic <- playerLogic) {
+      logic.handleLocalMessage(Disconnected)
+      playerLogic = None
+    }
+
+    case localMsg: ToPlayerMessage => playerLogic match {
+      case Some(logic) => logic.handleLocalMessage(localMsg)
+      case None        => println("Warning: connection not yet upgraded to player; can not process local message")
     }
   }
 
@@ -222,7 +230,7 @@ class Service extends Actor {
   def receive = {
     case Http.Connected(remoteAddress, localAddress) =>
       val curSender = sender()
-      val conn = context.actorOf(Props(classOf[ServiceWorker], curSender))
+      val conn = context.actorOf(Props(classOf[ConnectionWorker], curSender))
       curSender ! Http.Register(conn)
   }
 }
