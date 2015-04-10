@@ -123,14 +123,14 @@ class Room(val id: Int) extends Actor {
 }
 
 class Player(playerData: PlayerData, val id: Int, room: Room) extends Actor {
-  send(demo.Hello(id, demo.Vector3(0, 0, 0), demo.Vector3(0, 0, 0)))
+  sendToClient(demo.Hello(id, demo.Vector3(0, 0, 0), demo.Vector3(0, 0, 0)))
 
   var data: Option[demo.ClientUpdate] = None
 
   private var lastPingTime: Option[Long] = None
   private var latency: Option[Int] = None
 
-  def send(msg: demo.ServerMessage): Unit = {
+  def sendToClient(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
     playerData.sendFun(data)
   }
@@ -155,7 +155,7 @@ class Player(playerData: PlayerData, val id: Int, room: Room) extends Actor {
     //context.stop(self) // Done by the parent Room?
     case SendPing =>
       lastPingTime = Some(System.currentTimeMillis())
-      send(demo.Ping)
+      sendToClient(demo.Ping)
   }
 }
 
