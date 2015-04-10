@@ -78,7 +78,7 @@ object Rendering {
         gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
         gl.bufferData(GLES2.ARRAY_BUFFER, verticesData, GLES2.STATIC_DRAW)
         val normals = mesh.normals.get
-        val normalsData = GLES2.createFloatBuffer(meshVerticesCount * 3); require(meshVerticesCount == normals.length)
+        val normalsData = GLES2.createFloatBuffer(meshVerticesCount * 3); assert(meshVerticesCount == normals.length)
         normals.foreach { v => v.store(normalsData) }
         assert(normalsData.remaining() == 0) // Sanity check
         normalsData.flip()
