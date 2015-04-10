@@ -63,7 +63,7 @@ object DemoUtils {
         mesh
       }
 
-      // Execute the last in the OpenGL context
+      // Execute the loading part separately, in the OpenGL context
       meshFuture.map { mesh =>
         val meshVerticesCount = mesh.vertices.length
         val verticesData = GLES2.createFloatBuffer(meshVerticesCount * 3)
