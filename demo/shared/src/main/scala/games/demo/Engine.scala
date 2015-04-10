@@ -30,6 +30,9 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
+case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
+case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
+
 class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionContext) extends games.FrameListener {
   private implicit val standardEC = localEC
   private val updateIntervalMs = 25 // Resend position at 40Hz
@@ -63,6 +66,43 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
     case Some(conn) =>
       val data = upickle.write(msg)
       conn.write(data)
+  }
+
+  def loadModelFromResource(resourceFolder: String): Future[OpenGLMesh] = {
+    val mainResource = Resource(resourceFolder + "/main")
+    val mainFileFuture = Utils.getTextDataFromResource(mainResource)(parEC)
+    val ret = mainFileFuture.map { mainFile =>
+      val mainLines = Utils.lines(mainFile)
+
+      var nameOpt: Option[String] = None
+      var objPathOpt: Option[String] = None
+      var mtlPathOpt: Option[String] = None
+
+      mainLines.foreach { line =>
+        val tokens = line.split("=", 2)
+        if (tokens.size != 2) throw new RuntimeException("Main model file malformed: \"" + line + "\"")
+        val key = tokens(0)
+        val value = tokens(1)
+
+        key match {
+          case "name" => nameOpt = Some(value)
+          case "obj"  => objPathOpt = Some(value)
+          case "mtl"  => mtlPathOpt = Some(value)
+          case _      => Console.err.println("Warning: unknown model key in line: \"" + line + "\"")
+        }
+      }
+
+      def missing(missingKey: String) = throw new RuntimeException("Missing key \"" + missingKey + "\" in model")
+
+      val (name, objPath, mtlPath) = (nameOpt.getOrElse(missing("name")), objPathOpt.getOrElse(missing("obj path")), mtlPathOpt.getOrElse(missing("mtl path")))
+
+      val objResource = Resource(resourceFolder + "/" + objPath)
+      val objFileFuture = Utils.getTextDataFromResource(objResource)(parEC)
+
+      objFileFuture
+    }(parEC)
+
+    ???
   }
 
   def continue(): Boolean = continueCond

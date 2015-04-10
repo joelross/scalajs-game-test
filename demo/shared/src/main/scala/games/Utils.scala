@@ -1,7 +1,6 @@
 package games
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ Future, Promise, ExecutionContext }
 import java.nio.ByteBuffer
 import games.opengl.GLES2
 import games.opengl.Token
@@ -27,6 +26,19 @@ trait UtilsRequirements {
 object Utils extends UtilsImpl {
   def lines(text: String): Array[String] = {
     text.replaceAll("\r", "").split("\n")
+  }
+
+  def reduceFuture[T](orig: Future[Future[T]])(implicit ec: ExecutionContext): Future[T] = {
+    val promise = Promise[T]
+
+    orig.onSuccess {
+      case inner =>
+        inner.onSuccess { case value => promise.success(value) }
+        inner.onFailure { case t => promise.failure(t) }
+    }
+    orig.onFailure { case t => promise.failure(t) }
+
+    promise.future
   }
 }
 
