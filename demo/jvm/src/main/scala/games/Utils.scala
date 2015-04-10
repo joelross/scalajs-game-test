@@ -2,14 +2,16 @@ package games
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.io.InputStream
-import scala.concurrent.{ Await, Future, ExecutionContext }
-import scala.util.{ Success, Failure }
 import java.io.ByteArrayOutputStream
 import java.nio.{ ByteBuffer, ByteOrder }
 import org.lwjgl.opengl._
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import javax.imageio.ImageIO
+
+import scala.concurrent.{ Await, Future, ExecutionContext }
+import scala.concurrent.duration.Duration
+import scala.util.{ Success, Failure }
 
 import games.opengl.GLES2
 
@@ -137,7 +139,7 @@ trait UtilsImpl extends UtilsRequirements {
         readyOptFuture match {
           case None => // just continue
           case Some(future) => // wait for it
-            while (!future.isCompleted) Thread.sleep(100) // TODO is there a better method than this?
+            Await.ready(future, Duration.Inf)
 
             future.value.get match {
               case Success(_) => // Ok, nothing to do, just continue
