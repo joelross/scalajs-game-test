@@ -7,7 +7,7 @@ import games.utils.SimpleOBJParser
 
 import scala.collection.mutable
 
-class DemoUtils {
+object DemoUtils {
   def loadModelFromResourceFolder(resourceFolder: String, gl: GLES2)(implicit ec: ExecutionContext): Future[OpenGLMesh] = {
     val mainResource = Resource(resourceFolder + "/main")
     val mainFileFuture = Utils.getTextDataFromResource(mainResource)
