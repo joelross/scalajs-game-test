@@ -91,16 +91,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     audioContext.volume = 0.25f // Lower the initial global volume
 
     // Loading data
-    val sphereFuture = Rendering.loadModelFromResourceFolder("/games/demo/models/sphere", gl, loopExecutionContext)
-    val planeFuture = Rendering.loadModelFromResourceFolder("/games/demo/models/plane", gl, loopExecutionContext)
-    val simpleShaderFuture = Rendering.loadShadersFromResourceFolder("/games/demo/shaders/simple", gl, loopExecutionContext)
+    val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
+    val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
 
     val dataLoadedFuture = for (
-      sphere <- sphereFuture;
-      plane <- planeFuture;
-      simpleShader <- simpleShaderFuture
+      models <- modelsFuture;
+      shaders <- shadersFuture
     ) yield {
-      itf.printLine("All data loaded successfully")
+      itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
     }
 
     // Init network

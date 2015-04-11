@@ -7,11 +7,36 @@ import games.math.Vector3f
 import games.utils.SimpleOBJParser
 
 import scala.collection.mutable
+import scala.collection.immutable
 
 case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
 case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
 
 object Rendering {
+  def loadAllShaders(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[Map[String, Token.Program]] = {
+    loadAllFromList(resourceFolder, gl, openglContext, path => { loadShadersFromResourceFolder(path, gl, openglContext) })
+  }
+
+  def loadAllModels(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[Map[String, OpenGLMesh]] = {
+    loadAllFromList(resourceFolder, gl, openglContext, path => { loadModelFromResourceFolder(path, gl, openglContext) })
+  }
+
+  def loadAllFromList[T](resourceFolder: String, gl: GLES2, openglContext: ExecutionContext, asyncGet: (String) => Future[T])(implicit ec: ExecutionContext): Future[Map[String, T]] = {
+    val listResource = Resource(resourceFolder + "/list")
+    val listFileFuture = Utils.getTextDataFromResource(listResource)
+    listFileFuture.flatMap { listFile =>
+      val lines = Utils.lines(listFile)
+      val dataFutures = lines.map { line =>
+        val dataResourcePath = resourceFolder + "/" + line
+        asyncGet(dataResourcePath)
+      }
+      val datasFuture = Future.sequence(dataFutures.toSeq)
+      datasFuture.map { seqShaders =>
+        lines.zip(seqShaders).toMap
+      }
+    }
+  }
+
   def loadShadersFromResourceFolder(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[Token.Program] = {
     val vertexResource = Resource(resourceFolder + "/vertex.c")
     val fragmentResource = Resource(resourceFolder + "/fragment.c")
