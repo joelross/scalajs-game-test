@@ -48,7 +48,7 @@ object Utils extends UtilsImpl {
   /**
    * Function reducing a Future[Future[T]] to a Future[T]
    */
-  def reduceFuture[T](orig: Future[Future[T]])(implicit ec: ExecutionContext): Future[T] = orig.flatMap(identity)
+  def reduceFuture[T](orig: Future[Future[T]])(implicit ec: ExecutionContext): Future[T] = orig.flatMap(identity)(Utils.immediateExecutionContext)
 }
 
 package object input {
