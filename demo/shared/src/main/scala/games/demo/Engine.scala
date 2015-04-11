@@ -93,7 +93,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Loading data
     val sphereFuture = Rendering.loadModelFromResourceFolder("/games/demo/models/sphere", gl, loopExecutionContext)
     val planeFuture = Rendering.loadModelFromResourceFolder("/games/demo/models/plane", gl, loopExecutionContext)
-    val dataLoadedFuture = Future.sequence(Seq(sphereFuture, planeFuture)).map { _ => itf.printLine("Data loaded successfully") }
+    val simpleShaderFuture = Rendering.loadShaders("/games/demo/shaders/simple", gl, loopExecutionContext)
+
+    val dataLoadedFuture = for (
+      sphere <- sphereFuture;
+      plane <- planeFuture;
+      simpleShader <- simpleShaderFuture
+    ) yield {
+      itf.printLine("All data loaded successfully")
+    }
 
     // Init network
     val networkStartedFuture = dataLoadedFuture.flatMap { _ =>
