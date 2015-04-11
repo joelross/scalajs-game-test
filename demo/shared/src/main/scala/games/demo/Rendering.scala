@@ -15,7 +15,7 @@ object Rendering {
   def loadModelFromResourceFolder(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[OpenGLMesh] = {
     val mainResource = Resource(resourceFolder + "/main")
     val mainFileFuture = Utils.getTextDataFromResource(mainResource)
-    val mainFuture = for (mainFile <- mainFileFuture) yield {
+    mainFileFuture.flatMap { mainFile =>
       val mainLines = Utils.lines(mainFile)
 
       var nameOpt: Option[String] = None
@@ -107,7 +107,5 @@ object Rendering {
         OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes)
       }(openglContext)
     }
-
-    Utils.reduceFuture(mainFuture)
   }
 }
