@@ -46,9 +46,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var localPlayerId: Int = 0
 
   private var currentPosition: Vector3f = new Vector3f(0, 0, 0)
-  private var currentOrientationX: Float = 0
-  private var currentOrientationY: Float = 0
-  private var currentOrientationZ: Float = 0
+  private var currentOrientation: Vector3f = new Vector3f(0, 0, 0)
+  private var currentVelocity: Float = 0
 
   private var otherPlayers: Seq[PlayerServerUpdate] = Seq()
   private var lastTimeUpdateFromServer: Option[Long] = None
@@ -99,7 +98,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     futureConnection.onSuccess {
       case conn =>
         itf.printLine("Websocket connection established")
-        this.connection = Some(conn)
+        // Wait for the Hello packet to register the connection
         conn.handlerPromise.success { msg =>
           val serverMsg = upickle.read[ServerMessage](msg)
 
@@ -107,12 +106,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
             case Ping => // answer that ASAP
               sendMsg(Pong)
 
-            case Hello(playerId, initPos, initDir) =>
+            case Hello(playerId, initPostion, initOrientation) =>
+              this.connection = Some(conn)
               localPlayerId = playerId
-              currentPosition = conv(initPos)
-              currentOrientationX = initDir.x
-              currentOrientationY = initDir.y
-              currentOrientationZ = initDir.z
+              currentPosition = conv(initPostion)
+              currentOrientation = conv(initOrientation)
               itf.printLine("You are player " + playerId)
 
             case ServerUpdate(players, newEvents) =>
@@ -164,9 +162,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Network (if necessary)
     for (conn <- connection) {
       if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
-        val position = Vector3(currentPosition.x, currentPosition.y, currentPosition.z)
-        val velocity = 0f
-        val orientation = Vector3(currentOrientationX, currentOrientationY, currentOrientationZ)
+        val position = conv(currentPosition)
+        val velocity = currentVelocity
+        val orientation = conv(currentOrientation)
         val rotation = Vector3(0, 0, 0)
         val clientUpdate = ClientUpdate(position, velocity, orientation, rotation)
 
