@@ -48,19 +48,7 @@ object Utils extends UtilsImpl {
   /**
    * Function reducing a Future[Future[T]] to a Future[T]
    */
-  def reduceFuture[T](orig: Future[Future[T]])(implicit ec: ExecutionContext): Future[T] = {
-    val promise = Promise[T]
-
-    // Using immediateExecutionContext to reduce threading overhead
-    orig.onSuccess {
-      case inner =>
-        inner.onSuccess { case value => promise.success(value) }(immediateExecutionContext)
-        inner.onFailure { case t => promise.failure(t) }(immediateExecutionContext)
-    }(immediateExecutionContext)
-    orig.onFailure { case t => promise.failure(t) }(immediateExecutionContext)
-
-    promise.future
-  }
+  def reduceFuture[T](orig: Future[Future[T]])(implicit ec: ExecutionContext): Future[T] = orig.flatMap(identity)
 }
 
 package object input {
