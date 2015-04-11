@@ -93,7 +93,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Loading data
     val sphereFuture = Rendering.loadModelFromResourceFolder("/games/demo/models/sphere", gl, loopExecutionContext)
     val planeFuture = Rendering.loadModelFromResourceFolder("/games/demo/models/plane", gl, loopExecutionContext)
-    val simpleShaderFuture = Rendering.loadShaders("/games/demo/shaders/simple", gl, loopExecutionContext)
+    val simpleShaderFuture = Rendering.loadShadersFromResourceFolder("/games/demo/shaders/simple", gl, loopExecutionContext)
 
     val dataLoadedFuture = for (
       sphere <- sphereFuture;

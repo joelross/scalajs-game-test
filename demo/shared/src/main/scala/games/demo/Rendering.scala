@@ -12,7 +12,7 @@ case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambien
 case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
 
 object Rendering {
-  def loadShaders(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[Token.Program] = {
+  def loadShadersFromResourceFolder(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[Token.Program] = {
     val vertexResource = Resource(resourceFolder + "/vertex.c")
     val fragmentResource = Resource(resourceFolder + "/fragment.c")
 
