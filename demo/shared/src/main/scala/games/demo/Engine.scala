@@ -32,6 +32,7 @@ abstract class EngineInterface {
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   private val updateIntervalMs = 25 // Resend position at 40Hz
+  private val rotationSpeed: Float = 50.0f
 
   def context: games.opengl.GLES2 = gl
 
@@ -160,6 +161,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     processKeyboard()
 
     // Simulation
+    currentOrientation.x += (delta.x.toFloat / width.toFloat) * -rotationSpeed
+    currentOrientation.y += (delta.y.toFloat / height.toFloat) * -rotationSpeed
+
+    currentPosition += Physics.matrixForOrientation(currentOrientation) * (Vector3f.Front * (currentVelocity * elapsedSinceLastFrame))
 
     // Network (if necessary)
     for (conn <- connection) {

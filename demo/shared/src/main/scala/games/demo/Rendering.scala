@@ -12,6 +12,48 @@ case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambien
 case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
 
 object Rendering {
+  def loadShaders(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[Token.Program] = {
+    val vertexResource = Resource(resourceFolder + "/vertex.c")
+    val fragmentResource = Resource(resourceFolder + "/fragment.c")
+
+    val vertexFileFuture = Utils.getTextDataFromResource(vertexResource)
+    val fragmentFileFuture = Utils.getTextDataFromResource(fragmentResource)
+
+    val filesFuture = Future.sequence(Seq(vertexFileFuture, fragmentFileFuture))
+
+    filesFuture.map {
+      case Seq(vertexFile, fragmentFile) =>
+        val program = gl.createProgram()
+
+        def compileShader(shaderType: Int, source: String): Token.Shader = {
+          val shader = gl.createShader(shaderType)
+          gl.shaderSource(shader, source)
+          gl.compileShader(shader)
+
+          // Check for compilation error
+          if (gl.getShaderParameterb(shader, GLES2.COMPILE_STATUS) == false) {
+            val msg = gl.getShaderInfoLog(shader)
+            throw new RuntimeException("Error in the compilation of the shader : " + msg)
+          }
+
+          gl.attachShader(program, shader)
+          shader
+        }
+
+        val vertexShader = compileShader(GLES2.VERTEX_SHADER, vertexFile)
+        val fragmentShader = compileShader(GLES2.FRAGMENT_SHADER, fragmentFile)
+        gl.linkProgram(program)
+
+        // Check for linking error
+        if (gl.getProgramParameterb(program, GLES2.LINK_STATUS) == false) {
+          val msg = gl.getProgramInfoLog(program)
+          throw new RuntimeException("Error in the linking of the program : " + msg)
+        }
+
+        program
+    }(openglContext)
+  }
+
   def loadModelFromResourceFolder(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[OpenGLMesh] = {
     val mainResource = Resource(resourceFolder + "/main")
     val mainFileFuture = Utils.getTextDataFromResource(mainResource)
