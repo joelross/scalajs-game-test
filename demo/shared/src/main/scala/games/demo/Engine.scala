@@ -101,7 +101,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
     }
 
-    // Init network
+    // Init network (wait for data loading to complete before that)
     val networkStartedFuture = dataLoadedFuture.flatMap { _ =>
       val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
       futureConnection.map { conn =>
@@ -139,7 +139,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // TODO
 
-    Some(networkStartedFuture) // wait for network (last part) to setup before proceding
+    Some(networkStartedFuture) // wait for network setup (last part) to complete before proceding
   } catch {
     case t: Throwable => Some(Future.failed(throw new RuntimeException("Could not init game engine", t)))
   }
