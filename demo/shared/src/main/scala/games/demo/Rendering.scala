@@ -77,7 +77,7 @@ object Rendering {
         val verticesBuffer = gl.createBuffer()
         gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
         gl.bufferData(GLES2.ARRAY_BUFFER, verticesData, GLES2.STATIC_DRAW)
-        val normals = mesh.normals.get
+        val normals = mesh.normals.getOrElse(throw new RuntimeException("Missing normals"))
         assert(meshVerticesCount == normals.length) // Sanity check
         val normalsData = GLES2.createFloatBuffer(meshVerticesCount * 3)
         normals.foreach { v => v.store(normalsData) }
@@ -101,7 +101,8 @@ object Rendering {
           val indicesBuffer = gl.createBuffer()
           gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
           gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesData, GLES2.STATIC_DRAW)
-          OpenGLSubMesh(indicesBuffer, submeshVerticesCount, submesh.material.get.ambientColor.get, submesh.material.get.diffuseColor.get)
+          val material = submesh.material.getOrElse(throw new RuntimeException("Missing material"))
+          OpenGLSubMesh(indicesBuffer, submeshVerticesCount, material.ambientColor.getOrElse(throw new RuntimeException("Missing ambient color")), material.diffuseColor.getOrElse(throw new RuntimeException("Missing ambient color")))
         }
 
         OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes)

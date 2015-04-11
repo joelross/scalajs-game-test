@@ -91,12 +91,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // Loading data
     val sphereFuture = Rendering.loadModelFromResourceFolder("/games/demo/sphere", gl, loopExecutionContext)
-    val ret = sphereFuture.map { _ => Console.println("Sphere loaded successfully") }
+    val planeFuture = Rendering.loadModelFromResourceFolder("/games/demo/plane", gl, loopExecutionContext)
+    val dataLoadedFuture = Future.sequence(Seq(sphereFuture, planeFuture)).map { _ => Console.println("Data loaded successfully") }
 
     // Init network
-    val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
-    futureConnection.onSuccess {
-      case conn =>
+    val networkStartedFuture = dataLoadedFuture.flatMap { _ =>
+      val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
+      futureConnection.map { conn =>
         itf.printLine("Websocket connection established")
         // Wait for the Hello packet to register the connection
         conn.handlerPromise.success { msg =>
@@ -126,11 +127,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
             itf.printLine("Websocket connection closed")
             this.connection = None
         }
+      }
     }
 
     // TODO
 
-    Some(ret)
+    Some(networkStartedFuture) // wait for network (last part) to setup before proceding
   } catch {
     case t: Throwable => Some(Future.failed(throw new RuntimeException("Could not init game engine", t)))
   }
