@@ -15,6 +15,8 @@ import games.input._
 
 import games.demo._
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 object Launcher {
 
   def main(args: Array[String]): Unit = {
@@ -52,10 +54,7 @@ object Launcher {
       }
     }
 
-    val localEC = JvmUtils.openglExecutionContext
-    val parEC = scala.concurrent.ExecutionContext.Implicits.global
-
-    val engine = new Engine(itf, localEC, parEC)
+    val engine = new Engine(itf)
 
     Utils.startFrameListener(engine)
   }

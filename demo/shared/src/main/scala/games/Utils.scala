@@ -8,6 +8,8 @@ import games.opengl.Token
 case class FrameEvent(elapsedTime: Float)
 
 trait FrameListener {
+  final val loopExecutionContext: ExecutionContext = Utils.getLoopThreadExecutionContext()
+
   def context: GLES2
 
   def onCreate(): Option[Future[Unit]]
@@ -17,9 +19,10 @@ trait FrameListener {
 }
 
 trait UtilsRequirements {
+  def getLoopThreadExecutionContext(): ExecutionContext
   def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer]
   def getTextDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[String]
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, preload: => Boolean = true)(implicit gl: games.opengl.GLES2, ec: ExecutionContext): scala.concurrent.Future[Unit]
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext, preload: => Boolean = true)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit]
   def startFrameListener(fl: games.FrameListener): Unit
 }
 

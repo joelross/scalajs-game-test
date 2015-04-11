@@ -12,6 +12,8 @@ import games.input._
 
 import games.demo._
 
+import scalajs.concurrent.JSExecutionContext.Implicits.queue
+
 object Launcher extends js.JSApp {
   def main(): Unit = {
     JsUtils.setResourcePath("/resources")
@@ -46,9 +48,7 @@ object Launcher extends js.JSApp {
       def close(): Unit = {}
     }
 
-    val ec = scalajs.concurrent.JSExecutionContext.Implicits.queue
-
-    val engine = new Engine(itf, ec, ec)
+    val engine = new Engine(itf)
 
     Utils.startFrameListener(engine)
   }

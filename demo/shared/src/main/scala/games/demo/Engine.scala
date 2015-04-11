@@ -30,8 +30,7 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionContext) extends games.FrameListener {
-  private implicit val standardEC = parEC
+class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   private val updateIntervalMs = 25 // Resend position at 40Hz
 
   def context: games.opengl.GLES2 = gl
@@ -92,9 +91,8 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
     audioContext.volume = 0.25f // Lower the initial global volume
 
     // Loading data
-    val sphereFuture = Rendering.loadModelFromResourceFolder("/games/demo/sphere", gl, localEC)
-    sphereFuture.onSuccess { case mesh => Console.println("Sphere loaded successfully") }
-    sphereFuture.onFailure { case t => t.printStackTrace() }
+    val sphereFuture = Rendering.loadModelFromResourceFolder("/games/demo/sphere", gl, loopExecutionContext)
+    val ret = sphereFuture.map { _ => Console.println("Sphere loaded successfully") }
 
     // Init network
     val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
@@ -134,7 +132,7 @@ class Engine(itf: EngineInterface, localEC: ExecutionContext, parEC: ExecutionCo
 
     // TODO
 
-    None
+    Some(ret)
   } catch {
     case t: Throwable => Some(Future.failed(throw new RuntimeException("Could not init game engine", t)))
   }

@@ -87,6 +87,8 @@ object JsUtils {
 }
 
 trait UtilsImpl extends UtilsRequirements {
+  def getLoopThreadExecutionContext(): ExecutionContext = scalajs.concurrent.JSExecutionContext.Implicits.queue
+
   def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer] = {
     val xmlRequest = new dom.XMLHttpRequest()
 
@@ -118,6 +120,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     promise.future
   }
+
   def getTextDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[String] = {
     val xmlRequest = new dom.XMLHttpRequest()
 
@@ -148,7 +151,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     promise.future
   }
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, preload: => Boolean = true)(implicit gl: games.opengl.GLES2, ec: ExecutionContext): scala.concurrent.Future[Unit] = {
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext, preload: => Boolean = true)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit] = {
     val image = dom.document.createElement("img").asInstanceOf[js.Dynamic]
 
     val promise = Promise[Unit]
