@@ -33,7 +33,7 @@ object Rendering {
           // Check for compilation error
           if (gl.getShaderParameterb(shader, GLES2.COMPILE_STATUS) == false) {
             val msg = gl.getShaderInfoLog(shader)
-            throw new RuntimeException("Error in the compilation of the shader : " + msg)
+            throw new RuntimeException("Error in the compilation of the shader: " + msg)
           }
 
           gl.attachShader(program, shader)
@@ -47,7 +47,7 @@ object Rendering {
         // Check for linking error
         if (gl.getProgramParameterb(program, GLES2.LINK_STATUS) == false) {
           val msg = gl.getProgramInfoLog(program)
-          throw new RuntimeException("Error in the linking of the program : " + msg)
+          throw new RuntimeException("Error in the linking of the program: " + msg)
         }
 
         program
