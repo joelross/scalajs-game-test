@@ -79,6 +79,8 @@ object GlobalLogic {
 class Room(val id: Int) extends Actor {
   println("Creating room " + id)
 
+  val maxPlayers = 2
+
   val players: mutable.Set[Player] = mutable.Set()
   var events: mutable.Queue[demo.Event] = mutable.Queue()
 
@@ -101,7 +103,7 @@ class Room(val id: Int) extends Actor {
 
   def receive: Receive = {
     case RegisterPlayer(playerActor) =>
-      if (players.size >= 2 || reportedFull) {
+      if (players.size >= maxPlayers || reportedFull) {
         reportedFull = true
         sender ! RoomFull
       } else {

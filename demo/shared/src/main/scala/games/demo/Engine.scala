@@ -110,24 +110,27 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         conn.handlerPromise.success { msg =>
           val serverMsg = upickle.read[ServerMessage](msg)
 
-          serverMsg match {
-            case Ping => // answer that ASAP
-              sendMsg(Pong)
+          Future { // To avoid concurrency issue, process the following in the loop thread
+            serverMsg match {
+              case Ping => // answer that ASAP
+                sendMsg(Pong)
 
-            case Hello(playerId, initPostion, initOrientation) =>
-              this.connection = Some(conn)
-              localPlayerId = playerId
-              currentPosition = conv(initPostion)
-              currentOrientation = conv(initOrientation)
-              itf.printLine("You are player " + playerId)
+              case Hello(playerId, initPostion, initOrientation) =>
+                this.connection = Some(conn)
+                localPlayerId = playerId
+                currentPosition = conv(initPostion)
+                currentOrientation = conv(initOrientation)
+                itf.printLine("You are player " + playerId)
 
-            case ServerUpdate(players, newEvents) =>
-              lastTimeUpdateFromServer = Some(System.currentTimeMillis())
-              otherPlayers = players.filter { _.id != localPlayerId }
-              newEvents.foreach { event =>
-                // TODO process event
-              }
-          }
+              case ServerUpdate(players, newEvents) =>
+                lastTimeUpdateFromServer = Some(System.currentTimeMillis())
+                otherPlayers = players.filter { _.id != localPlayerId }
+                newEvents.foreach { event =>
+                  // TODO process event
+                }
+            }
+          }(loopExecutionContext)
+
         }
         conn.closedFuture.onSuccess {
           case _ =>
