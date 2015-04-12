@@ -190,9 +190,14 @@ trait UtilsImpl extends UtilsRequirements {
 
     val ctx = new FrameListenerLoopContext
 
+    def close(): Unit = {
+      ctx.closed = true
+      fl.onClose()
+    }
+
     def loop(timeStamp: js.Any): Unit = {
       if (!ctx.closed) {
-        if (fl.continue()) {
+        try if (fl.continue()) {
           // Main loop call
           val currentTime = JsUtils.now()
           val diff = ((currentTime - ctx.lastLoopTime) / 1e3).toFloat
@@ -201,30 +206,35 @@ trait UtilsImpl extends UtilsRequirements {
           fl.onDraw(frameEvent)
           g.window.requestAnimationFrame(loop _)
         } else {
-          ctx.closed = true
-          fl.onClose()
+          close()
+        } catch {
+          case t: Throwable =>
+            Console.err.println("Error during looping of FrameListener")
+            t.printStackTrace(Console.err)
+
+            close()
         }
       }
     }
 
     def loopInit(timeStamp: js.Any): Unit = {
-      val readyOptFuture = fl.onCreate()
+      val readyOptFuture = try { fl.onCreate() } catch { case t: Throwable => Some(Future.failed(t)) }
       readyOptFuture match {
         case None => loop(timeStamp) // ready right now
 
         case Some(future) => // wait for the future to complete
-          val exe = scalajs.concurrent.JSExecutionContext.Implicits.runNow
+          val ec = scalajs.concurrent.JSExecutionContext.Implicits.runNow
           future.onSuccess {
             case _ =>
               loop(timeStamp)
-          }(exe)
+          }(ec)
           future.onFailure {
             case t => // Don't start the loop in case of failure of the given future
               Console.err.println("Could not init FrameListener")
               t.printStackTrace(Console.err)
 
-              fl.onClose()
-          }(exe)
+              close()
+          }(ec)
 
       }
 

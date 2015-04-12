@@ -81,7 +81,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
   }
 
-  def onCreate(): Option[Future[Unit]] = try {
+  def onCreate(): Option[Future[Unit]] = {
     itf.printLine("Starting...")
     this.gl = new GLES2Debug(itf.initGL()) // Init OpenGL (Enable automatic error checking by encapsuling it in GLES2Debug)
     this.audioContext = itf.initAudio() // Init Audio
@@ -143,8 +143,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // TODO
 
     Some(networkStartedFuture) // wait for network setup (last part) to complete before proceding
-  } catch {
-    case t: Throwable => Some(Future.failed(throw new RuntimeException("Could not init game engine", t)))
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {

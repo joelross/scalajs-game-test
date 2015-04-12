@@ -129,7 +129,9 @@ trait UtilsImpl extends UtilsRequirements {
     val frameListenerThread = new Thread(new Runnable {
       def run() {
         var lastLoopTime: Long = System.nanoTime()
-        val readyOptFuture = fl.onCreate()
+        val readyOptFuture = try { fl.onCreate() } catch { case t: Throwable => Some(Future.failed(t)) }
+
+        var looping = true
 
         readyOptFuture match {
           case None => // just continue
@@ -137,7 +139,6 @@ trait UtilsImpl extends UtilsRequirements {
             while (!future.isCompleted) {
               // Execute the pending tasks
               fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
-
               Thread.sleep(100) // Don't exhaust the CPU, 10Hz should be enough
             }
 
@@ -146,13 +147,11 @@ trait UtilsImpl extends UtilsRequirements {
               case Failure(t) =>
                 Console.err.println("Could not init FrameListener")
                 t.printStackTrace(Console.err)
-
-                fl.onClose()
-                return // stop the thread here
+                looping = false
             }
         }
 
-        while (fl.continue()) {
+        try while (looping && fl.continue()) {
           // Execute the pending tasks
           fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
 
@@ -164,7 +163,12 @@ trait UtilsImpl extends UtilsRequirements {
           fl.onDraw(frameEvent)
 
           Display.update()
+        } catch {
+          case t: Throwable =>
+            Console.err.println("Error during looping of FrameListener")
+            t.printStackTrace(Console.err)
         }
+
         fl.onClose()
       }
     })
