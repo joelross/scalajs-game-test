@@ -75,6 +75,8 @@ object Rendering {
           throw new RuntimeException("Error in the linking of the program: " + msg)
         }
 
+        gl.checkError()
+
         program
     }(openglContext)
   }
@@ -171,6 +173,8 @@ object Rendering {
           val material = submesh.material.getOrElse(throw new RuntimeException("Missing material"))
           OpenGLSubMesh(indicesBuffer, submeshVerticesCount, material.ambientColor.getOrElse(throw new RuntimeException("Missing ambient color")), material.diffuseColor.getOrElse(throw new RuntimeException("Missing ambient color")))
         }
+
+        gl.checkError()
 
         OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes)
       }(openglContext)
