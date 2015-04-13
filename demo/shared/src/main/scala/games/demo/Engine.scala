@@ -141,7 +141,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val helloPacketReceived = Promise[Unit]
 
     // Init network (wait for data loading to complete before that)
-    val networkStartedFuture = retrieveInfoFromDataFuture.flatMap { _ =>
+    val networkFuture = retrieveInfoFromDataFuture.flatMap { _ =>
       val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
       futureConnection.map { conn =>
         itf.printLine("Websocket connection established")
@@ -161,7 +161,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 localData.position = conv(initPostion)
                 localData.orientation = conv(initOrientation)
                 itf.printLine("You are player " + playerId)
-                helloPacketReceived.success()
+                helloPacketReceived.success((): Unit)
 
               case ServerUpdate(players, newEvents) =>
                 lastTimeUpdateFromServer = Some(now)
@@ -187,7 +187,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
             this.connection = None
         }
       }
-    }
+    }.flatMap { _ => helloPacketReceived.future }
 
     // Setup OpenGL
     gl.clearColor(0.75f, 0.75f, 0.75f, 1) // black background
@@ -203,7 +203,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.viewport(0, 0, width, height)
     projection = Matrix4f.perspective3D(fovy, width.toFloat / height.toFloat, near, far)
 
-    Some(helloPacketReceived.future) // wait for network setup (last part) to complete before proceding
+    Some(networkFuture) // wait for network setup (last part) to complete before proceding
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {
