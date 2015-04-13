@@ -67,8 +67,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var lastTimeUpdateFromServer: Option[Long] = None
   private var lastTimeUpdateToServer: Option[Long] = None
 
-  private var shipModel: OpenGLMesh = _
+  private var planeMesh: OpenGLMesh = _
+  private var shipMesh: OpenGLMesh = _
   private var shipProgram: Token.Program = _
+
+  private val planeTransform = Matrix4f.translate3D(new Vector3f(0, 0, -10)) * Matrix4f.scale3D(new Vector3f(50, 50, 50))
 
   private var positionAttrLoc: Int = _
   private var normalAttrLoc: Int = _
@@ -123,7 +126,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     ) yield {
       itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
 
-      shipModel = models("ship")
+      planeMesh = models("plane")
+      shipMesh = models("ship")
       shipProgram = shaders("ship")
     }
 
@@ -283,9 +287,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val cameraTransform = Matrix4f.translate3D(localData.position) * localOrientationMatrix.toHomogeneous()
     val cameraTransformInv = cameraTransform.invertedCopy()
 
+    //Rendering.render(planeMesh, planeTransform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
+
     for ((extId, extVal) <- extData) {
       val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
-      Rendering.render(shipModel, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
+      Rendering.render(shipMesh, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
     }
 
     gl.disableVertexAttribArray(normalAttrLoc)
