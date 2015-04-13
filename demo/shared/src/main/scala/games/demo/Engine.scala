@@ -4,10 +4,10 @@ import transport.ConnectionHandle
 import transport.WebSocketUrl
 import games.demo.Specifics.WebSocketClient
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ Promise, Future, ExecutionContext }
 import games._
 import games.math
-import games.math.{ Vector3f, Vector4f, Matrix4f, Matrix3f }
+import games.math.{ Vector3f, Vector4f, Matrix3f, Matrix4f }
 import games.opengl._
 import games.audio._
 import games.input._
@@ -138,6 +138,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       modelViewInvTrUniLoc = gl.getUniformLocation(shipProgram, "modelViewInvTr")
     }(loopExecutionContext)
 
+    val helloPacketReceived = Promise[Unit]
+
     // Init network (wait for data loading to complete before that)
     val networkStartedFuture = retrieveInfoFromDataFuture.flatMap { _ =>
       val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
@@ -159,6 +161,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 localData.position = conv(initPostion)
                 localData.orientation = conv(initOrientation)
                 itf.printLine("You are player " + playerId)
+                helloPacketReceived.success()
 
               case ServerUpdate(players, newEvents) =>
                 lastTimeUpdateFromServer = Some(now)
@@ -200,7 +203,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.viewport(0, 0, width, height)
     projection = Matrix4f.perspective3D(fovy, width.toFloat / height.toFloat, near, far)
 
-    Some(networkStartedFuture) // wait for network setup (last part) to complete before proceding
+    Some(helloPacketReceived.future) // wait for network setup (last part) to complete before proceding
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {
