@@ -187,7 +187,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     // Setup OpenGL
-    gl.clearColor(0.25f, 0.25f, 0.25f, 1) // black background
+    gl.clearColor(0.75f, 0.75f, 0.75f, 1) // black background
 
     gl.enable(GLES2.DEPTH_TEST)
     gl.depthFunc(GLES2.LESS)
@@ -218,6 +218,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       for (keyEvent <- optKeyEvent) {
         if (keyEvent.down) keyEvent.key match {
           case Key.Escape => continueCond = false
+          case Key.L      => mouse.locked = !mouse.locked
+          case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
           case _          => // nothing to do
         }
 
@@ -226,8 +228,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     processKeyboard()
 
-    if (keyboard.isKeyDown(Key.W)) localData.velocity = 1f
-    else localData.velocity = 0f
+    if (keyboard.isKeyDown(Key.W)) localData.velocity = 3f
+    else if (keyboard.isKeyDown(Key.S)) localData.velocity = 1f
+    else localData.velocity = 2f
 
     // Simulation
     localData.orientation.x += (delta.x.toFloat / width.toFloat) * -rotationSpeed
