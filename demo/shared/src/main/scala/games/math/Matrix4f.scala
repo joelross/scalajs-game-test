@@ -309,9 +309,8 @@ class Matrix4f extends Matrix {
     ret
   }
 
-  def +=(m: Matrix4f): Matrix4f = {
+  def +=(m: Matrix4f): Unit = {
     Matrix4f.add(this, m, this)
-    this
   }
 
   def -(m: Matrix4f): Matrix4f = {
@@ -320,9 +319,8 @@ class Matrix4f extends Matrix {
     ret
   }
 
-  def -=(m: Matrix4f): Matrix4f = {
+  def -=(m: Matrix4f): Unit = {
     Matrix4f.sub(this, m, this)
-    this
   }
 
   def *(m: Matrix4f): Matrix4f = {
@@ -331,9 +329,8 @@ class Matrix4f extends Matrix {
     ret
   }
 
-  def *=(m: Matrix4f): Matrix4f = {
+  def *=(m: Matrix4f): Unit = {
     Matrix4f.mult(this, m, this)
-    this
   }
 
   def *(v: Float): Matrix4f = {
@@ -342,9 +339,8 @@ class Matrix4f extends Matrix {
     ret
   }
 
-  def *=(v: Float): Matrix4f = {
+  def *=(v: Float): Unit = {
     Matrix4f.mult(this, v, this)
-    this
   }
 
   def /(v: Float): Matrix4f = {
@@ -353,9 +349,8 @@ class Matrix4f extends Matrix {
     ret
   }
 
-  def /=(v: Float): Matrix4f = {
+  def /=(v: Float): Unit = {
     Matrix4f.div(this, v, this)
-    this
   }
 
   def *(v: Vector4f): Vector4f = {

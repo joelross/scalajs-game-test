@@ -52,6 +52,7 @@ class Vector4f extends Vector {
   def normalise(): Vector4f = {
     val l = length
     this /= l
+    this
   }
 
   def normalizedCopy(): Vector4f = {
@@ -115,24 +116,20 @@ class Vector4f extends Vector {
     ret
   }
 
-  def +=(v: Vector4f): Vector4f = {
+  def +=(v: Vector4f): Unit = {
     Vector4f.add(this, v, this)
-    this
   }
 
-  def -=(v: Vector4f): Vector4f = {
+  def -=(v: Vector4f): Unit = {
     Vector4f.sub(this, v, this)
-    this
   }
 
-  def *=(v: Float): Vector4f = {
+  def *=(v: Float): Unit = {
     Vector4f.mult(this, v, this)
-    this
   }
 
-  def /=(v: Float): Vector4f = {
+  def /=(v: Float): Unit = {
     Vector4f.div(this, v, this)
-    this
   }
 
   def toCartesian(): Vector3f = {

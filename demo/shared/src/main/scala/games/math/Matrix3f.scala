@@ -221,9 +221,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def +=(m: Matrix3f): Matrix3f = {
+  def +=(m: Matrix3f): Unit = {
     Matrix3f.add(this, m, this)
-    this
   }
 
   def -(m: Matrix3f): Matrix3f = {
@@ -232,9 +231,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def -=(m: Matrix3f): Matrix3f = {
+  def -=(m: Matrix3f): Unit = {
     Matrix3f.sub(this, m, this)
-    this
   }
 
   def *(m: Matrix3f): Matrix3f = {
@@ -243,9 +241,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def *=(m: Matrix3f): Matrix3f = {
+  def *=(m: Matrix3f): Unit = {
     Matrix3f.mult(this, m, this)
-    this
   }
 
   def *(v: Float): Matrix3f = {
@@ -254,9 +251,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def *=(v: Float): Matrix3f = {
+  def *=(v: Float): Unit = {
     Matrix3f.mult(this, v, this)
-    this
   }
 
   def /(v: Float): Matrix3f = {
@@ -265,9 +261,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def /=(v: Float): Matrix3f = {
+  def /=(v: Float): Unit = {
     Matrix3f.div(this, v, this)
-    this
   }
 
   def *(v: Vector3f): Vector3f = {

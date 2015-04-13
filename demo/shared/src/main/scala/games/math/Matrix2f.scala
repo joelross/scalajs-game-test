@@ -150,9 +150,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def +=(m: Matrix2f): Matrix2f = {
+  def +=(m: Matrix2f): Unit = {
     Matrix2f.add(this, m, this)
-    this
   }
 
   def -(m: Matrix2f): Matrix2f = {
@@ -161,9 +160,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def -=(m: Matrix2f): Matrix2f = {
+  def -=(m: Matrix2f): Unit = {
     Matrix2f.sub(this, m, this)
-    this
   }
 
   def *(m: Matrix2f): Matrix2f = {
@@ -172,9 +170,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def *=(m: Matrix2f): Matrix2f = {
+  def *=(m: Matrix2f): Unit = {
     Matrix2f.mult(this, m, this)
-    this
   }
 
   def *(v: Float): Matrix2f = {
@@ -183,9 +180,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def *=(v: Float): Matrix2f = {
+  def *=(v: Float): Unit = {
     Matrix2f.mult(this, v, this)
-    this
   }
 
   def /(v: Float): Matrix2f = {
@@ -194,9 +190,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def /=(v: Float): Matrix2f = {
+  def /=(v: Float): Unit = {
     Matrix2f.div(this, v, this)
-    this
   }
 
   def *(v: Vector2f): Vector2f = {
