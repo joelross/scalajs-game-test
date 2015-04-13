@@ -62,7 +62,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var projection: Matrix4f = _
 
   private var localData: PlayerData = new PlayerData(new Vector3f, 0f, new Vector3f)
-  private var extData: Seq[ExternalPlayerData] = Seq()
+  private var extData: Map[Int, ExternalPlayerData] = Map()
 
   private var lastTimeUpdateFromServer: Option[Long] = None
   private var lastTimeUpdateToServer: Option[Long] = None
@@ -172,8 +172,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 val local = locals.head
 
                 extData = externals.map { data =>
-                  new ExternalPlayerData(data.id, new PlayerData(conv(data.position), data.velocity, conv(data.orientation)), conv(data.rotation), data.latency + local.latency)
-                }
+                  (data.id, new ExternalPlayerData(data.id, new PlayerData(conv(data.position), data.velocity, conv(data.orientation)), conv(data.rotation), data.latency + local.latency))
+                }.toMap
                 newEvents.foreach { event =>
                   // TODO process event
                 }
@@ -238,9 +238,16 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Simulation
     localData.orientation.x += (delta.x.toFloat / width.toFloat) * -rotationSpeed
     localData.orientation.y += (delta.y.toFloat / height.toFloat) * -rotationSpeed
+    if (localData.orientation.y < -45) localData.orientation.y = -45
+    if (localData.orientation.y > +45) localData.orientation.y = +45
 
     val localOrientationMatrix = Physics.matrixForOrientation(localData.orientation)
     localData.position += localOrientationMatrix * (Vector3f.Front * (localData.velocity * elapsedSinceLastFrame))
+
+    for ((extId, extVal) <- extData) {
+      val orientationMatrix = Physics.matrixForOrientation(extVal.data.orientation)
+      extVal.data.position += orientationMatrix * (Vector3f.Front * (extVal.data.velocity * elapsedSinceLastFrame))
+    }
 
     // Network (if necessary)
     for (conn <- connection) {
@@ -276,25 +283,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val cameraTransform = Matrix4f.translate3D(localData.position) * localOrientationMatrix.toHomogeneous()
     val cameraTransformInv = cameraTransform.invertedCopy()
 
-    for (otherPlayer <- extData) {
-      val transform = Matrix4f.translate3D(otherPlayer.data.position) * Physics.matrixForOrientation(otherPlayer.data.orientation).toHomogeneous()
-      val modelView = cameraTransformInv * transform
-      val modelViewInvTr = modelView.invertedCopy().transpose()
-
-      gl.uniformMatrix4f(modelViewUniLoc, modelView)
-      gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
-
-      val mesh = shipModel
-
-      gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.verticesBuffer)
-      gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-      gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
-      gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-      mesh.subMeshes.foreach { submesh =>
-        gl.uniform3f(diffuseColorUniLoc, submesh.diffuseColor)
-        gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
-        gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
-      }
+    for ((extId, extVal) <- extData) {
+      val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
+      Rendering.render(shipModel, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
     }
 
     gl.disableVertexAttribArray(normalAttrLoc)

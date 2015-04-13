@@ -3,7 +3,7 @@ package games.demo
 import scala.concurrent.{ Future, ExecutionContext }
 import games.{ Utils, Resource }
 import games.opengl.{ Token, GLES2 }
-import games.math.Vector3f
+import games.math.{ Vector3f, Matrix4f }
 import games.utils.SimpleOBJParser
 
 import scala.collection.mutable
@@ -178,6 +178,24 @@ object Rendering {
 
         OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes)
       }(openglContext)
+    }
+  }
+
+  def render(mesh: OpenGLMesh, transform: Matrix4f, cameraTransformInv: Matrix4f, gl: GLES2, positionAttrLoc: Int, normalAttrLoc: Int, modelViewUniLoc: Token.UniformLocation, modelViewInvTrUniLoc: Token.UniformLocation, diffuseColorUniLoc: Token.UniformLocation): Unit = {
+    val modelView = cameraTransformInv * transform
+    val modelViewInvTr = modelView.invertedCopy().transpose()
+
+    gl.uniformMatrix4f(modelViewUniLoc, modelView)
+    gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
+
+    gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.verticesBuffer)
+    gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+    gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
+    gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+    mesh.subMeshes.foreach { submesh =>
+      gl.uniform3f(diffuseColorUniLoc, submesh.diffuseColor)
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
+      gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
     }
   }
 }
