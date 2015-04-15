@@ -109,7 +109,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   def onCreate(): Option[Future[Unit]] = {
     itf.printLine("Starting...")
-    this.gl = new GLES2Debug(itf.initGL()) // Init OpenGL (Enable automatic error checking by encapsuling it in GLES2Debug)
+    this.gl = itf.initGL() // Init OpenGL (Enable automatic error checking by encapsuling it in GLES2Debug)
     this.audioContext = itf.initAudio() // Init Audio
     this.keyboard = itf.initKeyboard() // Init Keyboard listening
     this.mouse = itf.initMouse() // Init Mouse listener

@@ -4,6 +4,7 @@ import games.demo
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.concurrent.{ Future, Promise, ExecutionContext }
 import akka.pattern.ask
 import akka.actor.ActorRef
 import akka.actor.Actor
@@ -43,6 +44,10 @@ case object RoomJoined extends LocalMessage // The room has accepted the player
 sealed trait ToPlayerMessage
 case object SendPing extends ToPlayerMessage // Request a ping sent to the client
 case object Disconnected extends ToPlayerMessage // Signal that the client has disconnected
+case object AskData extends ToPlayerMessage // request data of the player (expect responses)
+
+// Player response to GetData
+case class PlayerData(data: Option[demo.PlayerServerUpdate]) extends LocalMessage
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
@@ -94,7 +99,6 @@ class Room(val id: Int) extends Actor {
   val maxPlayers = 4
 
   val players: mutable.Set[Player] = mutable.Set()
-  var events: mutable.Queue[demo.Event] = mutable.Queue()
 
   private def nextPlayerId(): Int = {
     def tryFrom(v: Int): Int = {
@@ -144,13 +148,22 @@ class Room(val id: Int) extends Actor {
       players.foreach { player => player.actor.self ! SendPing }
 
     case UpdateReminder =>
-      val newEvents = immutable.Seq() ++ this.events // Events may be a bit empty for now...
-      val playersData = immutable.Seq() ++ players.flatMap { player =>
-        player.positionData.map { data => demo.PlayerServerUpdate(player.id, player.latency.getOrElse(0), data.position, data.velocity, data.orientation, data.rotation) }
+      implicit val timeout = Timeout(100.milliseconds)
+
+      val newEvents = immutable.Seq()
+
+      val playersData = players.map { player =>
+        (player.actor.self ? AskData).asInstanceOf[Future[PlayerData]]
       }
-      val updateMsg = demo.ServerUpdate(playersData, newEvents)
-      players.foreach { player =>
-        player.sendToClient(updateMsg)
+
+      val allFuture = Future.sequence(playersData)
+
+      for (all <- allFuture) {
+        val playersData = all.flatMap { player => player.data }.toSeq
+        val updateMsg = demo.ServerUpdate(playersData, newEvents)
+        players.foreach { player =>
+          player.sendToClient(updateMsg)
+        }
       }
   }
 }
@@ -180,6 +193,9 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
     case SendPing =>
       lastPingTime = Some(System.currentTimeMillis())
       sendToClient(demo.Ping)
+
+    case AskData =>
+      actor.sender ! PlayerData(positionData.map { data => demo.PlayerServerUpdate(this.id, this.latency.getOrElse(0), data.position, data.velocity, data.orientation, data.rotation) })
   }
 
   def handleClientMessage(msg: demo.ClientMessage): Unit = msg match {
