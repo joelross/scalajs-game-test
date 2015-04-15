@@ -47,7 +47,7 @@ case object Disconnected extends ToPlayerMessage // Signal that the client has d
 case object AskData extends ToPlayerMessage // request data of the player (expect responses)
 
 // Player response to GetData
-case class PlayerData(data: demo.PlayerServerUpdate) extends LocalMessage
+case class DataResponse(data: demo.ServerUpdatePlayerData) extends LocalMessage
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
@@ -153,7 +153,7 @@ class Room(val id: Int) extends Actor {
       val newEvents = immutable.Seq()
 
       val playersData = players.map { player =>
-        (player.actor.self ? AskData).asInstanceOf[Future[PlayerData]]
+        (player.actor.self ? AskData).asInstanceOf[Future[DataResponse]]
       }
 
       val allFuture = Future.sequence(playersData)
@@ -198,7 +198,7 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
       //      actor.sender ! PlayerData(positionData.map {
       //        data => demo.PlayerServerUpdate(this.id, this.latency.getOrElse(0), data.position, data.velocity, data.orientation, data.rotation)
       //      })
-      actor.sender ! PlayerData(demo.PlayerServerUpdate(this.id, this.latency.getOrElse(0), positionData.map { data => demo.SpaceData(data.position, data.velocity, data.orientation, data.rotation) }))
+      actor.sender ! DataResponse(demo.ServerUpdatePlayerData(this.id, this.latency.getOrElse(0), positionData.map { data => demo.SpaceData(data.position, data.velocity, data.orientation, data.rotation) }))
   }
 
   def handleClientMessage(msg: demo.ClientMessage): Unit = msg match {
