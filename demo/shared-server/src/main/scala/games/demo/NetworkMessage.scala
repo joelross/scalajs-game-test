@@ -6,7 +6,7 @@ case class SpaceData(position: Vector3, velocity: Float, orientation: Vector3, r
 
 case class ServerUpdatePlayerData(id: Int, latency: Int, space: Option[SpaceData])
 sealed trait Event
-case class BulletCreation(id: Int, playerId: Int, initialPosition: Vector3, initialOrientation: Vector3) extends Event
+case class BulletCreation(id: Int, playerId: Int, initialPosition: Vector3, orientation: Vector3) extends Event
 case class BulletHit(playerId: Int, shotId: Int, playerDestroyed: Boolean) extends Event
 
 sealed trait NetworkMessage
@@ -19,4 +19,4 @@ case class ServerUpdate(players: Seq[ServerUpdatePlayerData], newEvents: Seq[Eve
 // Server <- Client
 case object Pong extends ClientMessage
 case class ClientUpdate(position: Vector3, velocity: Float, orientation: Vector3, rotation: Vector3) extends ClientMessage
-case class BulletShot(initialPosition: Vector3, direction: Vector3) extends ClientMessage
+case class BulletShot(initialPosition: Vector3, orientation: Vector3) extends ClientMessage

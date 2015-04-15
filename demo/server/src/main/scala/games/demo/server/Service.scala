@@ -178,7 +178,7 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
   var latency: Option[Int] = None
 
   var positionData: Option[demo.ClientUpdate] = None
-  var bulletsData: immutable.Queue[demo.BulletShot] = immutable.Queue()
+  var bulletsData: mutable.Queue[demo.BulletShot] = mutable.Queue()
 
   def sendToClient(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
