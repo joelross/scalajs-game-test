@@ -42,9 +42,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private val fovy: Float = 60f
 
-  // render between 1cm and 100m
-  private val near: Float = 0.01f
-  private val far: Float = 100f
+  // render between 10cm and 1km
+  private val near: Float = 0.1f
+  private val far: Float = 1000f
 
   def context: games.opengl.GLES2 = gl
 
@@ -287,11 +287,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val cameraTransform = Matrix4f.translate3D(localData.position) * localOrientationMatrix.toHomogeneous()
     val cameraTransformInv = cameraTransform.invertedCopy()
 
-    //Rendering.render(planeMesh, planeTransform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
+    //Rendering.render(localPlayerId, planeMesh, planeTransform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
 
     for ((extId, extVal) <- extData) {
       val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
-      Rendering.render(shipMesh, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
+      Rendering.renderShip(localPlayerId, shipMesh, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
     }
 
     gl.disableVertexAttribArray(normalAttrLoc)

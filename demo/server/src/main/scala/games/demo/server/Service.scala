@@ -76,10 +76,22 @@ object GlobalLogic {
   }
 }
 
+object Init {
+  val positions = Map(1 -> demo.Vector3(0, 0, 50), // Player 1 starts behind
+    2 -> demo.Vector3(0, 0, -50), // Player 2 starts in front
+    3 -> demo.Vector3(50, 0, 0), // Player 3 starts on the right
+    4 -> demo.Vector3(-50, 0, 0)) // Player 4 starts on the left
+
+  val orientations = Map(1 -> demo.Vector3(0, 0, 0),
+    2 -> demo.Vector3(180, 0, 0),
+    3 -> demo.Vector3(90, 0, 0),
+    4 -> demo.Vector3(270, 0, 0))
+}
+
 class Room(val id: Int) extends Actor {
   println("Creating room " + id)
 
-  val maxPlayers = 2
+  val maxPlayers = 4
 
   val players: mutable.Set[Player] = mutable.Set()
   var events: mutable.Queue[demo.Event] = mutable.Queue()
@@ -146,7 +158,7 @@ class Room(val id: Int) extends Actor {
 class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
   // Init
   actor.playerLogic = Some(this)
-  sendToClient(demo.Hello(id, demo.Vector3(0, 0, 0), demo.Vector3(0, 0, 0)))
+  sendToClient(demo.Hello(id, Init.positions(id), Init.orientations(id)))
 
   private var lastPingTime: Option[Long] = None
 

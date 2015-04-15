@@ -9,7 +9,7 @@ import games.utils.SimpleOBJParser
 import scala.collection.mutable
 import scala.collection.immutable
 
-case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
+case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f, name: String)
 case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
 
 object Rendering {
@@ -171,7 +171,7 @@ object Rendering {
           gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
           gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesData, GLES2.STATIC_DRAW)
           val material = submesh.material.getOrElse(throw new RuntimeException("Missing material"))
-          OpenGLSubMesh(indicesBuffer, submeshVerticesCount, material.ambientColor.getOrElse(throw new RuntimeException("Missing ambient color")), material.diffuseColor.getOrElse(throw new RuntimeException("Missing ambient color")))
+          OpenGLSubMesh(indicesBuffer, submeshVerticesCount, material.ambientColor.getOrElse(throw new RuntimeException("Missing ambient color")), material.diffuseColor.getOrElse(throw new RuntimeException("Missing ambient color")), material.name)
         }
 
         gl.checkError()
@@ -181,7 +181,7 @@ object Rendering {
     }
   }
 
-  def render(mesh: OpenGLMesh, transform: Matrix4f, cameraTransformInv: Matrix4f, gl: GLES2, positionAttrLoc: Int, normalAttrLoc: Int, modelViewUniLoc: Token.UniformLocation, modelViewInvTrUniLoc: Token.UniformLocation, diffuseColorUniLoc: Token.UniformLocation): Unit = {
+  def renderShip(playerId: Int, mesh: OpenGLMesh, transform: Matrix4f, cameraTransformInv: Matrix4f, gl: GLES2, positionAttrLoc: Int, normalAttrLoc: Int, modelViewUniLoc: Token.UniformLocation, modelViewInvTrUniLoc: Token.UniformLocation, diffuseColorUniLoc: Token.UniformLocation): Unit = {
     val modelView = cameraTransformInv * transform
     val modelViewInvTr = modelView.invertedCopy().transpose()
 
@@ -193,7 +193,8 @@ object Rendering {
     gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
     gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
     mesh.subMeshes.foreach { submesh =>
-      gl.uniform3f(diffuseColorUniLoc, submesh.diffuseColor)
+      val color = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
+      gl.uniform3f(diffuseColorUniLoc, color)
       gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
       gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
     }
