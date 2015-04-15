@@ -195,9 +195,6 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
       sendToClient(demo.Ping)
 
     case AskData =>
-      //      actor.sender ! PlayerData(positionData.map {
-      //        data => demo.PlayerServerUpdate(this.id, this.latency.getOrElse(0), data.position, data.velocity, data.orientation, data.rotation)
-      //      })
       actor.sender ! DataResponse(demo.ServerUpdatePlayerData(this.id, this.latency.getOrElse(0), positionData.map { data => demo.SpaceData(data.position, data.velocity, data.orientation, data.rotation) }))
   }
 

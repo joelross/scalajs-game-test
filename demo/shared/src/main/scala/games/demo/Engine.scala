@@ -175,9 +175,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 assert(locals.size == 1)
                 val local = locals.head
 
-                extData = externals.flatMap { playerServerUpdate =>
-                  playerServerUpdate.space.map { spaceData =>
-                    (playerServerUpdate.id, new ExternalPlayerData(playerServerUpdate.id, new PlayerData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation)), conv(spaceData.rotation), playerServerUpdate.latency + local.latency))
+                extData = externals.flatMap { serverUpdatePlayerData =>
+                  serverUpdatePlayerData.space.map { spaceData =>
+                    (serverUpdatePlayerData.id, new ExternalPlayerData(serverUpdatePlayerData.id, new PlayerData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation)), conv(spaceData.rotation), serverUpdatePlayerData.latency + local.latency))
                   }
                 }.toMap
                 newEvents.foreach { event =>
