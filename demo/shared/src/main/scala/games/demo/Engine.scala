@@ -49,6 +49,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private val near: Float = 0.1f
   private val far: Float = 1000f
 
+  private val shipAngleAtMaxRotationXSpeed: Float = 45f
+
   def context: games.opengl.GLES2 = gl
 
   private var continueCond = true
@@ -85,6 +87,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
+
+  private def interpol(curIn: Float, minIn: Float, maxIn: Float, startValue: Float, endValue: Float): Float = startValue + (curIn - minIn) * (endValue - startValue) / (maxIn - minIn)
 
   def sendMsg(msg: ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
@@ -281,6 +285,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
       val orientationMatrix = Physics.matrixForOrientation(extVal.data.orientation)
       extVal.data.position += orientationMatrix * (Vector3f.Front * (extVal.data.velocity * elapsedSinceLastFrame))
+
+      extVal.data.orientation.z = interpol(extVal.data.rotation.x, -maxRotationXSpeed, +maxRotationXSpeed, +shipAngleAtMaxRotationXSpeed, -shipAngleAtMaxRotationXSpeed)
     }
 
     // Network (if necessary)
@@ -320,6 +326,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     //Rendering.render(localPlayerId, planeMesh, planeTransform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
 
     for ((extId, extVal) <- extData) {
+      //shipAngleAtMaxRotationXSpeed
       val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
       Rendering.renderShip(extId, shipMesh, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
     }
