@@ -293,7 +293,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     for ((extId, extVal) <- extData) {
       val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
-      Rendering.renderShip(localPlayerId, shipMesh, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
+      Rendering.renderShip(extId, shipMesh, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
     }
 
     gl.disableVertexAttribArray(normalAttrLoc)
