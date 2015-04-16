@@ -242,7 +242,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     else localData.velocity = 2f
 
     // Simulation
-    // Local Player
+
+    // Input for local Player
     val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
     val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
     val inputRotationXSpeed = inputRotationX / elapsedSinceLastFrame
@@ -251,10 +252,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     localData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
     localData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
 
-    Physics.step(elapsedSinceLastFrame, localData)
-
-    // External player
-    for ((extId, extVal) <- extData) {
+    Physics.step(elapsedSinceLastFrame, localData) // Local Player
+    for ((extId, extVal) <- extData) { // External players
       Physics.step(elapsedSinceLastFrame, extVal.data)
     }
 
