@@ -33,12 +33,15 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-class PlayerData(var position: Vector3f, var velocity: Float, var orientation: Vector3f)
-class ExternalPlayerData(var id: Int, var data: PlayerData, var rotation: Vector3f, var latency: Int)
+class PlayerData(var position: Vector3f, var velocity: Float, var orientation: Vector3f, var rotation: Vector3f)
+class ExternalPlayerData(var id: Int, var data: PlayerData, var latency: Int)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   private val updateIntervalMs = 25 // Resend position at 40Hz
-  private val rotationSpeed: Float = 50.0f
+  private val rotationMultiplier: Float = 50.0f
+  private val maxRotationXSpeed: Float = 100f
+  private val maxRotationYSpeed: Float = 100f
+  private val maxAngleY: Float = 30f
 
   private val fovy: Float = 60f
 
@@ -61,7 +64,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var screenDim: (Int, Int) = _
   private var projection: Matrix4f = _
 
-  private var localData: PlayerData = new PlayerData(new Vector3f, 0f, new Vector3f)
+  private var localData: PlayerData = new PlayerData(new Vector3f, 0f, new Vector3f, new Vector3f)
   private var extData: Map[Int, ExternalPlayerData] = Map()
 
   private var lastTimeUpdateFromServer: Option[Long] = None
@@ -177,7 +180,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
                 extData = externals.flatMap { serverUpdatePlayerData =>
                   serverUpdatePlayerData.space.map { spaceData =>
-                    (serverUpdatePlayerData.id, new ExternalPlayerData(serverUpdatePlayerData.id, new PlayerData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation)), conv(spaceData.rotation), serverUpdatePlayerData.latency + local.latency))
+                    (serverUpdatePlayerData.id, new ExternalPlayerData(serverUpdatePlayerData.id, new PlayerData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation), conv(spaceData.rotation)), serverUpdatePlayerData.latency + local.latency))
                   }
                 }.toMap
                 newEvents.foreach { event =>
@@ -242,15 +245,40 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     else localData.velocity = 2f
 
     // Simulation
-    localData.orientation.x += (delta.x.toFloat / width.toFloat) * -rotationSpeed
-    localData.orientation.y += (delta.y.toFloat / height.toFloat) * -rotationSpeed
-    if (localData.orientation.y < -45) localData.orientation.y = -45
-    if (localData.orientation.y > +45) localData.orientation.y = +45
+    val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
+    val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
+    val inputRotationXSpeed = inputRotationX / elapsedSinceLastFrame
+    val inputRotationYSpeed = inputRotationY / elapsedSinceLastFrame
+
+    localData.rotation.x = if (Math.abs(inputRotationXSpeed) > maxRotationXSpeed) Math.signum(inputRotationXSpeed) * maxRotationXSpeed else inputRotationXSpeed
+    localData.rotation.y = if (Math.abs(inputRotationYSpeed) > maxRotationYSpeed) Math.signum(inputRotationYSpeed) * maxRotationYSpeed else inputRotationYSpeed
+    localData.orientation.x += localData.rotation.x * elapsedSinceLastFrame
+    localData.orientation.y += localData.rotation.y * elapsedSinceLastFrame
+    if (localData.orientation.y < -maxAngleY) {
+      localData.orientation.y = -maxAngleY
+      localData.rotation.y = 0
+    }
+    if (localData.orientation.y > +maxAngleY) {
+      localData.orientation.y = +maxAngleY
+      localData.rotation.y = 0
+    }
 
     val localOrientationMatrix = Physics.matrixForOrientation(localData.orientation)
     localData.position += localOrientationMatrix * (Vector3f.Front * (localData.velocity * elapsedSinceLastFrame))
 
     for ((extId, extVal) <- extData) {
+      extVal.data.orientation.x += extVal.data.rotation.x * elapsedSinceLastFrame
+      extVal.data.orientation.y += extVal.data.rotation.y * elapsedSinceLastFrame
+
+      if (extVal.data.orientation.y < -45) {
+        extVal.data.orientation.y = -45
+        extVal.data.rotation.y = 0
+      }
+      if (extVal.data.orientation.y > +45) {
+        extVal.data.orientation.y = +45
+        extVal.data.rotation.y = 0
+      }
+
       val orientationMatrix = Physics.matrixForOrientation(extVal.data.orientation)
       extVal.data.position += orientationMatrix * (Vector3f.Front * (extVal.data.velocity * elapsedSinceLastFrame))
     }
@@ -261,7 +289,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val position = conv(localData.position)
         val velocity = localData.velocity
         val orientation = conv(localData.orientation)
-        val rotation = Vector3(0, 0, 0)
+        val rotation = conv(localData.rotation)
         val clientUpdate = ClientUpdate(position, velocity, orientation, rotation)
 
         val msgText = upickle.write(clientUpdate)
