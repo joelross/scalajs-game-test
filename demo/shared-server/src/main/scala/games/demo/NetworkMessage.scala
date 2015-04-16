@@ -18,5 +18,5 @@ case class Hello(playerId: Int, initPos: Vector3, initDir: Vector3) extends Serv
 case class ServerUpdate(players: Seq[ServerUpdatePlayerData], newEvents: Seq[Event]) extends ServerMessage
 // Server <- Client
 case object Pong extends ClientMessage
-case class ClientUpdate(position: Vector3, velocity: Float, orientation: Vector3, rotation: Vector3) extends ClientMessage
+case class ClientPositionUpdate(position: Vector3, velocity: Float, orientation: Vector3, rotation: Vector3) extends ClientMessage
 case class BulletShot(initialPosition: Vector3, orientation: Vector3) extends ClientMessage

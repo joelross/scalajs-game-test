@@ -182,8 +182,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                     (serverUpdatePlayerData.id, new ExternalPlayerData(serverUpdatePlayerData.id, new PlayerData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation), conv(spaceData.rotation)), serverUpdatePlayerData.latency + local.latency))
                   }
                 }.toMap
-                newEvents.foreach { event =>
-                  // TODO process event
+                newEvents.foreach {
+                  case BulletCreation(shotId, shooterId, initialPosition, orientation) if (shooterId != localPlayerId) => Console.println("Bullet shot by player " + shooterId)
+                  case _ =>
                 }
             }
           }(loopExecutionContext)
@@ -221,6 +222,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val width = gl.display.width
     val height = gl.display.height
 
+    var bulletShot = false
+
     // Update from inputs
     val delta = mouse.deltaPosition
 
@@ -238,6 +241,19 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
     processKeyboard()
+
+    def processMouse() {
+      val optMouseEvent = mouse.nextEvent()
+      for (mouseEvent <- optMouseEvent) {
+        mouseEvent match {
+          case ButtonEvent(Button.Left, true) => bulletShot = true
+          case _                              =>
+        }
+
+        processMouse() // process next event
+      }
+    }
+    processMouse()
 
     if (keyboard.isKeyDown(Key.W)) localData.velocity = 3f
     else if (keyboard.isKeyDown(Key.S)) localData.velocity = 1f
@@ -261,15 +277,21 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // Network (if necessary)
     for (conn <- connection) {
-      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
-        val position = conv(localData.position)
-        val velocity = localData.velocity
-        val orientation = conv(localData.orientation)
-        val rotation = conv(localData.rotation)
-        val clientUpdate = ClientUpdate(position, velocity, orientation, rotation)
+      val position = conv(localData.position)
+      val velocity = localData.velocity
+      val orientation = conv(localData.orientation)
+      val rotation = conv(localData.rotation)
 
-        val msgText = upickle.write(clientUpdate)
-        conn.write(msgText)
+      if (bulletShot) {
+        val bulletMsg = BulletShot(position, orientation)
+        val bulletMsgText = upickle.write(bulletMsg)
+        conn.write(bulletMsgText)
+      }
+
+      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
+        val positionUpdateMsg = ClientPositionUpdate(position, velocity, orientation, rotation)
+        val positionUpdateMsgText = upickle.write(positionUpdateMsg)
+        conn.write(positionUpdateMsgText)
 
         lastTimeUpdateToServer = Some(now)
       }
