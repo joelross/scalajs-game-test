@@ -160,12 +160,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 sendMsg(Pong)
 
               case Hello(playerId, initPostion, initOrientation) =>
-                this.connection = Some(conn)
-                localPlayerId = playerId
-                localData.position = conv(initPostion)
-                localData.orientation = conv(initOrientation)
-                itf.printLine("You are player " + playerId)
-                helloPacketReceived.success((): Unit)
+                if (this.connection.isEmpty) {
+                  this.connection = Some(conn)
+                  localPlayerId = playerId
+                  localData.position = conv(initPostion)
+                  localData.orientation = conv(initOrientation)
+                  itf.printLine("You are player " + playerId)
+                  helloPacketReceived.success((): Unit)
+                }
 
               case ServerUpdate(players, newEvents) =>
                 lastTimeUpdateFromServer = Some(now)
@@ -293,8 +295,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     val cameraTransform = Matrix4f.translate3D(localData.position) * Physics.matrixForOrientation(cameraOrientation).toHomogeneous()
     val cameraTransformInv = cameraTransform.invertedCopy()
-
-    //Rendering.render(localPlayerId, planeMesh, planeTransform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
 
     for ((extId, extVal) <- extData) {
       val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
