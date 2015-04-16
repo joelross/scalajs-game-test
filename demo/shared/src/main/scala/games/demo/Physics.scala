@@ -3,6 +3,11 @@ package games.demo
 import games.math.{ Vector3f, Matrix3f }
 
 object Physics {
+  val maxAngleY: Float = 30f
+  val maxRotationXSpeed: Float = 100f
+  val maxRotationYSpeed: Float = 100f
+  val shipAngleAtMaxRotationXSpeed: Float = 45f
+
   /**
    * Orientation:
    * x is the horizontal direction the object is looking at
@@ -13,4 +18,20 @@ object Physics {
    */
   def matrixForOrientation(orientation: Vector3f): Matrix3f = Matrix3f.rotation3D(orientation.x, Vector3f.Up) *
     Matrix3f.rotation3D(orientation.y, Vector3f.Right) * Matrix3f.rotation3D(orientation.z, Vector3f.Front)
+
+  def interpol(curIn: Float, minIn: Float, maxIn: Float, startValue: Float, endValue: Float): Float = startValue + (curIn - minIn) * (endValue - startValue) / (maxIn - minIn)
+
+  def step(elapsedSinceLastFrame: Float, data: PlayerData): Unit = {
+    data.orientation.x += data.rotation.x * elapsedSinceLastFrame
+    data.orientation.y += data.rotation.y * elapsedSinceLastFrame
+    if (Math.abs(data.orientation.y) > maxAngleY) {
+      data.orientation.y = Math.signum(data.orientation.y) * maxAngleY
+      data.rotation.y = 0
+    }
+
+    val localOrientationMatrix = Physics.matrixForOrientation(data.orientation)
+    data.position += localOrientationMatrix * (Vector3f.Front * (data.velocity * elapsedSinceLastFrame))
+
+    data.orientation.z = 0.9f * data.orientation.z + 0.1f * interpol(data.rotation.x, -maxRotationXSpeed, +maxRotationXSpeed, +shipAngleAtMaxRotationXSpeed, -shipAngleAtMaxRotationXSpeed)
+  }
 }

@@ -39,17 +39,12 @@ class ExternalPlayerData(var id: Int, var data: PlayerData, var latency: Int)
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   private val updateIntervalMs = 25 // Resend position at 40Hz
   private val rotationMultiplier: Float = 50.0f
-  private val maxRotationXSpeed: Float = 100f
-  private val maxRotationYSpeed: Float = 100f
-  private val maxAngleY: Float = 30f
 
   private val fovy: Float = 60f
 
   // render between 10cm and 1km
   private val near: Float = 0.1f
   private val far: Float = 1000f
-
-  private val shipAngleAtMaxRotationXSpeed: Float = 45f
 
   def context: games.opengl.GLES2 = gl
 
@@ -87,8 +82,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
-
-  private def interpol(curIn: Float, minIn: Float, maxIn: Float, startValue: Float, endValue: Float): Float = startValue + (curIn - minIn) * (endValue - startValue) / (maxIn - minIn)
 
   def sendMsg(msg: ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
@@ -255,34 +248,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val inputRotationXSpeed = inputRotationX / elapsedSinceLastFrame
     val inputRotationYSpeed = inputRotationY / elapsedSinceLastFrame
 
-    localData.rotation.x = if (Math.abs(inputRotationXSpeed) > maxRotationXSpeed) Math.signum(inputRotationXSpeed) * maxRotationXSpeed else inputRotationXSpeed
-    localData.rotation.y = if (Math.abs(inputRotationYSpeed) > maxRotationYSpeed) Math.signum(inputRotationYSpeed) * maxRotationYSpeed else inputRotationYSpeed
+    localData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
+    localData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
 
-    localData.orientation.x += localData.rotation.x * elapsedSinceLastFrame
-    localData.orientation.y += localData.rotation.y * elapsedSinceLastFrame
-    if (Math.abs(localData.orientation.y) > maxAngleY) {
-      localData.orientation.y = Math.signum(localData.orientation.y) * maxAngleY
-      localData.rotation.y = 0
-    }
-
-    val localOrientationMatrix = Physics.matrixForOrientation(localData.orientation)
-    localData.position += localOrientationMatrix * (Vector3f.Front * (localData.velocity * elapsedSinceLastFrame))
-
-    localData.orientation.z = 0.9f * localData.orientation.z + 0.1f * interpol(localData.rotation.x, -maxRotationXSpeed, +maxRotationXSpeed, +shipAngleAtMaxRotationXSpeed, -shipAngleAtMaxRotationXSpeed)
+    Physics.step(elapsedSinceLastFrame, localData)
 
     // External player
     for ((extId, extVal) <- extData) {
-      extVal.data.orientation.x += extVal.data.rotation.x * elapsedSinceLastFrame
-      extVal.data.orientation.y += extVal.data.rotation.y * elapsedSinceLastFrame
-      if (Math.abs(extVal.data.orientation.y) > maxAngleY) {
-        extVal.data.orientation.y = Math.signum(extVal.data.orientation.y) * maxAngleY
-        extVal.data.rotation.y = 0
-      }
-
-      val orientationMatrix = Physics.matrixForOrientation(extVal.data.orientation)
-      extVal.data.position += orientationMatrix * (Vector3f.Front * (extVal.data.velocity * elapsedSinceLastFrame))
-
-      extVal.data.orientation.z = 0.9f * extVal.data.orientation.z + 0.1f * interpol(extVal.data.rotation.x, -maxRotationXSpeed, +maxRotationXSpeed, +shipAngleAtMaxRotationXSpeed, -shipAngleAtMaxRotationXSpeed)
+      Physics.step(elapsedSinceLastFrame, extVal.data)
     }
 
     // Network (if necessary)
