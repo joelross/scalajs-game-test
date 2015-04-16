@@ -270,6 +270,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val localOrientationMatrix = Physics.matrixForOrientation(localData.orientation)
     localData.position += localOrientationMatrix * (Vector3f.Front * (localData.velocity * elapsedSinceLastFrame))
 
+    localData.orientation.z = 0.9f * localData.orientation.z + 0.1f * interpol(localData.rotation.x, -maxRotationXSpeed, +maxRotationXSpeed, +shipAngleAtMaxRotationXSpeed, -shipAngleAtMaxRotationXSpeed)
+
     for ((extId, extVal) <- extData) {
       extVal.data.orientation.x += extVal.data.rotation.x * elapsedSinceLastFrame
       extVal.data.orientation.y += extVal.data.rotation.y * elapsedSinceLastFrame
@@ -286,7 +288,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val orientationMatrix = Physics.matrixForOrientation(extVal.data.orientation)
       extVal.data.position += orientationMatrix * (Vector3f.Front * (extVal.data.velocity * elapsedSinceLastFrame))
 
-      extVal.data.orientation.z = interpol(extVal.data.rotation.x, -maxRotationXSpeed, +maxRotationXSpeed, +shipAngleAtMaxRotationXSpeed, -shipAngleAtMaxRotationXSpeed)
+      extVal.data.orientation.z = 0.9f * extVal.data.orientation.z + 0.1f * interpol(extVal.data.rotation.x, -maxRotationXSpeed, +maxRotationXSpeed, +shipAngleAtMaxRotationXSpeed, -shipAngleAtMaxRotationXSpeed)
     }
 
     // Network (if necessary)
@@ -320,7 +322,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.enableVertexAttribArray(positionAttrLoc)
     gl.enableVertexAttribArray(normalAttrLoc)
 
-    val cameraTransform = Matrix4f.translate3D(localData.position) * localOrientationMatrix.toHomogeneous()
+    val cameraOrientation = localData.orientation.copy()
+    cameraOrientation.z = 0
+
+    val cameraTransform = Matrix4f.translate3D(localData.position) * Physics.matrixForOrientation(cameraOrientation).toHomogeneous()
     val cameraTransformInv = cameraTransform.invertedCopy()
 
     //Rendering.render(localPlayerId, planeMesh, planeTransform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
