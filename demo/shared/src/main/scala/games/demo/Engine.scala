@@ -249,6 +249,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     else localData.velocity = 2f
 
     // Simulation
+    // Local Player
     val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
     val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
     val inputRotationXSpeed = inputRotationX / elapsedSinceLastFrame
@@ -256,14 +257,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     localData.rotation.x = if (Math.abs(inputRotationXSpeed) > maxRotationXSpeed) Math.signum(inputRotationXSpeed) * maxRotationXSpeed else inputRotationXSpeed
     localData.rotation.y = if (Math.abs(inputRotationYSpeed) > maxRotationYSpeed) Math.signum(inputRotationYSpeed) * maxRotationYSpeed else inputRotationYSpeed
+
     localData.orientation.x += localData.rotation.x * elapsedSinceLastFrame
     localData.orientation.y += localData.rotation.y * elapsedSinceLastFrame
-    if (localData.orientation.y < -maxAngleY) {
-      localData.orientation.y = -maxAngleY
-      localData.rotation.y = 0
-    }
-    if (localData.orientation.y > +maxAngleY) {
-      localData.orientation.y = +maxAngleY
+    if (Math.abs(localData.orientation.y) > maxAngleY) {
+      localData.orientation.y = Math.signum(localData.orientation.y) * maxAngleY
       localData.rotation.y = 0
     }
 
@@ -272,16 +270,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     localData.orientation.z = 0.9f * localData.orientation.z + 0.1f * interpol(localData.rotation.x, -maxRotationXSpeed, +maxRotationXSpeed, +shipAngleAtMaxRotationXSpeed, -shipAngleAtMaxRotationXSpeed)
 
+    // External player
     for ((extId, extVal) <- extData) {
       extVal.data.orientation.x += extVal.data.rotation.x * elapsedSinceLastFrame
       extVal.data.orientation.y += extVal.data.rotation.y * elapsedSinceLastFrame
-
-      if (extVal.data.orientation.y < -45) {
-        extVal.data.orientation.y = -45
-        extVal.data.rotation.y = 0
-      }
-      if (extVal.data.orientation.y > +45) {
-        extVal.data.orientation.y = +45
+      if (Math.abs(extVal.data.orientation.y) > maxAngleY) {
+        extVal.data.orientation.y = Math.signum(extVal.data.orientation.y) * maxAngleY
         extVal.data.rotation.y = 0
       }
 
@@ -331,7 +325,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     //Rendering.render(localPlayerId, planeMesh, planeTransform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
 
     for ((extId, extVal) <- extData) {
-      //shipAngleAtMaxRotationXSpeed
       val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
       Rendering.renderShip(extId, shipMesh, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
     }
