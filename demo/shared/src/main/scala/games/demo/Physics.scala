@@ -8,6 +8,8 @@ object Physics {
   val maxRotationYSpeed: Float = 100f
   val shipAngleAtMaxRotationXSpeed: Float = 45f
 
+  val bulletVelocity: Float = 10f
+
   /**
    * Orientation:
    * x is the horizontal direction the object is looking at
@@ -33,5 +35,9 @@ object Physics {
     data.position += localOrientationMatrix * (Vector3f.Front * (data.velocity * elapsedSinceLastFrame))
 
     data.orientation.z = 0.9f * data.orientation.z + 0.1f * interpol(data.rotation.x, -maxRotationXSpeed, +maxRotationXSpeed, +shipAngleAtMaxRotationXSpeed, -shipAngleAtMaxRotationXSpeed)
+  }
+
+  def stepBullet(elapsedSinceLastFrame: Float, data: BulletData): Unit = {
+
   }
 }

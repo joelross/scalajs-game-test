@@ -228,13 +228,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     processMouse()
 
+    // Apply inputs to local ship
     if (keyboard.isKeyDown(Key.W)) localShipData.velocity = 3f
     else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = 1f
     else localShipData.velocity = 2f
 
-    // Simulation
-
-    // Input for local Player
     val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
     val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
     val inputRotationXSpeed = inputRotationX / elapsedSinceLastFrame
@@ -243,9 +241,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     localShipData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
     localShipData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
 
+    // Simulation
+
+    // Ships
     Physics.stepShip(elapsedSinceLastFrame, localShipData) // Local Player
-    for ((extId, extVal) <- extShipsData) { // External players
-      Physics.stepShip(elapsedSinceLastFrame, extVal.data)
+    for ((shipId, shipData) <- extShipsData) { // External players
+      Physics.stepShip(elapsedSinceLastFrame, shipData.data)
+    }
+
+    // Bullets
+    for ((bulletId, bulletData) <- bulletsData) {
+      Physics.stepBullet(elapsedSinceLastFrame, bulletData)
     }
 
     // Network (if necessary)
@@ -277,22 +283,26 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       Rendering.setProjection(width, height)
     }
 
-    gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
-
-    Rendering.initShipRendering()
-
+    // Camera data
     val cameraOrientation = localShipData.orientation.copy()
     cameraOrientation.z = 0
 
     val cameraTransform = Matrix4f.translate3D(localShipData.position) * Physics.matrixForOrientation(cameraOrientation).toHomogeneous()
     val cameraTransformInv = cameraTransform.invertedCopy()
 
+    // Clear the buffers
+    gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
+
+    // Ships
+    Rendering.initShipRendering()
     for ((extId, extVal) <- extShipsData) {
       val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
       Rendering.renderShip(extId, transform, cameraTransformInv)
     }
-
     Rendering.closeShipRendering()
+
+    // Bullets
+    // TODO
 
     // Ending
     continueCond = continueCond && itf.update()
