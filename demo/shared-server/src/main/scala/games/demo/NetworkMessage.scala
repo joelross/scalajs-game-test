@@ -7,7 +7,7 @@ case class SpaceData(position: Vector3, velocity: Float, orientation: Vector3, r
 case class ServerUpdatePlayerData(id: Int, latency: Int, space: Option[SpaceData])
 sealed trait Event
 case class BulletCreation(id: Int, playerId: Int, initialPosition: Vector3, orientation: Vector3) extends Event
-case class BulletHit(playerId: Int, shotId: Int, playerDestroyed: Boolean) extends Event
+case class BulletDestruction(playerId: Int, shotId: Int, playerDestroyed: Boolean) extends Event
 
 sealed trait NetworkMessage
 sealed trait ClientMessage extends NetworkMessage

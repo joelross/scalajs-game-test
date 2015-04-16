@@ -33,24 +33,20 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-class PlayerData(var position: Vector3f, var velocity: Float, var orientation: Vector3f, var rotation: Vector3f)
-class ExternalPlayerData(var id: Int, var data: PlayerData, var latency: Int)
+class ShipData(var position: Vector3f, var velocity: Float, var orientation: Vector3f, var rotation: Vector3f)
+class ExternalShipData(var id: Int, var data: ShipData, var latency: Int)
+
+class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var orientation: Vector3f)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   private val updateIntervalMs = 25 // Resend position at 40Hz
   private val rotationMultiplier: Float = 50.0f
 
-  private val fovy: Float = 60f
-
-  // render between 10cm and 1km
-  private val near: Float = 0.1f
-  private val far: Float = 1000f
-
   def context: games.opengl.GLES2 = gl
 
   private var continueCond = true
 
-  private var gl: GLES2 = _
+  private implicit var gl: GLES2 = _
   private var audioContext: Context = _
   private var keyboard: Keyboard = _
   private var mouse: Mouse = _
@@ -59,26 +55,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var localPlayerId: Int = 0
 
   private var screenDim: (Int, Int) = _
-  private var projection: Matrix4f = _
 
-  private var localData: PlayerData = new PlayerData(new Vector3f, 0f, new Vector3f, new Vector3f)
-  private var extData: Map[Int, ExternalPlayerData] = Map()
+  private var localShipData: ShipData = new ShipData(new Vector3f, 0f, new Vector3f, new Vector3f)
+  private var extShipsData: Map[Int, ExternalShipData] = Map()
+
+  private var bulletsData: mutable.Map[Int, BulletData] = mutable.Map()
 
   private var lastTimeUpdateFromServer: Option[Long] = None
   private var lastTimeUpdateToServer: Option[Long] = None
-
-  private var planeMesh: OpenGLMesh = _
-  private var shipMesh: OpenGLMesh = _
-  private var shipProgram: Token.Program = _
-
-  private val planeTransform = Matrix4f.translate3D(new Vector3f(0, 0, -10)) * Matrix4f.scale3D(new Vector3f(50, 50, 50))
-
-  private var positionAttrLoc: Int = _
-  private var normalAttrLoc: Int = _
-  private var diffuseColorUniLoc: Token.UniformLocation = _
-  private var projectionUniLoc: Token.UniformLocation = _
-  private var modelViewUniLoc: Token.UniformLocation = _
-  private var modelViewInvTrUniLoc: Token.UniformLocation = _
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
@@ -120,27 +104,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
     val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
 
-    val dataLoadedFuture = for (
-      models <- modelsFuture;
-      shaders <- shadersFuture
-    ) yield {
-      itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
-
-      planeMesh = models("plane")
-      shipMesh = models("ship")
-      shipProgram = shaders("ship")
-    }
-
     // Retrieve useful data from shaders (require access to OpenGL context)
-    val retrieveInfoFromDataFuture = dataLoadedFuture.map { _ =>
-      positionAttrLoc = gl.getAttribLocation(shipProgram, "position")
-      normalAttrLoc = gl.getAttribLocation(shipProgram, "normal")
+    val retrieveInfoFromDataFuture = modelsFuture.flatMap { models =>
+      shadersFuture.map { shaders =>
+        itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
 
-      diffuseColorUniLoc = gl.getUniformLocation(shipProgram, "diffuseColor")
-      projectionUniLoc = gl.getUniformLocation(shipProgram, "projection")
-      modelViewUniLoc = gl.getUniformLocation(shipProgram, "modelView")
-      modelViewInvTrUniLoc = gl.getUniformLocation(shipProgram, "modelViewInvTr")
-    }(loopExecutionContext)
+        val shipProgram = shaders("ship")
+        val shipMesh = models("ship")
+
+        Rendering.setupShipRendering(shipProgram, shipMesh)
+      }(loopExecutionContext)
+    }
 
     val helloPacketReceived = Promise[Unit]
 
@@ -163,8 +137,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 if (this.connection.isEmpty) {
                   this.connection = Some(conn)
                   localPlayerId = playerId
-                  localData.position = conv(initPostion)
-                  localData.orientation = conv(initOrientation)
+                  localShipData.position = conv(initPostion)
+                  localShipData.orientation = conv(initOrientation)
                   itf.printLine("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
                 }
@@ -177,13 +151,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 assert(locals.size == 1)
                 val local = locals.head
 
-                extData = externals.flatMap { serverUpdatePlayerData =>
+                extShipsData = externals.flatMap { serverUpdatePlayerData =>
                   serverUpdatePlayerData.space.map { spaceData =>
-                    (serverUpdatePlayerData.id, new ExternalPlayerData(serverUpdatePlayerData.id, new PlayerData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation), conv(spaceData.rotation)), serverUpdatePlayerData.latency + local.latency))
+                    (serverUpdatePlayerData.id, new ExternalShipData(serverUpdatePlayerData.id, new ShipData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation), conv(spaceData.rotation)), serverUpdatePlayerData.latency + local.latency))
                   }
                 }.toMap
                 newEvents.foreach {
-                  case BulletCreation(shotId, shooterId, initialPosition, orientation) if (shooterId != localPlayerId) => Console.println("Bullet shot by player " + shooterId)
+                  case BulletCreation(shotId, shooterId, initialPosition, orientation) => bulletsData += (shotId -> new BulletData(shotId, shooterId, conv(initialPosition), conv(orientation)))
+                  case BulletDestruction(playerHitId, shotId, playerDestroyed) => bulletsData.remove(shotId)
                   case _ =>
                 }
             }
@@ -208,9 +183,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val height = gl.display.height
 
     screenDim = (width, height)
-
-    gl.viewport(0, 0, width, height)
-    projection = Matrix4f.perspective3D(fovy, width.toFloat / height.toFloat, near, far)
+    Rendering.setProjection(width, height)
 
     Some(networkFuture) // wait for network setup (last part) to complete before proceding
   }
@@ -255,9 +228,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     processMouse()
 
-    if (keyboard.isKeyDown(Key.W)) localData.velocity = 3f
-    else if (keyboard.isKeyDown(Key.S)) localData.velocity = 1f
-    else localData.velocity = 2f
+    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = 3f
+    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = 1f
+    else localShipData.velocity = 2f
 
     // Simulation
 
@@ -267,20 +240,20 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val inputRotationXSpeed = inputRotationX / elapsedSinceLastFrame
     val inputRotationYSpeed = inputRotationY / elapsedSinceLastFrame
 
-    localData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
-    localData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
+    localShipData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
+    localShipData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
 
-    Physics.step(elapsedSinceLastFrame, localData) // Local Player
-    for ((extId, extVal) <- extData) { // External players
-      Physics.step(elapsedSinceLastFrame, extVal.data)
+    Physics.stepShip(elapsedSinceLastFrame, localShipData) // Local Player
+    for ((extId, extVal) <- extShipsData) { // External players
+      Physics.stepShip(elapsedSinceLastFrame, extVal.data)
     }
 
     // Network (if necessary)
     for (conn <- connection) {
-      val position = conv(localData.position)
-      val velocity = localData.velocity
-      val orientation = conv(localData.orientation)
-      val rotation = conv(localData.rotation)
+      val position = conv(localShipData.position)
+      val velocity = localShipData.velocity
+      val orientation = conv(localShipData.orientation)
+      val rotation = conv(localShipData.rotation)
 
       if (bulletShot) {
         val bulletMsg = BulletShot(position, orientation)
@@ -301,30 +274,25 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val curDim = (width, height)
     if (curDim != screenDim) {
       screenDim = curDim
-      gl.viewport(0, 0, width, height)
-      Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
+      Rendering.setProjection(width, height)
     }
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
-    gl.useProgram(shipProgram)
-    gl.uniformMatrix4f(projectionUniLoc, projection)
 
-    gl.enableVertexAttribArray(positionAttrLoc)
-    gl.enableVertexAttribArray(normalAttrLoc)
+    Rendering.initShipRendering()
 
-    val cameraOrientation = localData.orientation.copy()
+    val cameraOrientation = localShipData.orientation.copy()
     cameraOrientation.z = 0
 
-    val cameraTransform = Matrix4f.translate3D(localData.position) * Physics.matrixForOrientation(cameraOrientation).toHomogeneous()
+    val cameraTransform = Matrix4f.translate3D(localShipData.position) * Physics.matrixForOrientation(cameraOrientation).toHomogeneous()
     val cameraTransformInv = cameraTransform.invertedCopy()
 
-    for ((extId, extVal) <- extData) {
+    for ((extId, extVal) <- extShipsData) {
       val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
-      Rendering.renderShip(extId, shipMesh, transform, cameraTransformInv, gl, positionAttrLoc, normalAttrLoc, modelViewUniLoc, modelViewInvTrUniLoc, diffuseColorUniLoc)
+      Rendering.renderShip(extId, transform, cameraTransformInv)
     }
 
-    gl.disableVertexAttribArray(normalAttrLoc)
-    gl.disableVertexAttribArray(positionAttrLoc)
+    Rendering.closeShipRendering()
 
     // Ending
     continueCond = continueCond && itf.update()

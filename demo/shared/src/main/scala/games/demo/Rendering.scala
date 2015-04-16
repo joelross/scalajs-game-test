@@ -181,20 +181,68 @@ object Rendering {
     }
   }
 
-  def renderShip(playerId: Int, mesh: OpenGLMesh, transform: Matrix4f, cameraTransformInv: Matrix4f, gl: GLES2, positionAttrLoc: Int, normalAttrLoc: Int, modelViewUniLoc: Token.UniformLocation, modelViewInvTrUniLoc: Token.UniformLocation, diffuseColorUniLoc: Token.UniformLocation): Unit = {
+  var projection: Matrix4f = new Matrix4f
+
+  private val fovy: Float = 60f // vertical field of view: 60°
+  // render between 10cm and 1km
+  private val near: Float = 0.1f
+  private val far: Float = 1000f
+
+  def setProjection(width: Int, height: Int)(implicit gl: GLES2): Unit = {
+    gl.viewport(0, 0, width, height)
+    Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
+  }
+
+  var shipProgram: Token.Program = _
+  var shipMesh: OpenGLMesh = _
+
+  var shipPositionAttrLoc: Int = _
+  var shipNormalAttrLoc: Int = _
+  var shipDiffuseColorUniLoc: Token.UniformLocation = _
+  var shipProjectionUniLoc: Token.UniformLocation = _
+  var shipModelViewUniLoc: Token.UniformLocation = _
+  var shipModelViewInvTrUniLoc: Token.UniformLocation = _
+
+  def setupShipRendering(program: Token.Program, mesh: OpenGLMesh)(implicit gl: GLES2): Unit = {
+    shipProgram = program
+    shipMesh = mesh
+
+    shipPositionAttrLoc = gl.getAttribLocation(shipProgram, "position")
+    shipNormalAttrLoc = gl.getAttribLocation(shipProgram, "normal")
+
+    shipDiffuseColorUniLoc = gl.getUniformLocation(shipProgram, "diffuseColor")
+    shipProjectionUniLoc = gl.getUniformLocation(shipProgram, "projection")
+    shipModelViewUniLoc = gl.getUniformLocation(shipProgram, "modelView")
+    shipModelViewInvTrUniLoc = gl.getUniformLocation(shipProgram, "modelViewInvTr")
+  }
+
+  def initShipRendering()(implicit gl: GLES2): Unit = {
+    gl.useProgram(shipProgram)
+    gl.uniformMatrix4f(shipProjectionUniLoc, projection)
+
+    gl.enableVertexAttribArray(shipPositionAttrLoc)
+    gl.enableVertexAttribArray(shipNormalAttrLoc)
+  }
+
+  def closeShipRendering()(implicit gl: GLES2): Unit = {
+    gl.disableVertexAttribArray(shipNormalAttrLoc)
+    gl.disableVertexAttribArray(shipPositionAttrLoc)
+  }
+
+  def renderShip(playerId: Int, transform: Matrix4f, cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
     val modelView = cameraTransformInv * transform
     val modelViewInvTr = modelView.invertedCopy().transpose()
 
-    gl.uniformMatrix4f(modelViewUniLoc, modelView)
-    gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
+    gl.uniformMatrix4f(shipModelViewUniLoc, modelView)
+    gl.uniformMatrix4f(shipModelViewInvTrUniLoc, modelViewInvTr)
 
-    gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.verticesBuffer)
-    gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-    gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
-    gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-    mesh.subMeshes.foreach { submesh =>
+    gl.bindBuffer(GLES2.ARRAY_BUFFER, shipMesh.verticesBuffer)
+    gl.vertexAttribPointer(shipPositionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+    gl.bindBuffer(GLES2.ARRAY_BUFFER, shipMesh.normalsBuffer)
+    gl.vertexAttribPointer(shipNormalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+    shipMesh.subMeshes.foreach { submesh =>
       val color = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
-      gl.uniform3f(diffuseColorUniLoc, color)
+      gl.uniform3f(shipDiffuseColorUniLoc, color)
       gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
       gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
     }

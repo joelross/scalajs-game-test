@@ -21,7 +21,7 @@ object Physics {
 
   def interpol(curIn: Float, minIn: Float, maxIn: Float, startValue: Float, endValue: Float): Float = startValue + (curIn - minIn) * (endValue - startValue) / (maxIn - minIn)
 
-  def step(elapsedSinceLastFrame: Float, data: PlayerData): Unit = {
+  def stepShip(elapsedSinceLastFrame: Float, data: ShipData): Unit = {
     data.orientation.x += data.rotation.x * elapsedSinceLastFrame
     data.orientation.y += data.rotation.y * elapsedSinceLastFrame
     if (Math.abs(data.orientation.y) > maxAngleY) {
