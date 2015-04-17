@@ -109,10 +109,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       shadersFuture.map { shaders =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
 
-        val shipProgram = shaders("ship")
-        val shipMesh = models("ship")
-
-        Rendering.setupShipRendering(shipProgram, shipMesh)
+        Rendering.setupShipRendering(shaders("ship"), models("ship"))
+        Rendering.setupBulletRendering(shaders("ship"), models("bullet"))
       }(loopExecutionContext)
     }
 
@@ -295,11 +293,19 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // Ships
     Rendering.initShipRendering()
-    for ((extId, extVal) <- extShipsData) {
-      val transform = Matrix4f.translate3D(extVal.data.position) * Physics.matrixForOrientation(extVal.data.orientation).toHomogeneous()
+    for ((extId, shipData) <- extShipsData) {
+      val transform = Matrix4f.translate3D(shipData.data.position) * Physics.matrixForOrientation(shipData.data.orientation).toHomogeneous()
       Rendering.renderShip(extId, transform, cameraTransformInv)
     }
     Rendering.closeShipRendering()
+
+    // Bullets
+    Rendering.initBulletRendering()
+    for ((bulletId, bulletData) <- bulletsData) {
+      val transform = Matrix4f.translate3D(bulletData.position) * Physics.matrixForOrientation(bulletData.orientation).toHomogeneous()
+      Rendering.renderBullet(bulletData.shooterId, transform, cameraTransformInv)
+    }
+    Rendering.closeBulletRendering()
 
     // Bullets
     // TODO

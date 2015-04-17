@@ -247,4 +247,59 @@ object Rendering {
       gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
     }
   }
+
+  var bulletProgram: Token.Program = _
+  var bulletMesh: OpenGLMesh = _
+
+  var bulletPositionAttrLoc: Int = _
+  var bulletNormalAttrLoc: Int = _
+  var bulletDiffuseColorUniLoc: Token.UniformLocation = _
+  var bulletProjectionUniLoc: Token.UniformLocation = _
+  var bulletModelViewUniLoc: Token.UniformLocation = _
+  var bulletModelViewInvTrUniLoc: Token.UniformLocation = _
+
+  def setupBulletRendering(program: Token.Program, mesh: OpenGLMesh)(implicit gl: GLES2): Unit = {
+    bulletProgram = program
+    bulletMesh = mesh
+
+    bulletPositionAttrLoc = gl.getAttribLocation(bulletProgram, "position")
+    bulletNormalAttrLoc = gl.getAttribLocation(bulletProgram, "normal")
+
+    bulletDiffuseColorUniLoc = gl.getUniformLocation(bulletProgram, "diffuseColor")
+    bulletProjectionUniLoc = gl.getUniformLocation(bulletProgram, "projection")
+    bulletModelViewUniLoc = gl.getUniformLocation(bulletProgram, "modelView")
+    bulletModelViewInvTrUniLoc = gl.getUniformLocation(bulletProgram, "modelViewInvTr")
+  }
+
+  def initBulletRendering()(implicit gl: GLES2): Unit = {
+    gl.useProgram(bulletProgram)
+    gl.uniformMatrix4f(bulletProjectionUniLoc, projection)
+
+    gl.enableVertexAttribArray(bulletPositionAttrLoc)
+    gl.enableVertexAttribArray(bulletNormalAttrLoc)
+  }
+
+  def closeBulletRendering()(implicit gl: GLES2): Unit = {
+    gl.disableVertexAttribArray(bulletNormalAttrLoc)
+    gl.disableVertexAttribArray(bulletPositionAttrLoc)
+  }
+
+  def renderBullet(playerId: Int, transform: Matrix4f, cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
+    val modelView = cameraTransformInv * transform
+    val modelViewInvTr = modelView.invertedCopy().transpose()
+
+    gl.uniformMatrix4f(bulletModelViewUniLoc, modelView)
+    gl.uniformMatrix4f(bulletModelViewInvTrUniLoc, modelViewInvTr)
+
+    gl.bindBuffer(GLES2.ARRAY_BUFFER, bulletMesh.verticesBuffer)
+    gl.vertexAttribPointer(bulletPositionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+    gl.bindBuffer(GLES2.ARRAY_BUFFER, bulletMesh.normalsBuffer)
+    gl.vertexAttribPointer(bulletNormalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+    bulletMesh.subMeshes.foreach { submesh =>
+      val color = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
+      gl.uniform3f(bulletDiffuseColorUniLoc, color)
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
+      gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
+    }
+  }
 }
