@@ -156,7 +156,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 }.toMap
                 newEvents.foreach {
                   case BulletCreation(shotId, shooterId, initialPosition, orientation) => bulletsData += (shotId -> new BulletData(shotId, shooterId, conv(initialPosition), conv(orientation)))
-                  case BulletDestruction(playerHitId, shotId, playerDestroyed) => bulletsData.remove(shotId)
+                  case BulletDestruction(shotId, playerHitId) => bulletsData.remove(shotId)
                   case _ =>
                 }
             }
@@ -195,7 +195,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     var bulletShot = false
 
-    // Update from inputs
+    //#### Update from inputs
     val delta = mouse.deltaPosition
 
     def processKeyboard() {
@@ -239,7 +239,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     localShipData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
     localShipData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
 
-    // Simulation
+    //#### Simulation
 
     // Ships
     Physics.stepShip(elapsedSinceLastFrame, localShipData) // Local Player
@@ -274,7 +274,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
 
-    // Rendering
+    //#### Rendering
     val curDim = (width, height)
     if (curDim != screenDim) {
       screenDim = curDim
@@ -307,10 +307,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     Rendering.closeBulletRendering()
 
-    // Bullets
-    // TODO
-
-    // Ending
+    //#### Ending
     continueCond = continueCond && itf.update()
   }
 }
