@@ -13,6 +13,8 @@ case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambien
 case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
 
 object Rendering {
+  def validAttribLocation(aloc: Int): Boolean = aloc >= 0
+
   def loadAllShaders(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[Map[String, Token.Program]] = {
     loadAllFromList(resourceFolder, gl, openglContext, path => { loadShadersFromResourceFolder(path, gl, openglContext) })
   }
