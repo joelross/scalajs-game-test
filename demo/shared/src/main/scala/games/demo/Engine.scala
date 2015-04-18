@@ -278,12 +278,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     // Remove bullets out of the terrain
-    bulletsData = bulletsData.filter {
+    bulletsData --= (bulletsData.filter {
       case (bulletId, bulletData) =>
-        Math.abs(bulletData.position.x) <= terrainSize &&
-          Math.abs(bulletData.position.y) <= terrainSize &&
-          Math.abs(bulletData.position.z) <= terrainSize
-    }
+        Math.abs(bulletData.position.x) > terrainSize ||
+          Math.abs(bulletData.position.y) > terrainSize ||
+          Math.abs(bulletData.position.z) > terrainSize
+    }).keys
 
     val hits: mutable.Set[(Int, Int)] = mutable.Set()
     // Check collisions for our owns bullets
