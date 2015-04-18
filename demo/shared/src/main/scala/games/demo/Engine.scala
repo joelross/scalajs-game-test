@@ -40,6 +40,7 @@ class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var or
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   private val updateIntervalMs = 25 // Resend position at 40Hz
+  private val shotIntervalMs = 500 // 2 shots per second max
   private val rotationMultiplier: Float = 50.0f
 
   def context: games.opengl.GLES2 = gl
@@ -63,6 +64,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var lastTimeUpdateFromServer: Option[Long] = None
   private var lastTimeUpdateToServer: Option[Long] = None
+
+  private var lastTimeBulletShot: Option[Long] = None
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
@@ -259,10 +262,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val orientation = conv(localShipData.orientation)
       val rotation = conv(localShipData.rotation)
 
-      if (bulletShot) {
+      if (bulletShot && (lastTimeBulletShot.isEmpty || now - lastTimeBulletShot.get > shotIntervalMs)) {
         val bulletMsg = BulletShot(position, orientation)
         val bulletMsgText = upickle.write(bulletMsg)
         conn.write(bulletMsgText)
+
+        lastTimeBulletShot = Some(now)
       }
 
       if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
