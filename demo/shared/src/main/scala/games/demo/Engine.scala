@@ -119,8 +119,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       shadersFuture.map { shaders =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
 
-        Rendering.setupShipRendering(shaders("ship"), models("ship"))
-        Rendering.setupBulletRendering(shaders("ship"), models("bullet"))
+        Rendering.Ship.setupShipRendering(shaders("ship"), models("ship"))
+        Rendering.Bullet.setupBulletRendering(shaders("ship"), models("bullet"))
+        Rendering.Health.setupHealthRendering(shaders("health"))
       }(loopExecutionContext)
     }
 
@@ -349,20 +350,25 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     // Ships
-    Rendering.initShipRendering()
+    Rendering.Ship.initShipRendering()
     for ((extId, shipData) <- extShipsData) {
       val transform = Matrix4f.translate3D(shipData.data.position) * Physics.matrixForOrientation(shipData.data.orientation).toHomogeneous()
-      Rendering.renderShip(extId, transform, cameraTransformInv)
+      Rendering.Ship.renderShip(extId, transform, cameraTransformInv)
     }
-    Rendering.closeShipRendering()
+    Rendering.Ship.closeShipRendering()
 
     // Bullets
-    Rendering.initBulletRendering()
+    Rendering.Bullet.initBulletRendering()
     for ((bulletId, bulletData) <- bulletsData) {
       val transform = Matrix4f.translate3D(bulletData.position) * Physics.matrixForOrientation(bulletData.orientation).toHomogeneous()
-      Rendering.renderBullet(bulletData.shooterId, transform, cameraTransformInv)
+      Rendering.Bullet.renderBullet(bulletData.shooterId, transform, cameraTransformInv)
     }
-    Rendering.closeBulletRendering()
+    Rendering.Bullet.closeBulletRendering()
+
+    //Hud: health
+    Rendering.Health.initHealthRendering()
+    Rendering.Health.renderHealth(localPlayerHealth)
+    Rendering.Health.closeHealthRendering()
 
     //#### Ending
     continueCond = continueCond && itf.update()

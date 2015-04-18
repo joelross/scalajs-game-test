@@ -195,147 +195,150 @@ object Rendering {
     Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
   }
 
-  //#### Ship rendering
+  object Ship {
 
-  var shipProgram: Token.Program = _
-  var shipMesh: OpenGLMesh = _
+    var shipProgram: Token.Program = _
+    var shipMesh: OpenGLMesh = _
 
-  var shipPositionAttrLoc: Int = _
-  var shipNormalAttrLoc: Int = _
-  var shipDiffuseColorUniLoc: Token.UniformLocation = _
-  var shipProjectionUniLoc: Token.UniformLocation = _
-  var shipModelViewUniLoc: Token.UniformLocation = _
-  var shipModelViewInvTrUniLoc: Token.UniformLocation = _
+    var shipPositionAttrLoc: Int = _
+    var shipNormalAttrLoc: Int = _
+    var shipDiffuseColorUniLoc: Token.UniformLocation = _
+    var shipProjectionUniLoc: Token.UniformLocation = _
+    var shipModelViewUniLoc: Token.UniformLocation = _
+    var shipModelViewInvTrUniLoc: Token.UniformLocation = _
 
-  def setupShipRendering(program: Token.Program, mesh: OpenGLMesh)(implicit gl: GLES2): Unit = {
-    shipProgram = program
-    shipMesh = mesh
+    def setupShipRendering(program: Token.Program, mesh: OpenGLMesh)(implicit gl: GLES2): Unit = {
+      shipProgram = program
+      shipMesh = mesh
 
-    shipPositionAttrLoc = gl.getAttribLocation(shipProgram, "position")
-    shipNormalAttrLoc = gl.getAttribLocation(shipProgram, "normal")
+      shipPositionAttrLoc = gl.getAttribLocation(shipProgram, "position")
+      shipNormalAttrLoc = gl.getAttribLocation(shipProgram, "normal")
 
-    shipDiffuseColorUniLoc = gl.getUniformLocation(shipProgram, "diffuseColor")
-    shipProjectionUniLoc = gl.getUniformLocation(shipProgram, "projection")
-    shipModelViewUniLoc = gl.getUniformLocation(shipProgram, "modelView")
-    shipModelViewInvTrUniLoc = gl.getUniformLocation(shipProgram, "modelViewInvTr")
-  }
+      shipDiffuseColorUniLoc = gl.getUniformLocation(shipProgram, "diffuseColor")
+      shipProjectionUniLoc = gl.getUniformLocation(shipProgram, "projection")
+      shipModelViewUniLoc = gl.getUniformLocation(shipProgram, "modelView")
+      shipModelViewInvTrUniLoc = gl.getUniformLocation(shipProgram, "modelViewInvTr")
+    }
 
-  def initShipRendering()(implicit gl: GLES2): Unit = {
-    gl.useProgram(shipProgram)
-    gl.uniformMatrix4f(shipProjectionUniLoc, projection)
+    def initShipRendering()(implicit gl: GLES2): Unit = {
+      gl.useProgram(shipProgram)
+      gl.uniformMatrix4f(shipProjectionUniLoc, projection)
 
-    gl.enableVertexAttribArray(shipPositionAttrLoc)
-    gl.enableVertexAttribArray(shipNormalAttrLoc)
-  }
+      gl.enableVertexAttribArray(shipPositionAttrLoc)
+      gl.enableVertexAttribArray(shipNormalAttrLoc)
+    }
 
-  def closeShipRendering()(implicit gl: GLES2): Unit = {
-    gl.disableVertexAttribArray(shipNormalAttrLoc)
-    gl.disableVertexAttribArray(shipPositionAttrLoc)
-  }
+    def closeShipRendering()(implicit gl: GLES2): Unit = {
+      gl.disableVertexAttribArray(shipNormalAttrLoc)
+      gl.disableVertexAttribArray(shipPositionAttrLoc)
+    }
 
-  def renderShip(playerId: Int, transform: Matrix4f, cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
-    val modelView = cameraTransformInv * transform
-    val modelViewInvTr = modelView.invertedCopy().transpose()
+    def renderShip(playerId: Int, transform: Matrix4f, cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
+      val modelView = cameraTransformInv * transform
+      val modelViewInvTr = modelView.invertedCopy().transpose()
 
-    gl.uniformMatrix4f(shipModelViewUniLoc, modelView)
-    gl.uniformMatrix4f(shipModelViewInvTrUniLoc, modelViewInvTr)
+      gl.uniformMatrix4f(shipModelViewUniLoc, modelView)
+      gl.uniformMatrix4f(shipModelViewInvTrUniLoc, modelViewInvTr)
 
-    gl.bindBuffer(GLES2.ARRAY_BUFFER, shipMesh.verticesBuffer)
-    gl.vertexAttribPointer(shipPositionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-    gl.bindBuffer(GLES2.ARRAY_BUFFER, shipMesh.normalsBuffer)
-    gl.vertexAttribPointer(shipNormalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-    shipMesh.subMeshes.foreach { submesh =>
-      val color = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
-      gl.uniform3f(shipDiffuseColorUniLoc, color)
-      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
-      gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, shipMesh.verticesBuffer)
+      gl.vertexAttribPointer(shipPositionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, shipMesh.normalsBuffer)
+      gl.vertexAttribPointer(shipNormalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+      shipMesh.subMeshes.foreach { submesh =>
+        val color = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
+        gl.uniform3f(shipDiffuseColorUniLoc, color)
+        gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
+        gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
+      }
     }
   }
 
-  //#### Bullet rendering
+  object Bullet {
 
-  var bulletProgram: Token.Program = _
-  var bulletMesh: OpenGLMesh = _
+    var bulletProgram: Token.Program = _
+    var bulletMesh: OpenGLMesh = _
 
-  var bulletPositionAttrLoc: Int = _
-  var bulletNormalAttrLoc: Int = _
-  var bulletDiffuseColorUniLoc: Token.UniformLocation = _
-  var bulletProjectionUniLoc: Token.UniformLocation = _
-  var bulletModelViewUniLoc: Token.UniformLocation = _
-  var bulletModelViewInvTrUniLoc: Token.UniformLocation = _
+    var bulletPositionAttrLoc: Int = _
+    var bulletNormalAttrLoc: Int = _
+    var bulletDiffuseColorUniLoc: Token.UniformLocation = _
+    var bulletProjectionUniLoc: Token.UniformLocation = _
+    var bulletModelViewUniLoc: Token.UniformLocation = _
+    var bulletModelViewInvTrUniLoc: Token.UniformLocation = _
 
-  def setupBulletRendering(program: Token.Program, mesh: OpenGLMesh)(implicit gl: GLES2): Unit = {
-    bulletProgram = program
-    bulletMesh = mesh
+    def setupBulletRendering(program: Token.Program, mesh: OpenGLMesh)(implicit gl: GLES2): Unit = {
+      bulletProgram = program
+      bulletMesh = mesh
 
-    bulletPositionAttrLoc = gl.getAttribLocation(bulletProgram, "position")
-    bulletNormalAttrLoc = gl.getAttribLocation(bulletProgram, "normal")
+      bulletPositionAttrLoc = gl.getAttribLocation(bulletProgram, "position")
+      bulletNormalAttrLoc = gl.getAttribLocation(bulletProgram, "normal")
 
-    bulletDiffuseColorUniLoc = gl.getUniformLocation(bulletProgram, "diffuseColor")
-    bulletProjectionUniLoc = gl.getUniformLocation(bulletProgram, "projection")
-    bulletModelViewUniLoc = gl.getUniformLocation(bulletProgram, "modelView")
-    bulletModelViewInvTrUniLoc = gl.getUniformLocation(bulletProgram, "modelViewInvTr")
-  }
+      bulletDiffuseColorUniLoc = gl.getUniformLocation(bulletProgram, "diffuseColor")
+      bulletProjectionUniLoc = gl.getUniformLocation(bulletProgram, "projection")
+      bulletModelViewUniLoc = gl.getUniformLocation(bulletProgram, "modelView")
+      bulletModelViewInvTrUniLoc = gl.getUniformLocation(bulletProgram, "modelViewInvTr")
+    }
 
-  def initBulletRendering()(implicit gl: GLES2): Unit = {
-    gl.useProgram(bulletProgram)
-    gl.uniformMatrix4f(bulletProjectionUniLoc, projection)
+    def initBulletRendering()(implicit gl: GLES2): Unit = {
+      gl.useProgram(bulletProgram)
+      gl.uniformMatrix4f(bulletProjectionUniLoc, projection)
 
-    gl.enableVertexAttribArray(bulletPositionAttrLoc)
-    gl.enableVertexAttribArray(bulletNormalAttrLoc)
-  }
+      gl.enableVertexAttribArray(bulletPositionAttrLoc)
+      gl.enableVertexAttribArray(bulletNormalAttrLoc)
+    }
 
-  def closeBulletRendering()(implicit gl: GLES2): Unit = {
-    gl.disableVertexAttribArray(bulletNormalAttrLoc)
-    gl.disableVertexAttribArray(bulletPositionAttrLoc)
-  }
+    def closeBulletRendering()(implicit gl: GLES2): Unit = {
+      gl.disableVertexAttribArray(bulletNormalAttrLoc)
+      gl.disableVertexAttribArray(bulletPositionAttrLoc)
+    }
 
-  def renderBullet(playerId: Int, transform: Matrix4f, cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
-    val modelView = cameraTransformInv * transform
-    val modelViewInvTr = modelView.invertedCopy().transpose()
+    def renderBullet(playerId: Int, transform: Matrix4f, cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
+      val modelView = cameraTransformInv * transform
+      val modelViewInvTr = modelView.invertedCopy().transpose()
 
-    gl.uniformMatrix4f(bulletModelViewUniLoc, modelView)
-    gl.uniformMatrix4f(bulletModelViewInvTrUniLoc, modelViewInvTr)
+      gl.uniformMatrix4f(bulletModelViewUniLoc, modelView)
+      gl.uniformMatrix4f(bulletModelViewInvTrUniLoc, modelViewInvTr)
 
-    gl.bindBuffer(GLES2.ARRAY_BUFFER, bulletMesh.verticesBuffer)
-    gl.vertexAttribPointer(bulletPositionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-    gl.bindBuffer(GLES2.ARRAY_BUFFER, bulletMesh.normalsBuffer)
-    gl.vertexAttribPointer(bulletNormalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-    bulletMesh.subMeshes.foreach { submesh =>
-      val color = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
-      gl.uniform3f(bulletDiffuseColorUniLoc, color)
-      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
-      gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, bulletMesh.verticesBuffer)
+      gl.vertexAttribPointer(bulletPositionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, bulletMesh.normalsBuffer)
+      gl.vertexAttribPointer(bulletNormalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+      bulletMesh.subMeshes.foreach { submesh =>
+        val color = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
+        gl.uniform3f(bulletDiffuseColorUniLoc, color)
+        gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
+        gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
+      }
     }
   }
 
-  //#### Health rendering
+  object Health {
 
-  var healthProgram: Token.Program = _
+    var healthProgram: Token.Program = _
 
-  var healthPositionAttrLoc: Int = _
-  var healthColorAttrLoc: Int = _
+    var healthPositionAttrLoc: Int = _
+    var healthColorAttrLoc: Int = _
 
-  def setupHealthRendering(program: Token.Program)(implicit gl: GLES2): Unit = {
-    healthProgram = program
+    def setupHealthRendering(program: Token.Program)(implicit gl: GLES2): Unit = {
+      healthProgram = program
 
-    healthPositionAttrLoc = gl.getAttribLocation(healthProgram, "position")
-    healthColorAttrLoc = gl.getAttribLocation(healthProgram, "color")
-  }
+      healthPositionAttrLoc = gl.getAttribLocation(healthProgram, "position")
+      healthColorAttrLoc = gl.getAttribLocation(healthProgram, "color")
+    }
 
-  def initHealthRendering()(implicit gl: GLES2): Unit = {
-    gl.useProgram(healthProgram)
+    def initHealthRendering()(implicit gl: GLES2): Unit = {
+      gl.useProgram(healthProgram)
 
-    gl.enableVertexAttribArray(healthPositionAttrLoc)
-    gl.enableVertexAttribArray(healthColorAttrLoc)
-  }
+      gl.enableVertexAttribArray(healthPositionAttrLoc)
+      gl.enableVertexAttribArray(healthColorAttrLoc)
+    }
 
-  def closeHealthRendering()(implicit gl: GLES2): Unit = {
-    gl.disableVertexAttribArray(healthColorAttrLoc)
-    gl.disableVertexAttribArray(healthPositionAttrLoc)
-  }
+    def closeHealthRendering()(implicit gl: GLES2): Unit = {
+      gl.disableVertexAttribArray(healthColorAttrLoc)
+      gl.disableVertexAttribArray(healthPositionAttrLoc)
+    }
 
-  def renderHealth(value: Float)(implicit gl: GLES2): Unit = {
-    // TODO
+    def renderHealth(value: Float)(implicit gl: GLES2): Unit = {
+      // TODO
+    }
   }
 }
