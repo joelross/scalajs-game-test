@@ -247,9 +247,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     processMouse()
 
     // Apply inputs to local ship
-    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = 3f
-    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = 1f
-    else localShipData.velocity = 2f
+    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = 6f
+    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = 2f
+    else localShipData.velocity = 4f
 
     val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
     val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
