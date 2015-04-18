@@ -347,6 +347,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val cameraTransformInv = cameraTransform.invertedCopy()
 
     // Clear the buffers
+    val r = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 1.0f)
+    val gb = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 0.0f)
+    gl.clearColor(r, gb, gb, 1f)
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     // Ships
