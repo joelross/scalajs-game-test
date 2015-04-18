@@ -42,6 +42,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private val updateIntervalMs = 25 // Resend position at 40Hz
   private val shotIntervalMs = 500 // 2 shots per second max
   private val rotationMultiplier: Float = 50.0f
+  private val hitDamage: Float = 25f
 
   def context: games.opengl.GLES2 = gl
 
@@ -160,7 +161,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 }.toMap
                 newEvents.foreach {
                   case BulletCreation(shotId, shooterId, initialPosition, orientation) => bulletsData += (shotId -> new BulletData(shotId, shooterId, conv(initialPosition), conv(orientation)))
-                  case BulletDestruction(shotId, playerHitId) => bulletsData.remove(shotId)
+                  case BulletDestruction(shotId, playerHitId) =>
+                    if (playerHitId == localPlayerId) localPlayerHealth -= hitDamage
+                    bulletsData.remove(shotId)
                   case _ =>
                 }
             }
@@ -256,20 +259,43 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       Physics.stepBullet(elapsedSinceLastFrame, bulletData)
     }
 
+    // Remove bullets out of the terrain
+    bulletsData = bulletsData.filter {
+      case (bulletId, bulletData) =>
+        Math.abs(bulletData.position.x) <= 50f &&
+          Math.abs(bulletData.position.y) <= 50f &&
+          Math.abs(bulletData.position.z) <= 50f
+    }
+
+    val hits: mutable.Set[(Int, Int)] = mutable.Set()
     // Check collisions for our owns bullets
     bulletsData.filter { case (bulletId, bulletData) => bulletData.shooterId == localPlayerId }.foreach {
       case (bulletId, bulletData) => extShipsData.foreach {
         case (shipId, shipData) =>
-        // TODO
+          if ((bulletData.position - shipData.data.position).length <= 1f) {
+            hits += ((bulletId, shipId))
+          }
       }
     }
 
-    // Network (if necessary)
+    // Remove bullets that reached a target
+    for ((bulletId, shipId) <- hits) {
+      bulletsData.remove(bulletId)
+    }
+
+    //#### Network
     for (conn <- connection) {
       val position = conv(localShipData.position)
       val velocity = localShipData.velocity
       val orientation = conv(localShipData.orientation)
       val rotation = conv(localShipData.rotation)
+
+      for (hit <- hits) {
+        val (bulletId, shipId) = hit
+        val hitMsg = BulletHit(bulletId, shipId)
+        val hitMsgText = upickle.write(hitMsg)
+        conn.write(hitMsgText)
+      }
 
       if (bulletShot && (lastTimeBulletShot.isEmpty || now - lastTimeBulletShot.get > shotIntervalMs)) {
         val bulletMsg = BulletShot(position, orientation)
