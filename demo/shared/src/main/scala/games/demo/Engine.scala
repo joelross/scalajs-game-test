@@ -43,6 +43,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private val shotIntervalMs = 500 // 2 shots per second max
   private val rotationMultiplier: Float = 50.0f
   private val hitDamage: Float = 25f
+  private val terrainSize: Float = 50f
+  private val initHealth: Float = 100f
 
   def context: games.opengl.GLES2 = gl
 
@@ -55,9 +57,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var connection: Option[ConnectionHandle] = None
   private var localPlayerId: Int = 0
-  private var localPlayerHealth: Float = 100f
+  private var localPlayerHealth: Float = initHealth
 
   private var screenDim: (Int, Int) = _
+
+  private var initPosition: Vector3f = _
+  private var initOrientation: Vector3f = _
 
   private var localShipData: ShipData = new ShipData(new Vector3f, 0f, new Vector3f, new Vector3f)
   private var extShipsData: Map[Int, ExternalShipData] = Map()
@@ -136,12 +141,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
               case Ping => // answer that ASAP
                 sendMsg(Pong)
 
-              case Hello(playerId, initPostion, initOrientation) =>
+              case Hello(playerId, initPosition, initOrientation) =>
                 if (this.connection.isEmpty) {
                   this.connection = Some(conn)
                   localPlayerId = playerId
-                  localShipData.position = conv(initPostion)
+                  localShipData.position = conv(initPosition)
                   localShipData.orientation = conv(initOrientation)
+                  this.initPosition = localShipData.position.copy()
+                  this.initOrientation = localShipData.orientation.copy()
                   itf.printLine("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
                 }
@@ -162,8 +169,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 newEvents.foreach {
                   case BulletCreation(shotId, shooterId, initialPosition, orientation) => bulletsData += (shotId -> new BulletData(shotId, shooterId, conv(initialPosition), conv(orientation)))
                   case BulletDestruction(shotId, playerHitId) =>
-                    if (playerHitId == localPlayerId) localPlayerHealth -= hitDamage
                     bulletsData.remove(shotId)
+                    if (playerHitId == localPlayerId) localPlayerHealth -= hitDamage
+                    if (localPlayerHealth < 0f) { // Reset the player's ship
+                      localPlayerHealth = initHealth
+                      localShipData.position = this.initPosition.copy()
+                      localShipData.orientation = this.initOrientation.copy()
+                    }
                   case _ =>
                 }
             }
@@ -254,6 +266,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       Physics.stepShip(elapsedSinceLastFrame, shipData.data)
     }
 
+    // Make sure the ship remains on the terrain
+    if (Math.abs(localShipData.position.x) > terrainSize) localShipData.position.x = Math.signum(localShipData.position.x) * terrainSize
+    if (Math.abs(localShipData.position.y) > terrainSize) localShipData.position.y = Math.signum(localShipData.position.y) * terrainSize
+    if (Math.abs(localShipData.position.z) > terrainSize) localShipData.position.z = Math.signum(localShipData.position.z) * terrainSize
+
     // Bullets
     for ((bulletId, bulletData) <- bulletsData) {
       Physics.stepBullet(elapsedSinceLastFrame, bulletData)
@@ -262,9 +279,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Remove bullets out of the terrain
     bulletsData = bulletsData.filter {
       case (bulletId, bulletData) =>
-        Math.abs(bulletData.position.x) <= 50f &&
-          Math.abs(bulletData.position.y) <= 50f &&
-          Math.abs(bulletData.position.z) <= 50f
+        Math.abs(bulletData.position.x) <= terrainSize &&
+          Math.abs(bulletData.position.y) <= terrainSize &&
+          Math.abs(bulletData.position.z) <= terrainSize
     }
 
     val hits: mutable.Set[(Int, Int)] = mutable.Set()
