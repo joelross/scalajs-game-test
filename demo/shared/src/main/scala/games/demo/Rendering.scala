@@ -195,6 +195,8 @@ object Rendering {
     Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
   }
 
+  //#### Ship rendering
+
   var shipProgram: Token.Program = _
   var shipMesh: OpenGLMesh = _
 
@@ -250,6 +252,8 @@ object Rendering {
     }
   }
 
+  //#### Bullet rendering
+
   var bulletProgram: Token.Program = _
   var bulletMesh: OpenGLMesh = _
 
@@ -303,5 +307,35 @@ object Rendering {
       gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
       gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
     }
+  }
+
+  //#### Health rendering
+
+  var healthProgram: Token.Program = _
+
+  var healthPositionAttrLoc: Int = _
+  var healthColorAttrLoc: Int = _
+
+  def setupHealthRendering(program: Token.Program)(implicit gl: GLES2): Unit = {
+    healthProgram = program
+
+    healthPositionAttrLoc = gl.getAttribLocation(healthProgram, "position")
+    healthColorAttrLoc = gl.getAttribLocation(healthProgram, "color")
+  }
+
+  def initHealthRendering()(implicit gl: GLES2): Unit = {
+    gl.useProgram(healthProgram)
+
+    gl.enableVertexAttribArray(healthPositionAttrLoc)
+    gl.enableVertexAttribArray(healthColorAttrLoc)
+  }
+
+  def closeHealthRendering()(implicit gl: GLES2): Unit = {
+    gl.disableVertexAttribArray(healthColorAttrLoc)
+    gl.disableVertexAttribArray(healthPositionAttrLoc)
+  }
+
+  def renderHealth(value: Float)(implicit gl: GLES2): Unit = {
+    // TODO
   }
 }
