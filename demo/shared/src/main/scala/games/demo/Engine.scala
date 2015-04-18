@@ -54,6 +54,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var connection: Option[ConnectionHandle] = None
   private var localPlayerId: Int = 0
+  private var localPlayerHealth: Float = 100f
 
   private var screenDim: (Int, Int) = _
 
@@ -253,6 +254,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Bullets
     for ((bulletId, bulletData) <- bulletsData) {
       Physics.stepBullet(elapsedSinceLastFrame, bulletData)
+    }
+
+    // Check collisions for our owns bullets
+    bulletsData.filter { case (bulletId, bulletData) => bulletData.shooterId == localPlayerId }.foreach {
+      case (bulletId, bulletData) => extShipsData.foreach {
+        case (shipId, shipData) =>
+        // TODO
+      }
     }
 
     // Network (if necessary)
