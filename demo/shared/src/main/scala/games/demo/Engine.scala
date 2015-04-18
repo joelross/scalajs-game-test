@@ -119,9 +119,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       shadersFuture.map { shaders =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
 
-        Rendering.Ship.setupShipRendering(shaders("ship"), models("ship"))
-        Rendering.Bullet.setupBulletRendering(shaders("ship"), models("bullet"))
-        Rendering.Health.setupHealthRendering(shaders("health"))
+        Rendering.Ship.setup(shaders("simple3d"), models("ship"))
+        Rendering.Bullet.setup(shaders("simple3d"), models("bullet"))
+        Rendering.Health.setup(shaders("health"))
       }(loopExecutionContext)
     }
 
@@ -350,25 +350,25 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     // Ships
-    Rendering.Ship.initShipRendering()
+    Rendering.Ship.init()
     for ((extId, shipData) <- extShipsData) {
       val transform = Matrix4f.translate3D(shipData.data.position) * Physics.matrixForOrientation(shipData.data.orientation).toHomogeneous()
-      Rendering.Ship.renderShip(extId, transform, cameraTransformInv)
+      Rendering.Ship.render(extId, transform, cameraTransformInv)
     }
-    Rendering.Ship.closeShipRendering()
+    Rendering.Ship.close()
 
     // Bullets
-    Rendering.Bullet.initBulletRendering()
+    Rendering.Bullet.init()
     for ((bulletId, bulletData) <- bulletsData) {
       val transform = Matrix4f.translate3D(bulletData.position) * Physics.matrixForOrientation(bulletData.orientation).toHomogeneous()
-      Rendering.Bullet.renderBullet(bulletData.shooterId, transform, cameraTransformInv)
+      Rendering.Bullet.render(bulletData.shooterId, transform, cameraTransformInv)
     }
-    Rendering.Bullet.closeBulletRendering()
+    Rendering.Bullet.close()
 
     //Hud: health
-    Rendering.Health.initHealthRendering()
-    Rendering.Health.renderHealth(localPlayerHealth)
-    Rendering.Health.closeHealthRendering()
+    Rendering.Health.init()
+    Rendering.Health.render(localPlayerHealth)
+    Rendering.Health.close()
 
     //#### Ending
     continueCond = continueCond && itf.update()
