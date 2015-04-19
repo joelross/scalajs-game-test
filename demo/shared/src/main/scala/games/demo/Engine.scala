@@ -172,7 +172,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                   case BulletDestruction(shotId, playerHitId) =>
                     bulletsData.remove(shotId)
                     if (playerHitId == localPlayerId) localPlayerHealth -= hitDamage
-                    if (localPlayerHealth < 0f) { // Reset the player's ship
+                    if (localPlayerHealth <= 0f) { // Reset the player's ship
                       localPlayerHealth = initHealth
                       localShipData.position = this.initPosition.copy()
                       localShipData.orientation = this.initOrientation.copy()
