@@ -20,8 +20,8 @@ The address the clients will attempt to reach is located in ```demo/shared/src/m
 
 #### Server + Scala.js client
 
-Run ```sbt```. Once in SBT, enter ```serverDemoJS/reStart```. This will start the server and make the Scala.js client available.
-To use the Scala.js client, open your browser (preferably Chrome or Firefox) to the specified address (normally [http://localhost:8080/](http://localhost:8080/)) (press Ctrl + C to stop the server and exit SBT).
+* Run ```sbt```. Once in SBT, enter ```serverDemoJS/reStart```. This will start the server and make the Scala.js client available through it.
+* To use the Scala.js client, open your browser (preferably Chrome or Firefox) to the specified address (normally [http://localhost:8080/](http://localhost:8080/)) (press Ctrl + C to stop the server and exit SBT).
 
 #### JVM client (requires a running server to connect to)
 
