@@ -12,6 +12,8 @@ Library for graphics/audio/inputs for Scala.js
 * Maintain **W** to accelerate or **S** to brake
 * Left mouse button to shoot and mouse movement to navigate
 
+Players are dispatched in room of up to 4 players.
+
 ### Launching
 
 #### General
