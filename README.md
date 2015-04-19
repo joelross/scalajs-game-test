@@ -16,7 +16,7 @@ Library for graphics/audio/inputs for Scala.js
 
 #### General
 
-The address the client will attempt to reach is located in ```demo/shared/src/main/scala/games/demo/Data.scala``` (```ws://localhost:8080/``` by default, which should be fine if you are using the included server on the same computer).
+The address the client will attempt to reach is located in ```demo/shared/src/main/scala/games/demo/Data.scala``` (```ws://localhost:8080/``` by default, which should be fine if you are using the included server locally).
 
 #### Server + Scala.js client
 
