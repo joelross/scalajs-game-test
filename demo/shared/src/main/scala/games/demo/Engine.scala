@@ -4,10 +4,10 @@ import transport.ConnectionHandle
 import transport.WebSocketUrl
 import games.demo.Specifics.WebSocketClient
 
-import scala.concurrent.{ Future, ExecutionContext }
+import scala.concurrent.{ Promise, Future, ExecutionContext }
 import games._
 import games.math
-import games.math.{ Vector3f, Vector4f, Matrix4f, Matrix3f }
+import games.math.{ Vector3f, Vector4f, Matrix3f, Matrix4f }
 import games.opengl._
 import games.audio._
 import games.input._
@@ -17,7 +17,11 @@ import games.opengl.GLES2Debug
 import games.audio.Source3D
 import games.input.ButtonEvent
 import games.audio.AbstractSource
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+
+import scala.collection.immutable
+import scala.collection.mutable
 
 abstract class EngineInterface {
   def printLine(msg: String): Unit
@@ -29,22 +33,56 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-case class PlayerData(posX: Float, posY: Float, posZ: Float, rotH: Float, rotV: Float)
-case class NetworkData(players: Seq[PlayerData])
+class ShipData(var position: Vector3f, var velocity: Float, var orientation: Vector3f, var rotation: Vector3f)
+class ExternalShipData(var id: Int, var data: ShipData, var latency: Int)
 
-case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambientColor: Vector3f, diffuseColor: Vector3f)
-case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
-case class Entity(mesh: OpenGLMesh, transform: Matrix4f)
+class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var orientation: Vector3f)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
+  private val updateIntervalMs = 25 // Resend position at 40Hz
+  private val shotIntervalMs = 500 // 2 shots per second max
+  private val rotationMultiplier: Float = 50.0f
+  private val hitDamage: Float = 25f
+  private val terrainSize: Float = 50f
+  private val initHealth: Float = 100f
+
   def context: games.opengl.GLES2 = gl
 
   private var continueCond = true
 
-  private var gl: GLES2 = _
+  private implicit var gl: GLES2 = _
   private var audioContext: Context = _
   private var keyboard: Keyboard = _
   private var mouse: Mouse = _
+
+  private var connection: Option[ConnectionHandle] = None
+  private var localPlayerId: Int = 0
+  private var localPlayerHealth: Float = initHealth
+
+  private var screenDim: (Int, Int) = _
+
+  private var initPosition: Vector3f = _
+  private var initOrientation: Vector3f = _
+
+  private var localShipData: ShipData = new ShipData(new Vector3f, 0f, new Vector3f, new Vector3f)
+  private var extShipsData: Map[Int, ExternalShipData] = Map()
+
+  private var bulletsData: mutable.Map[Int, BulletData] = mutable.Map()
+
+  private var lastTimeUpdateFromServer: Option[Long] = None
+  private var lastTimeUpdateToServer: Option[Long] = None
+
+  private var lastTimeBulletShot: Option[Long] = None
+
+  private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
+  private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
+
+  def sendMsg(msg: ClientMessage): Unit = connection match {
+    case None => throw new RuntimeException("Websocket not connected")
+    case Some(conn) =>
+      val data = upickle.write(msg)
+      conn.write(data)
+  }
 
   def continue(): Boolean = continueCond
 
@@ -56,76 +94,105 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     keyboard.close()
     audioContext.close()
     gl.close()
+
+    for (conn <- connection) {
+      conn.close()
+      connection = None
+    }
   }
 
-  def onCreate(): Unit = {
-    itf.printLine("Init...")
-    this.gl = new GLES2Debug(itf.initGL()) // Enable automatic error checking
-    this.audioContext = itf.initAudio()
-    this.keyboard = itf.initKeyboard()
-    this.mouse = itf.initMouse()
+  def onCreate(): Option[Future[Unit]] = {
+    itf.printLine("Starting...")
+    this.gl = itf.initGL() // Init OpenGL (Enable automatic error checking by encapsuling it in GLES2Debug)
+    this.audioContext = itf.initAudio() // Init Audio
+    this.keyboard = itf.initKeyboard() // Init Keyboard listening
+    this.mouse = itf.initMouse() // Init Mouse listener
 
-    audioContext.volume = 0.25f
+    audioContext.volume = 0.25f // Lower the initial global volume
 
-    // Prepare shaders
-    val vertexSource = """
-      uniform mat4 projection;
-      uniform mat4 modelView;
-      uniform mat4 modelViewInvTr;
-      
-      attribute vec3 position;
-      attribute vec3 normal;
-      
-      varying vec3 varNormal;
-      varying vec3 varView;
-      
-      void main(void) {
-        vec4 pos = modelView * vec4(position, 1.0);
-        gl_Position = projection * pos;
-        varNormal = normalize((modelViewInvTr * vec4(normal, 1.0)).xyz);
-        varView = normalize(-pos.xyz);
+    // Loading data
+    val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
+    val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
+
+    // Retrieve useful data from shaders (require access to OpenGL context)
+    val retrieveInfoFromDataFuture = modelsFuture.flatMap { models =>
+      shadersFuture.map { shaders =>
+        itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
+
+        Rendering.Ship.setup(shaders("simple3d"), models("ship"))
+        Rendering.Bullet.setup(shaders("simple3d"), models("bullet"))
+        Rendering.Health.setup(shaders("health"))
+      }(loopExecutionContext)
+    }
+
+    val helloPacketReceived = Promise[Unit]
+
+    // Init network (wait for data loading to complete before that)
+    val networkFuture = retrieveInfoFromDataFuture.flatMap { _ =>
+      val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
+      futureConnection.map { conn =>
+        itf.printLine("Websocket connection established")
+        // Wait for the Hello packet to register the connection
+        conn.handlerPromise.success { msg =>
+          val now = System.currentTimeMillis()
+          val serverMsg = upickle.read[ServerMessage](msg)
+
+          Future { // To avoid concurrency issue, process the following in the loop thread
+            serverMsg match {
+              case Ping => // answer that ASAP
+                sendMsg(Pong)
+
+              case Hello(playerId, initPosition, initOrientation) =>
+                if (this.connection.isEmpty) {
+                  this.connection = Some(conn)
+                  localPlayerId = playerId
+                  localShipData.position = conv(initPosition)
+                  localShipData.orientation = conv(initOrientation)
+                  this.initPosition = localShipData.position.copy()
+                  this.initOrientation = localShipData.orientation.copy()
+                  itf.printLine("You are player " + playerId)
+                  helloPacketReceived.success((): Unit)
+                }
+
+              case ServerUpdate(players, newEvents) =>
+                lastTimeUpdateFromServer = Some(now)
+
+                val (locals, externals) = players.partition(_.id == localPlayerId)
+
+                assert(locals.size == 1)
+                val local = locals.head
+
+                extShipsData = externals.flatMap { serverUpdatePlayerData =>
+                  serverUpdatePlayerData.space.map { spaceData =>
+                    (serverUpdatePlayerData.id, new ExternalShipData(serverUpdatePlayerData.id, new ShipData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation), conv(spaceData.rotation)), serverUpdatePlayerData.latency + local.latency))
+                  }
+                }.toMap
+                newEvents.foreach {
+                  case BulletCreation(shotId, shooterId, initialPosition, orientation) => bulletsData += (shotId -> new BulletData(shotId, shooterId, conv(initialPosition), conv(orientation)))
+                  case BulletDestruction(shotId, playerHitId) =>
+                    bulletsData.remove(shotId)
+                    if (playerHitId == localPlayerId) localPlayerHealth -= hitDamage
+                    if (localPlayerHealth <= 0f) { // Reset the player's ship
+                      localPlayerHealth = initHealth
+                      localShipData.position = this.initPosition.copy()
+                      localShipData.orientation = this.initOrientation.copy()
+                    }
+                  case _ =>
+                }
+            }
+          }(loopExecutionContext)
+
+        }
+        conn.closedFuture.onSuccess {
+          case _ =>
+            itf.printLine("Websocket connection closed")
+            this.connection = None
+        }
       }
-      """
+    }.flatMap { _ => helloPacketReceived.future }
 
-    val fragmentSource = """
-      #ifdef GL_ES
-        precision mediump float;
-      #endif
-      
-      uniform vec3 diffuseColor;
-      
-      varying vec3 varNormal;
-      varying vec3 varView;
-      
-      void main(void) {
-        gl_FragColor = vec4(diffuseColor * dot(normalize(varView), normalize(varNormal)), 1.0);
-      }
-      """
-
-    program = gl.createProgram()
-
-    val vertexShader = gl.createShader(GLES2.VERTEX_SHADER)
-    gl.shaderSource(vertexShader, vertexSource)
-    gl.compileShader(vertexShader)
-    gl.attachShader(program, vertexShader)
-
-    val fragmentShader = gl.createShader(GLES2.FRAGMENT_SHADER)
-    gl.shaderSource(fragmentShader, fragmentSource)
-    gl.compileShader(fragmentShader)
-    gl.attachShader(program, fragmentShader)
-
-    gl.linkProgram(program)
-    gl.useProgram(program)
-
-    positionAttrLoc = gl.getAttribLocation(program, "position")
-    normalAttrLoc = gl.getAttribLocation(program, "normal")
-
-    diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
-    projectionUniLoc = gl.getUniformLocation(program, "projection")
-    modelViewUniLoc = gl.getUniformLocation(program, "modelView")
-    modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
-
-    gl.clearColor(0.5f, 0.5f, 0.5f, 1) // grey background
+    // Setup OpenGL
+    gl.clearColor(0.75f, 0.75f, 0.75f, 1) // black background
 
     gl.enable(GLES2.DEPTH_TEST)
     gl.depthFunc(GLES2.LESS)
@@ -133,250 +200,180 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val width = gl.display.width
     val height = gl.display.height
 
-    dim = (width, height)
-    gl.viewport(0, 0, width, height)
-    projection = Matrix4f.perspective3D(fovy, width.toFloat / height.toFloat, near, far)
+    screenDim = (width, height)
+    Rendering.setProjection(width, height)
 
-    // Load mesh
-    val futureMeshObj = Utils.getTextDataFromResource(Resource("/games/demo/sphere.obj"))
-    val futureMeshMtl = Utils.getTextDataFromResource(Resource("/games/demo/sphere.mtl"))
-
-    val futureMesh = Future.sequence(Seq(futureMeshObj, futureMeshMtl))
-    futureMesh.onSuccess {
-      case Seq(meshObj, meshMtl) =>
-        val objLines = Utils.lines(meshObj)
-        val mtlLines = Utils.lines(meshMtl)
-
-        val objs = SimpleOBJParser.parseOBJ(objLines, Map("sphere.mtl" -> mtlLines))
-        val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
-        val mesh = meshes("Sphere")
-
-        val meshVerticesCount = mesh.vertices.length
-
-        val verticesData = GLES2.createFloatBuffer(meshVerticesCount * 3)
-        mesh.vertices.foreach { v => v.store(verticesData) }
-        verticesData.flip()
-        val verticesBuffer = gl.createBuffer()
-        gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
-        gl.bufferData(GLES2.ARRAY_BUFFER, verticesData, GLES2.STATIC_DRAW)
-
-        val normals = mesh.normals.get
-        val normalsData = GLES2.createFloatBuffer(meshVerticesCount * 3); require(meshVerticesCount == normals.length)
-        normals.foreach { v => v.store(normalsData) }
-        normalsData.flip()
-        val normalsBuffer = gl.createBuffer()
-        gl.bindBuffer(GLES2.ARRAY_BUFFER, normalsBuffer)
-        gl.bufferData(GLES2.ARRAY_BUFFER, normalsData, GLES2.STATIC_DRAW)
-
-        val openGLSubMeshes = mesh.submeshes.map { submesh =>
-          val tris = submesh.tris
-          val submeshVerticesCount = tris.length * 3
-          val indicesData = GLES2.createShortBuffer(submeshVerticesCount)
-          tris.foreach {
-            case (i0, i1, i2) =>
-              indicesData.put(i0.toShort)
-              indicesData.put(i1.toShort)
-              indicesData.put(i2.toShort)
-          }
-          indicesData.flip()
-          val indicesBuffer = gl.createBuffer()
-          gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
-          gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesData, GLES2.STATIC_DRAW)
-
-          OpenGLSubMesh(indicesBuffer, submeshVerticesCount, submesh.material.get.ambientColor.get, submesh.material.get.diffuseColor.get)
-        }
-
-        val openGLMesh = OpenGLMesh(verticesBuffer, normalsBuffer, meshVerticesCount, openGLSubMeshes)
-        this.mainMesh = Some(openGLMesh)
-    }
-    futureMesh.onFailure { case t => itf.printLine("Failed to load the mesh: " + t) }
-
-    // Connect to the server using WebSocket
-    val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
-    futureConnection.foreach { connection =>
-      itf.printLine("Websocket connection established")
-      this.connection = Some(connection)
-      connection.handlerPromise.success { msg =>
-        val networkData = upickle.read[NetworkData](msg)
-        entities.clear()
-        for (mesh <- mainMesh) {
-          networkData.players.foreach { playerData =>
-            val transform = Matrix4f.translate3D(new Vector3f(playerData.posX, playerData.posY, playerData.posZ)) * Matrix4f.rotation3D(playerData.rotH, Vector3f.Up) * Matrix4f.rotation3D(playerData.rotV, Vector3f.Right)
-            entities += Entity(mesh, transform)
-          }
-        }
-      }
-      connection.closedFuture.onSuccess {
-        case _ =>
-          itf.printLine("Websocket connection closed")
-          this.connection = None
-      }
-    }
-  }
-
-  var program: Token.Program = _
-  var projection: Matrix4f = _
-
-  var cameraPosition: Vector3f = new Vector3f(0, 0, 3)
-  var cameraRotationH: Float = 0
-  var cameraRotationV: Float = 0
-
-  var verticesBuffer: Token.Buffer = _
-  var indicesBuffer: Token.Buffer = _
-
-  var positionAttrLoc: Int = _
-  var normalAttrLoc: Int = _
-  var diffuseColorUniLoc: Token.UniformLocation = _
-  var projectionUniLoc: Token.UniformLocation = _
-  var modelViewUniLoc: Token.UniformLocation = _
-  var modelViewInvTrUniLoc: Token.UniformLocation = _
-
-  var mainMesh: Option[OpenGLMesh] = None
-  val entities = new ArrayBuffer[Entity]()
-
-  var connection: Option[ConnectionHandle] = None
-
-  val fovy: Float = 60f
-  val near: Float = 0.1f
-  val far: Float = 100f
-
-  val lookTranslationSpeed: Float = 2.0f
-  val lookRotationSpeed: Float = 50.0f
-
-  var dim: (Int, Int) = _
-
-  val sampleRate = 44100
-
-  var lastTimeSent: Long = 0
-
-  def createMonoSound(freq: Int): ByteBuffer = {
-    val bb = ByteBuffer.allocate(4 * sampleRate).order(ByteOrder.nativeOrder())
-
-    var i = 0
-    while (i < sampleRate) {
-      val current = Math.sin(2 * Math.PI * freq * i.toDouble / sampleRate).toFloat
-      bb.putFloat(current)
-      i += 1
-    }
-
-    bb.rewind()
-    bb
+    Some(networkFuture) // wait for network setup (last part) to complete before proceding
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {
-    def processKeyboard() {
-      val event = keyboard.nextEvent()
-      event match {
-        case Some(KeyboardEvent(key, down)) =>
-          if (down) key match {
-            case Key.L =>
-              mouse.locked = !mouse.locked
-              itf.printLine("Pointer lock toggled")
-
-            case Key.Escape => continueCond = false
-            case Key.F =>
-              gl.display.fullscreen = !gl.display.fullscreen
-              itf.printLine("Fullscreen toggled")
-
-            case Key.NumAdd =>
-              audioContext.volume *= 1.25f
-              itf.printLine("Increased volume to " + audioContext.volume)
-
-            case Key.NumSubstract =>
-              audioContext.volume /= 1.25f
-              itf.printLine("Decreased volume to " + audioContext.volume)
-
-            case Key.M =>
-            // TODO audio
-
-            case _     => // nothing to do
-          }
-          processKeyboard()
-
-        case None => // nothing to do
-      }
-    }
-    processKeyboard()
+    val now = System.currentTimeMillis()
+    val elapsedSinceLastFrame = fe.elapsedTime
 
     val width = gl.display.width
     val height = gl.display.height
 
-    val curDim = (width, height)
-    if (curDim != dim) {
-      dim = curDim
-      gl.viewport(0, 0, width, height)
-      Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
+    var bulletShot = false
+
+    //#### Update from inputs
+    val delta = mouse.deltaPosition
+
+    def processKeyboard() {
+      val optKeyEvent = keyboard.nextEvent()
+      for (keyEvent <- optKeyEvent) {
+        if (keyEvent.down) keyEvent.key match {
+          case Key.Escape => continueCond = false
+          case Key.L      => mouse.locked = !mouse.locked
+          case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
+          case _          => // nothing to do
+        }
+
+        processKeyboard() // process next event
+      }
+    }
+    processKeyboard()
+
+    def processMouse() {
+      val optMouseEvent = mouse.nextEvent()
+      for (mouseEvent <- optMouseEvent) {
+        mouseEvent match {
+          case ButtonEvent(Button.Left, true) => bulletShot = true
+          case _                              =>
+        }
+
+        processMouse() // process next event
+      }
+    }
+    processMouse()
+
+    // Apply inputs to local ship
+    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = 6f
+    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = 2f
+    else localShipData.velocity = 4f
+
+    val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
+    val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
+    val inputRotationXSpeed = inputRotationX / elapsedSinceLastFrame
+    val inputRotationYSpeed = inputRotationY / elapsedSinceLastFrame
+
+    localShipData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
+    localShipData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
+
+    //#### Simulation
+
+    // Ships
+    Physics.stepShip(elapsedSinceLastFrame, localShipData) // Local Player
+    for ((shipId, shipData) <- extShipsData) { // External players
+      Physics.stepShip(elapsedSinceLastFrame, shipData.data)
     }
 
-    val deltaPosition = mouse.deltaPosition
-    val rotX: Float = (deltaPosition.x.toFloat / width.toFloat) * -lookRotationSpeed
-    val rotY: Float = (deltaPosition.y.toFloat / height.toFloat) * -lookRotationSpeed
-    cameraRotationH += rotX
-    cameraRotationV += rotY
+    // Make sure the ship remains on the terrain
+    if (Math.abs(localShipData.position.x) > terrainSize) localShipData.position.x = Math.signum(localShipData.position.x) * terrainSize
+    if (Math.abs(localShipData.position.y) > terrainSize) localShipData.position.y = Math.signum(localShipData.position.y) * terrainSize
+    if (Math.abs(localShipData.position.z) > terrainSize) localShipData.position.z = Math.signum(localShipData.position.z) * terrainSize
 
-    val cameraRotation = Matrix3f.rotation3D(cameraRotationH, Vector3f.Up) * Matrix3f.rotation3D(cameraRotationV, Vector3f.Right)
+    // Bullets
+    for ((bulletId, bulletData) <- bulletsData) {
+      Physics.stepBullet(elapsedSinceLastFrame, bulletData)
+    }
 
-    var transX: Float = 0
-    var transY: Float = 0
-    var transZ: Float = 0
-    if (keyboard.isKeyDown(Key.D)) transX += fe.elapsedTime * +lookTranslationSpeed
-    if (keyboard.isKeyDown(Key.A)) transX += fe.elapsedTime * -lookTranslationSpeed
-    if (keyboard.isKeyDown(Key.W)) transZ += fe.elapsedTime * -lookTranslationSpeed
-    if (keyboard.isKeyDown(Key.S)) transZ += fe.elapsedTime * +lookTranslationSpeed
-    if (keyboard.isKeyDown(Key.E)) transY += fe.elapsedTime * +lookTranslationSpeed
-    if (keyboard.isKeyDown(Key.C)) transY += fe.elapsedTime * -lookTranslationSpeed
-    val multiplier: Float = if (keyboard.isKeyDown(Key.ShiftLeft)) 4f else 1f
-    cameraPosition += cameraRotation * (new Vector3f(transX, transY, transZ) * multiplier)
+    // Remove bullets out of the terrain
+    bulletsData --= (bulletsData.filter {
+      case (bulletId, bulletData) =>
+        Math.abs(bulletData.position.x) > terrainSize ||
+          Math.abs(bulletData.position.y) > terrainSize ||
+          Math.abs(bulletData.position.z) > terrainSize
+    }).keys
 
-    audioContext.listener.position = cameraPosition
-    audioContext.listener.setOrientation(cameraRotation * Vector3f.Front, cameraRotation * Vector3f.Up)
-
-    for (conn <- connection) { // Network
-      val now = System.currentTimeMillis()
-      if (now - lastTimeSent > 40) { // 40ms before each sent (25Hz)
-        conn.write(upickle.write[PlayerData](PlayerData(cameraPosition.x, cameraPosition.y, cameraPosition.z, cameraRotationH, cameraRotationV)))
-        lastTimeSent = now
+    val hits: mutable.Set[(Int, Int)] = mutable.Set()
+    // Check collisions for our owns bullets
+    bulletsData.filter { case (bulletId, bulletData) => bulletData.shooterId == localPlayerId }.foreach {
+      case (bulletId, bulletData) => extShipsData.foreach {
+        case (shipId, shipData) =>
+          if ((bulletData.position - shipData.data.position).length <= 1f) {
+            hits += ((bulletId, shipId))
+          }
       }
     }
 
-    gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
+    // Remove bullets that reached a target
+    for ((bulletId, shipId) <- hits) {
+      bulletsData.remove(bulletId)
+    }
 
-    gl.useProgram(program)
+    //#### Network
+    for (conn <- connection) {
+      val position = conv(localShipData.position)
+      val velocity = localShipData.velocity
+      val orientation = conv(localShipData.orientation)
+      val rotation = conv(localShipData.rotation)
 
-    gl.uniformMatrix4f(projectionUniLoc, projection)
-    val cameraTransform = Matrix4f.translate3D(cameraPosition) * cameraRotation.toHomogeneous()
+      for (hit <- hits) {
+        val (bulletId, shipId) = hit
+        val hitMsg = BulletHit(bulletId, shipId)
+        val hitMsgText = upickle.write(hitMsg)
+        conn.write(hitMsgText)
+      }
+
+      if (bulletShot && (lastTimeBulletShot.isEmpty || now - lastTimeBulletShot.get > shotIntervalMs)) {
+        val bulletMsg = BulletShot(position, orientation)
+        val bulletMsgText = upickle.write(bulletMsg)
+        conn.write(bulletMsgText)
+
+        lastTimeBulletShot = Some(now)
+      }
+
+      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
+        val positionUpdateMsg = ClientPositionUpdate(position, velocity, orientation, rotation)
+        val positionUpdateMsgText = upickle.write(positionUpdateMsg)
+        conn.write(positionUpdateMsgText)
+
+        lastTimeUpdateToServer = Some(now)
+      }
+    }
+
+    //#### Rendering
+    val curDim = (width, height)
+    if (curDim != screenDim) {
+      screenDim = curDim
+      Rendering.setProjection(width, height)
+    }
+
+    // Camera data
+    val cameraOrientation = localShipData.orientation.copy()
+    cameraOrientation.z = 0
+
+    val cameraTransform = Matrix4f.translate3D(localShipData.position) * Physics.matrixForOrientation(cameraOrientation).toHomogeneous()
     val cameraTransformInv = cameraTransform.invertedCopy()
 
-    gl.enableVertexAttribArray(positionAttrLoc)
-    gl.enableVertexAttribArray(normalAttrLoc)
+    // Clear the buffers
+    val r = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 1.0f)
+    val gb = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 0.0f)
+    gl.clearColor(r, gb, gb, 1f)
+    gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
-    this.entities.foreach { entity =>
-      val mesh = entity.mesh
-
-      val transform = entity.transform
-      val modelView = cameraTransformInv * transform
-      val modelViewInvTr = modelView.invertedCopy().transpose()
-
-      gl.uniformMatrix4f(modelViewUniLoc, modelView)
-      gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
-
-      gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.verticesBuffer)
-      gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-
-      gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
-      gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
-
-      mesh.subMeshes.foreach { submesh =>
-        gl.uniform3f(diffuseColorUniLoc, submesh.diffuseColor)
-
-        gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
-        gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
-      }
+    // Ships
+    Rendering.Ship.init()
+    for ((extId, shipData) <- extShipsData) {
+      val transform = Matrix4f.translate3D(shipData.data.position) * Physics.matrixForOrientation(shipData.data.orientation).toHomogeneous()
+      Rendering.Ship.render(extId, transform, cameraTransformInv)
     }
+    Rendering.Ship.close()
 
-    gl.disableVertexAttribArray(normalAttrLoc)
-    gl.disableVertexAttribArray(positionAttrLoc)
+    // Bullets
+    Rendering.Bullet.init()
+    for ((bulletId, bulletData) <- bulletsData) {
+      val transform = Matrix4f.translate3D(bulletData.position) * Physics.matrixForOrientation(bulletData.orientation).toHomogeneous()
+      Rendering.Bullet.render(bulletData.shooterId, transform, cameraTransformInv)
+    }
+    Rendering.Bullet.close()
 
+    //Hud: health
+    Rendering.Health.init()
+    Rendering.Health.render(localPlayerHealth)
+    Rendering.Health.close()
+
+    //#### Ending
     continueCond = continueCond && itf.update()
   }
 }

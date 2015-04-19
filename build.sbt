@@ -1,5 +1,5 @@
-import android.Keys._
-import android.Dependencies.aar
+//import android.Keys._
+//import android.Dependencies.aar
 
 lazy val commonSettings = Seq(
         version := "0.1-SNAPSHOT",
@@ -9,7 +9,8 @@ lazy val commonSettings = Seq(
         resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
         resolvers += "Spray" at "http://repo.spray.io",
         scalacOptions ++= Seq(
-          "-deprecation"
+          "-deprecation",
+          "-feature"
         ),
         libraryDependencies ++= Seq(
           "com.lihaoyi" %%% "upickle" % "0.2.8"
@@ -30,7 +31,9 @@ lazy val demo = crossProject
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %%% "transport-core" % "0.1-SNAPSHOT",
             "com.lihaoyi" %%% "utest" % "0.3.0" % "test"
-        )
+        ),
+        unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared-server" / "src" / "main" / "scala",
+        unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared-server" / "src" / "test" / "scala"
     )
     
     /* JavaScript settings */
@@ -106,5 +109,7 @@ lazy val serverDemoJS = project
                 "com.wandoulabs.akka" %% "spray-websocket" % "0.1.4"
             )
         },
+        unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared-server" / "src" / "main" / "scala",
+        unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared-server" / "src" / "test" / "scala",
         (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data
     )

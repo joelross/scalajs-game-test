@@ -6,8 +6,8 @@ import java.nio.FloatBuffer
  * Ported from LWJGL source code
  */
 class Matrix2f extends Matrix {
-  private var m00, m11: Float = 1
-  private var m01, m10: Float = 0
+  private[math] var m00, m11: Float = 1
+  private[math] var m01, m10: Float = 0
 
   def this(a00: Float, a01: Float, a10: Float, a11: Float) = {
     this()
@@ -16,6 +16,16 @@ class Matrix2f extends Matrix {
     m01 = a10
     m10 = a01
     m11 = a11
+  }
+
+  def this(col0: Vector2f, col1: Vector2f) = {
+    this()
+
+    m00 = col0.x
+    m01 = col0.y
+
+    m10 = col1.x
+    m11 = col1.y
   }
 
   def this(m: Matrix2f) = {
@@ -28,7 +38,7 @@ class Matrix2f extends Matrix {
     case (0, 1) => m10
     case (1, 0) => m01
     case (1, 1) => m11
-    case _ => throw new IndexOutOfBoundsException
+    case _      => throw new IndexOutOfBoundsException
   }
 
   def update(row: Int, col: Int, v: Float): Unit = (row, col) match {
@@ -36,7 +46,7 @@ class Matrix2f extends Matrix {
     case (0, 1) => m10 = v
     case (1, 0) => m01 = v
     case (1, 1) => m11 = v
-    case _ => throw new IndexOutOfBoundsException
+    case _      => throw new IndexOutOfBoundsException
   }
 
   def load(src: FloatBuffer, order: MajorOrder): Matrix2f = order match {
@@ -81,6 +91,17 @@ class Matrix2f extends Matrix {
     m10 = 0
     m11 = 0
     this
+  }
+
+  def column(colIdx: Int): Vector2f = {
+    val ret = new Vector2f
+    Matrix2f.getColumn(this, colIdx, ret)
+    ret
+  }
+  def row(rowIdx: Int): Vector2f = {
+    val ret = new Vector2f
+    Matrix2f.getRow(this, rowIdx, ret)
+    ret
   }
 
   def invert(): Matrix2f = {
@@ -129,9 +150,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def +=(m: Matrix2f): Matrix2f = {
+  def +=(m: Matrix2f): Unit = {
     Matrix2f.add(this, m, this)
-    this
   }
 
   def -(m: Matrix2f): Matrix2f = {
@@ -140,9 +160,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def -=(m: Matrix2f): Matrix2f = {
+  def -=(m: Matrix2f): Unit = {
     Matrix2f.sub(this, m, this)
-    this
   }
 
   def *(m: Matrix2f): Matrix2f = {
@@ -151,9 +170,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def *=(m: Matrix2f): Matrix2f = {
+  def *=(m: Matrix2f): Unit = {
     Matrix2f.mult(this, m, this)
-    this
   }
 
   def *(v: Float): Matrix2f = {
@@ -162,9 +180,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def *=(v: Float): Matrix2f = {
+  def *=(v: Float): Unit = {
     Matrix2f.mult(this, v, this)
-    this
   }
 
   def /(v: Float): Matrix2f = {
@@ -173,9 +190,8 @@ class Matrix2f extends Matrix {
     ret
   }
 
-  def /=(v: Float): Matrix2f = {
+  def /=(v: Float): Unit = {
     Matrix2f.div(this, v, this)
-    this
   }
 
   def *(v: Vector2f): Vector2f = {
@@ -187,6 +203,12 @@ class Matrix2f extends Matrix {
   def transform(v: Vector2f): Vector2f = {
     val ret = new Vector2f
     Matrix2f.mult(this, v, ret)
+    ret
+  }
+
+  def toHomogeneous(): Matrix3f = {
+    val ret = new Matrix3f
+    Matrix2f.setHomogeneous(this, ret)
     ret
   }
 
@@ -210,7 +232,7 @@ class Matrix2f extends Matrix {
   }
 
   override def hashCode(): Int = {
-    m00.toInt ^ m01.toInt ^ m10.toInt ^ m11.toInt
+    m00.hashCode ^ m01.hashCode ^ m10.hashCode ^ m11.hashCode
   }
 }
 
@@ -220,6 +242,67 @@ object Matrix2f {
     dst.m01 = src.m01
     dst.m10 = src.m10
     dst.m11 = src.m11
+  }
+
+  def getColumn(src: Matrix2f, colIdx: Int, dst: Vector2f): Unit = colIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m01
+
+    case 1 =>
+      dst.x = src.m10
+      dst.y = src.m11
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
+  def getRow(src: Matrix2f, rowIdx: Int, dst: Vector2f): Unit = rowIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m10
+
+    case 1 =>
+      dst.x = src.m01
+      dst.y = src.m11
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
+  def setColumn(src: Vector2f, dst: Matrix2f, colIdx: Int): Unit = colIdx match {
+    case 0 =>
+      dst.m00 = src.x
+      dst.m01 = src.y
+
+    case 1 =>
+      dst.m10 = src.x
+      dst.m11 = src.y
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+  def setRow(src: Vector2f, dst: Matrix2f, rowIdx: Int): Unit = rowIdx match {
+    case 0 =>
+      dst.m00 = src.x
+      dst.m10 = src.y
+
+    case 1 =>
+      dst.m01 = src.x
+      dst.m11 = src.y
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
+  def setHomogeneous(src: Matrix2f, dst: Matrix3f): Unit = {
+    dst.m00 = src.m00
+    dst.m01 = src.m01
+    dst.m02 = 0f
+
+    dst.m10 = src.m10
+    dst.m11 = src.m11
+    dst.m12 = 0f
+
+    dst.m20 = 0f
+    dst.m21 = 0f
+    dst.m22 = 1f
   }
 
   def negate(src: Matrix2f, dst: Matrix2f): Unit = {

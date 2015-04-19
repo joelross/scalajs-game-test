@@ -25,6 +25,22 @@ class Matrix3f extends Matrix {
     m22 = a22
   }
 
+  def this(col0: Vector3f, col1: Vector3f, col2: Vector3f) = {
+    this()
+
+    m00 = col0.x
+    m01 = col0.y
+    m02 = col0.z
+
+    m10 = col1.x
+    m11 = col1.y
+    m12 = col1.z
+
+    m20 = col2.x
+    m21 = col2.y
+    m22 = col2.z
+  }
+
   def this(m: Matrix3f) = {
     this()
     Matrix3f.set(m, this)
@@ -148,6 +164,17 @@ class Matrix3f extends Matrix {
     this
   }
 
+  def column(colIdx: Int): Vector3f = {
+    val ret = new Vector3f
+    Matrix3f.getColumn(this, colIdx, ret)
+    ret
+  }
+  def row(rowIdx: Int): Vector3f = {
+    val ret = new Vector3f
+    Matrix3f.getRow(this, rowIdx, ret)
+    ret
+  }
+
   def invert(): Matrix3f = {
     Matrix3f.invert(this, this)
     this
@@ -194,9 +221,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def +=(m: Matrix3f): Matrix3f = {
+  def +=(m: Matrix3f): Unit = {
     Matrix3f.add(this, m, this)
-    this
   }
 
   def -(m: Matrix3f): Matrix3f = {
@@ -205,9 +231,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def -=(m: Matrix3f): Matrix3f = {
+  def -=(m: Matrix3f): Unit = {
     Matrix3f.sub(this, m, this)
-    this
   }
 
   def *(m: Matrix3f): Matrix3f = {
@@ -216,9 +241,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def *=(m: Matrix3f): Matrix3f = {
+  def *=(m: Matrix3f): Unit = {
     Matrix3f.mult(this, m, this)
-    this
   }
 
   def *(v: Float): Matrix3f = {
@@ -227,9 +251,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def *=(v: Float): Matrix3f = {
+  def *=(v: Float): Unit = {
     Matrix3f.mult(this, v, this)
-    this
   }
 
   def /(v: Float): Matrix3f = {
@@ -238,9 +261,8 @@ class Matrix3f extends Matrix {
     ret
   }
 
-  def /=(v: Float): Matrix3f = {
+  def /=(v: Float): Unit = {
     Matrix3f.div(this, v, this)
-    this
   }
 
   def *(v: Vector3f): Vector3f = {
@@ -252,6 +274,12 @@ class Matrix3f extends Matrix {
   def transform(v: Vector3f): Vector3f = {
     val ret = new Vector3f
     Matrix3f.mult(this, v, ret)
+    ret
+  }
+
+  def toCartesian(): Matrix2f = {
+    val ret = new Matrix2f
+    Matrix3f.setCartesian(this, ret)
     ret
   }
 
@@ -287,9 +315,9 @@ class Matrix3f extends Matrix {
   }
 
   override def hashCode(): Int = {
-    m00.toInt ^ m01.toInt ^ m02.toInt ^
-      m10.toInt ^ m11.toInt ^ m12.toInt ^
-      m20.toInt ^ m21.toInt ^ m22.toInt
+    m00.hashCode ^ m01.hashCode ^ m02.hashCode ^
+      m10.hashCode ^ m11.hashCode ^ m12.hashCode ^
+      m20.hashCode ^ m21.hashCode ^ m22.hashCode
   }
 }
 
@@ -306,6 +334,88 @@ object Matrix3f {
     dst.m20 = src.m20
     dst.m21 = src.m21
     dst.m22 = src.m22
+  }
+
+  def getColumn(src: Matrix3f, colIdx: Int, dst: Vector3f): Unit = colIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m01
+      dst.z = src.m02
+
+    case 1 =>
+      dst.x = src.m10
+      dst.y = src.m11
+      dst.z = src.m12
+
+    case 2 =>
+      dst.x = src.m20
+      dst.y = src.m21
+      dst.z = src.m22
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+  def getRow(src: Matrix3f, rowIdx: Int, dst: Vector3f): Unit = rowIdx match {
+    case 0 =>
+      dst.x = src.m00
+      dst.y = src.m10
+      dst.z = src.m20
+
+    case 1 =>
+      dst.x = src.m01
+      dst.y = src.m11
+      dst.z = src.m21
+
+    case 2 =>
+      dst.x = src.m02
+      dst.y = src.m12
+      dst.z = src.m22
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
+  def setColumn(src: Vector3f, dst: Matrix3f, colIdx: Int): Unit = colIdx match {
+    case 0 =>
+      dst.m00 = src.x
+      dst.m01 = src.y
+      dst.m02 = src.z
+
+    case 1 =>
+      dst.m10 = src.x
+      dst.m11 = src.y
+      dst.m12 = src.z
+
+    case 2 =>
+      dst.m20 = src.x
+      dst.m21 = src.y
+      dst.m22 = src.z
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+  def setRow(src: Vector3f, dst: Matrix3f, rowIdx: Int): Unit = rowIdx match {
+    case 0 =>
+      dst.m00 = src.x
+      dst.m10 = src.y
+      dst.m20 = src.z
+
+    case 1 =>
+      dst.m01 = src.x
+      dst.m11 = src.y
+      dst.m21 = src.z
+
+    case 2 =>
+      dst.m02 = src.x
+      dst.m12 = src.y
+      dst.m22 = src.z
+
+    case _ => throw new IndexOutOfBoundsException
+  }
+
+  def setCartesian(src: Matrix3f, dst: Matrix2f): Unit = {
+    dst.m00 = src.m00 / src.m22
+    dst.m01 = src.m01 / src.m22
+
+    dst.m10 = src.m10 / src.m22
+    dst.m11 = src.m11 / src.m22
   }
 
   def setHomogeneous(src: Matrix3f, dst: Matrix4f): Unit = {

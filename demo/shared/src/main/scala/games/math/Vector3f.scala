@@ -47,6 +47,7 @@ class Vector3f extends Vector {
   def normalise(): Vector3f = {
     val l = length
     this /= l
+    this
   }
 
   def normalizedCopy(): Vector3f = {
@@ -127,24 +128,20 @@ class Vector3f extends Vector {
     ret
   }
 
-  def +=(v: Vector3f): Vector3f = {
+  def +=(v: Vector3f): Unit = {
     Vector3f.add(this, v, this)
-    this
   }
 
-  def -=(v: Vector3f): Vector3f = {
+  def -=(v: Vector3f): Unit = {
     Vector3f.sub(this, v, this)
-    this
   }
 
-  def *=(v: Float): Vector3f = {
+  def *=(v: Float): Unit = {
     Vector3f.mult(this, v, this)
-    this
   }
 
-  def /=(v: Float): Vector3f = {
+  def /=(v: Float): Unit = {
     Vector3f.div(this, v, this)
-    this
   }
 
   def toHomogeneous(): Vector4f = {
@@ -169,9 +166,9 @@ class Vector3f extends Vector {
   }
 
   override def hashCode(): Int = {
-    x.toInt ^
-      y.toInt ^
-      z.toInt
+    x.hashCode ^
+      y.hashCode ^
+      z.hashCode
   }
 }
 

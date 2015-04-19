@@ -2,7 +2,6 @@ package games.demoJS
 
 import scala.scalajs.js
 import org.scalajs.dom
-import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 import games._
 import games.math
@@ -12,6 +11,8 @@ import games.audio._
 import games.input._
 
 import games.demo._
+
+import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 object Launcher extends js.JSApp {
   def main(): Unit = {

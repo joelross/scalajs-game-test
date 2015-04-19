@@ -2,7 +2,6 @@ package games
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.io.InputStream
-import scala.concurrent.{ Future, ExecutionContext }
 import java.io.ByteArrayOutputStream
 import java.nio.{ ByteBuffer, ByteOrder }
 import org.lwjgl.opengl._
@@ -10,54 +9,37 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import javax.imageio.ImageIO
 
+import scala.concurrent.{ Await, Future, ExecutionContext }
+import scala.concurrent.duration.Duration
+import scala.util.{ Success, Failure }
+
 import games.opengl.GLES2
 
-object JvmUtils {
-  private val pendingTaskList = new ConcurrentLinkedQueue[Runnable]
+private[games] class ExplicitExecutionContext extends ExecutionContext {
+  private val pendingRunnables = new ConcurrentLinkedQueue[Runnable]
 
-  /**
-   * Trivial ExecutionContext that simply execute the Runnable immediately in the same thread
-   */
-  val immediateExecutionContext: ExecutionContext = new ExecutionContext {
-    def execute(runnable: Runnable): Unit = {
-      try {
-        runnable.run()
-      } catch {
-        case t: Throwable => this.reportFailure(t)
-      }
-    }
-    def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
+  def execute(runnable: Runnable): Unit = {
+    pendingRunnables.add(runnable)
   }
-
-  implicit val openglExecutionContext: ExecutionContext = new ExecutionContext {
-    def execute(runnable: Runnable): Unit = addPendingTask(runnable)
-    def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
+  def reportFailure(cause: Throwable): Unit = {
+    ExecutionContext.defaultReporter(cause)
   }
 
   /**
-   * Flush all the pending tasks.
+   * Flush all the currently pending runnables.
    * You don't need to explicitly use this method if you use the FrameListener loop system.
    * Warning: this should be called only from the OpenGL thread!
    */
-  def flushPendingTaskList(): Unit = {
+  def flushPending(): Unit = {
     var current: Runnable = null
-    while ({ current = pendingTaskList.poll(); current } != null) {
-      try {
-        current.run()
-      } catch {
-        case t: Throwable => openglExecutionContext.reportFailure(t)
-      }
+    while ({ current = pendingRunnables.poll(); current } != null) {
+      try { current.run() }
+      catch { case t: Throwable => this.reportFailure(t) }
     }
   }
+}
 
-  /**
-   * Add a Runnable task to be executed by the OpenGL thread.
-   * Tasks are usually executed at the beginning of the next iteration of the FrameListener loop system.
-   */
-  def addPendingTask(task: Runnable): Unit = {
-    pendingTaskList.add(task)
-  }
-
+object JvmUtils {
   def streamForResource(res: Resource): InputStream = {
     val stream = JvmUtils.getClass().getResourceAsStream(res.name)
     if (stream == null) throw new RuntimeException("Could not load resource " + res.name)
@@ -66,6 +48,8 @@ object JvmUtils {
 }
 
 trait UtilsImpl extends UtilsRequirements {
+  def getLoopThreadExecutionContext(): ExecutionContext = new ExplicitExecutionContext
+
   def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer] = {
     Future {
       val stream = JvmUtils.streamForResource(res)
@@ -110,7 +94,7 @@ trait UtilsImpl extends UtilsRequirements {
       text.toString()
     }
   }
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, preload: => Boolean = true)(implicit gl: games.opengl.GLES2, ec: ExecutionContext): scala.concurrent.Future[Unit] = {
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext, preload: => Boolean = true)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit] = {
     Future {
       val stream = JvmUtils.streamForResource(res)
 
@@ -139,26 +123,37 @@ trait UtilsImpl extends UtilsRequirements {
         gl.bindTexture(GLES2.TEXTURE_2D, texture)
         gl.texImage2D(GLES2.TEXTURE_2D, 0, GLES2.RGBA, width, height, 0, GLES2.RGBA, GLES2.UNSIGNED_BYTE, byteBuffer)
         gl.bindTexture(GLES2.TEXTURE_2D, previousTexture)
-    }(JvmUtils.openglExecutionContext)
+    }(openglExecutionContext)
   }
   def startFrameListener(fl: games.FrameListener): Unit = {
-    def screenDim(): (Int, Int) = {
-      val displayMode = Display.getDisplayMode()
-
-      val width = displayMode.getWidth()
-      val height = displayMode.getHeight()
-
-      (width, height)
-    }
-
     val frameListenerThread = new Thread(new Runnable {
       def run() {
         var lastLoopTime: Long = System.nanoTime()
-        fl.onCreate()
+        val readyOptFuture = try { fl.onCreate() } catch { case t: Throwable => Some(Future.failed(t)) }
 
-        while (fl.continue()) {
+        var looping = true
+
+        readyOptFuture match {
+          case None => // just continue
+          case Some(future) => // wait for it
+            while (!future.isCompleted) {
+              // Execute the pending tasks
+              fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
+              Thread.sleep(100) // Don't exhaust the CPU, 10Hz should be enough
+            }
+
+            future.value.get match {
+              case Success(_) => // Ok, nothing to do, just continue
+              case Failure(t) =>
+                Console.err.println("Could not init FrameListener")
+                t.printStackTrace(Console.err)
+                looping = false
+            }
+        }
+
+        try while (looping && fl.continue()) {
           // Execute the pending tasks
-          JvmUtils.flushPendingTaskList()
+          fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
 
           // Main loop call
           val currentTime: Long = System.nanoTime()
@@ -166,7 +161,14 @@ trait UtilsImpl extends UtilsRequirements {
           lastLoopTime = currentTime
           val frameEvent = FrameEvent(diff)
           fl.onDraw(frameEvent)
+
+          Display.update()
+        } catch {
+          case t: Throwable =>
+            Console.err.println("Error during looping of FrameListener")
+            t.printStackTrace(Console.err)
         }
+
         fl.onClose()
       }
     })

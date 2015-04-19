@@ -1,6 +1,5 @@
 package games.demoJVM
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.FileInputStream
 import java.io.File
 import java.io.EOFException
@@ -15,6 +14,8 @@ import games.audio._
 import games.input._
 
 import games.demo._
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Launcher {
 
@@ -46,7 +47,6 @@ object Launcher {
         mouse
       }
       def update(): Boolean = {
-        Display.update()
         !Display.isCloseRequested()
       }
       def close(): Unit = {
@@ -54,7 +54,7 @@ object Launcher {
       }
     }
 
-    val engine = new Engine(itf)(JvmUtils.openglExecutionContext)
+    val engine = new Engine(itf)
 
     Utils.startFrameListener(engine)
   }

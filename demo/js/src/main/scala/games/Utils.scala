@@ -87,6 +87,8 @@ object JsUtils {
 }
 
 trait UtilsImpl extends UtilsRequirements {
+  def getLoopThreadExecutionContext(): ExecutionContext = scalajs.concurrent.JSExecutionContext.Implicits.queue
+
   def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer] = {
     val xmlRequest = new dom.XMLHttpRequest()
 
@@ -118,6 +120,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     promise.future
   }
+
   def getTextDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[String] = {
     val xmlRequest = new dom.XMLHttpRequest()
 
@@ -148,7 +151,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     promise.future
   }
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, preload: => Boolean = true)(implicit gl: games.opengl.GLES2, ec: ExecutionContext): scala.concurrent.Future[Unit] = {
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext, preload: => Boolean = true)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit] = {
     val image = dom.document.createElement("img").asInstanceOf[js.Dynamic]
 
     val promise = Promise[Unit]
@@ -187,9 +190,14 @@ trait UtilsImpl extends UtilsRequirements {
 
     val ctx = new FrameListenerLoopContext
 
+    def close(): Unit = {
+      ctx.closed = true
+      fl.onClose()
+    }
+
     def loop(timeStamp: js.Any): Unit = {
       if (!ctx.closed) {
-        if (fl.continue()) {
+        try if (fl.continue()) {
           // Main loop call
           val currentTime = JsUtils.now()
           val diff = ((currentTime - ctx.lastLoopTime) / 1e3).toFloat
@@ -198,15 +206,38 @@ trait UtilsImpl extends UtilsRequirements {
           fl.onDraw(frameEvent)
           g.window.requestAnimationFrame(loop _)
         } else {
-          ctx.closed = true
-          fl.onClose()
+          close()
+        } catch {
+          case t: Throwable =>
+            Console.err.println("Error during looping of FrameListener")
+            t.printStackTrace(Console.err)
+
+            close()
         }
       }
     }
 
     def loopInit(timeStamp: js.Any): Unit = {
-      fl.onCreate()
-      loop(timeStamp)
+      val readyOptFuture = try { fl.onCreate() } catch { case t: Throwable => Some(Future.failed(t)) }
+      readyOptFuture match {
+        case None => loop(timeStamp) // ready right now
+
+        case Some(future) => // wait for the future to complete
+          val ec = scalajs.concurrent.JSExecutionContext.Implicits.runNow
+          future.onSuccess {
+            case _ =>
+              loop(timeStamp)
+          }(ec)
+          future.onFailure {
+            case t => // Don't start the loop in case of failure of the given future
+              Console.err.println("Could not init FrameListener")
+              t.printStackTrace(Console.err)
+
+              close()
+          }(ec)
+
+      }
+
     }
 
     // Start listener

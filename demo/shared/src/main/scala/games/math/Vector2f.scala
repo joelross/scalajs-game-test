@@ -42,6 +42,7 @@ class Vector2f extends Vector {
   def normalise(): Vector2f = {
     val l = length
     this /= l
+    this
   }
 
   def normalizedCopy(): Vector2f = {
@@ -105,24 +106,20 @@ class Vector2f extends Vector {
     ret
   }
 
-  def +=(v: Vector2f): Vector2f = {
+  def +=(v: Vector2f): Unit = {
     Vector2f.add(this, v, this)
-    this
   }
 
-  def -=(v: Vector2f): Vector2f = {
+  def -=(v: Vector2f): Unit = {
     Vector2f.sub(this, v, this)
-    this
   }
 
-  def *=(v: Float): Vector2f = {
+  def *=(v: Float): Unit = {
     Vector2f.mult(this, v, this)
-    this
   }
 
-  def /=(v: Float): Vector2f = {
+  def /=(v: Float): Unit = {
     Vector2f.div(this, v, this)
-    this
   }
 
   override def toString = {
@@ -140,8 +137,8 @@ class Vector2f extends Vector {
   }
 
   override def hashCode(): Int = {
-    x.toInt ^
-      y.toInt
+    x.hashCode ^
+      y.hashCode
   }
 }
 
