@@ -55,6 +55,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var keyboard: Keyboard = _
   private var mouse: Mouse = _
 
+  private var config: Map[String, String] = _
+
   private var connection: Option[ConnectionHandle] = None
   private var localPlayerId: Int = 0
   private var localPlayerHealth: Float = initHealth
@@ -110,30 +112,33 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     audioContext.volume = 0.25f // Lower the initial global volume
 
-    // Loading data
-    val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
-    val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
+    // Load main config file
     val configFuture = Misc.loadConfigFile(Resource("/games/demo/config"))
 
-    // Retrieve useful data from shaders (require access to OpenGL context)
-    val retrieveInfoFromDataFuture = modelsFuture.flatMap { models =>
-      shadersFuture.flatMap { shaders =>
-        configFuture.map { config =>
-          itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
+    // Loading data
+    val dataFuture = configFuture.flatMap { config =>
+      this.config = config
 
-          Rendering.Ship.setup(shaders("simple3d"), models("ship"))
-          Rendering.Bullet.setup(shaders("simple3d"), models("bullet"))
-          Rendering.Health.setup(shaders("health"))
+      val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
+      val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
 
-          config
-        }(loopExecutionContext)
-      }
+      Future.sequence(Seq(modelsFuture, shadersFuture))
     }
+
+    // Retrieve useful data from shaders (require access to OpenGL context)
+    val retrieveInfoFromDataFuture = dataFuture.map {
+      case Seq(models: Map[String, OpenGLMesh], shaders: Map[String, Token.Program]) =>
+        itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
+
+        Rendering.Ship.setup(shaders("simple3d"), models("ship"))
+        Rendering.Bullet.setup(shaders("simple3d"), models("bullet"))
+        Rendering.Health.setup(shaders("health"))
+    }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
 
     // Init network (wait for data loading to complete before that)
-    val networkFuture = retrieveInfoFromDataFuture.flatMap { config =>
+    val networkFuture = retrieveInfoFromDataFuture.flatMap { _ =>
       val serverAddress = config("server")
       itf.printLine("Server address: " + serverAddress)
 
