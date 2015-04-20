@@ -18,7 +18,7 @@ Players are dispatched in room of up to 4 players.
 
 #### General
 
-The address the clients will attempt to reach is located in ```demo/shared/src/main/scala/games/demo/Data.scala``` (```ws://localhost:8080/``` by default, which should be fine if you are using the included server locally).
+The address the clients will attempt to reach is located in ```demo/shared/src/main/resources/games/demo/config``` (```ws://localhost:8080/``` by default, which should be fine if you are using the included server locally).
 
 #### Server + Scala.js client
 

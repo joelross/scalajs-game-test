@@ -113,23 +113,31 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Loading data
     val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
     val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
+    val configFuture = Misc.loadConfigFile(Resource("/games/demo/config"))
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = modelsFuture.flatMap { models =>
-      shadersFuture.map { shaders =>
-        itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
+      shadersFuture.flatMap { shaders =>
+        configFuture.map { config =>
+          itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
 
-        Rendering.Ship.setup(shaders("simple3d"), models("ship"))
-        Rendering.Bullet.setup(shaders("simple3d"), models("bullet"))
-        Rendering.Health.setup(shaders("health"))
-      }(loopExecutionContext)
+          Rendering.Ship.setup(shaders("simple3d"), models("ship"))
+          Rendering.Bullet.setup(shaders("simple3d"), models("bullet"))
+          Rendering.Health.setup(shaders("health"))
+
+          config
+        }(loopExecutionContext)
+      }
     }
 
     val helloPacketReceived = Promise[Unit]
 
     // Init network (wait for data loading to complete before that)
-    val networkFuture = retrieveInfoFromDataFuture.flatMap { _ =>
-      val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
+    val networkFuture = retrieveInfoFromDataFuture.flatMap { config =>
+      val serverAddress = config("server")
+      itf.printLine("Server address: " + serverAddress)
+
+      val futureConnection = new WebSocketClient().connect(WebSocketUrl(serverAddress))
       futureConnection.map { conn =>
         itf.printLine("Websocket connection established")
         // Wait for the Hello packet to register the connection
