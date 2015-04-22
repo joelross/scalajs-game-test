@@ -80,21 +80,39 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
       canvas.width = canvasPrevDim._1
       canvas.height = canvasPrevDim._2
     } else {
-      val screen = js.Dynamic.global.screen
+      // Necessary for the size of the canvas (Chrome) and its resolution (Firefox)
       canvas.width = screen.width
       canvas.height = screen.height
     }
 
     if (JsUtils.autoToggling) this.fullscreen = fullscreenRequested // If the fullscreen state has changed against the wish of the user, change back ASAP
-    //js.Dynamic.global.console.log("onFullscreenChange", this.fullscreen, e)
   }
   private val onFullscreenError: js.Function = (e: js.Dynamic) => {
     // nothing to do?
     js.Dynamic.global.console.log("onFullscreenError", this.fullscreen, e)
   }
 
+  private val onOrientationChange: js.Function = (e: js.Dynamic) => {
+    if (this.fullscreen) { // Update the canvas size in case of fullscreen mode
+      /*
+       * Wait 1000 ms before reading the screen dimension
+       * (Firefox has not yet applied the orientation change, and is a bit
+       * slow to do it)
+       */
+      val delay = 1000
+      js.Dynamic.global.setTimeout(() => {
+        if (this.fullscreen) { // check again (may have change it the mean time)
+          canvas.width = screen.width
+          canvas.height = screen.height
+        }
+      }, delay)
+    }
+  }
+
   private val canvas = gl.getWebGLRenderingContext().canvas.asInstanceOf[js.Dynamic]
   private val document = dom.document.asInstanceOf[js.Dynamic]
+  private val window = js.Dynamic.global.window
+  private val screen = js.Dynamic.global.screen
 
   // Init
   {
@@ -113,11 +131,19 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
     document.addEventListener("webkitfullscreenerror", onFullscreenError, true)
     document.addEventListener("mozfullscreenerror", onFullscreenError, true)
     document.addEventListener("MSFullscreenError", onFullscreenError, true)
+
+    window.addEventListener("orientationchange", onOrientationChange, true)
+    if (JsUtils.getOptional[js.Function](screen, "addEventListener").isDefined) {
+      screen.addEventListener("orientationchange", onOrientationChange, true)
+      screen.addEventListener("mozorientationchange", onOrientationChange, true)
+    }
+    document.addEventListener("orientationchange", onOrientationChange, true)
   }
 
   private var canvasPrevDim: (Int, Int) = (canvas.width.asInstanceOf[Int], canvas.height.asInstanceOf[Int])
 
   def fullscreen: Boolean = {
+    //val isFullscreen = JsUtils.getOptional[Boolean](document, "webkitIsFullScreen", "mozFullScreen")
     val element = JsUtils.getOptional[js.Dynamic](document, "fullscreenElement", "webkitFullscreenElement", "mozFullScreenElement")
     element match {
       case Some(el) => el == canvas
@@ -158,6 +184,13 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
     document.removeEventListener("webkitfullscreenerror", onFullscreenError, true)
     document.removeEventListener("mozfullscreenerror", onFullscreenError, true)
     document.removeEventListener("MSFullscreenError", onFullscreenError, true)
+
+    window.removeEventListener("orientationchange", onOrientationChange, true)
+    if (JsUtils.getOptional[js.Function](screen, "removeEventListener").isDefined) {
+      screen.removeEventListener("orientationchange", onOrientationChange, true)
+      screen.removeEventListener("mozorientationchange", onOrientationChange, true)
+    }
+    document.removeEventListener("orientationchange", onOrientationChange, true)
   }
 }
 

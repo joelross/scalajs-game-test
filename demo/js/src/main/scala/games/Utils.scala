@@ -84,6 +84,26 @@ object JsUtils {
     val name = execArray(1)
     name
   }
+
+  /*
+   * Get the offset of the element.
+   * From jQuery: https://github.com/jquery/jquery/blob/2.1.3/src/offset.js#L107-L108
+   */
+  def offsetOfElement(element: js.Dynamic): (Int, Int) = {
+    val bounding = element.getBoundingClientRect()
+    val window = js.Dynamic.global.window
+
+    val boundingLeft = bounding.left.asInstanceOf[Double]
+    val boundingTop = bounding.top.asInstanceOf[Double]
+
+    val winOffsetX = window.pageXOffset.asInstanceOf[Double]
+    val winOffsetY = window.pageYOffset.asInstanceOf[Double]
+
+    val elemOffsetX = element.clientLeft.asInstanceOf[Double]
+    val elemOffsetY = element.clientTop.asInstanceOf[Double]
+
+    ((boundingLeft + winOffsetX - elemOffsetX).toInt, (boundingTop + winOffsetY - elemOffsetY).toInt)
+  }
 }
 
 trait UtilsImpl extends UtilsRequirements {

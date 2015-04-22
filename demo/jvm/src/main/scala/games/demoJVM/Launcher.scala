@@ -46,6 +46,7 @@ object Launcher {
         val mouse = new MouseLWJGL()
         mouse
       }
+      def initTouch(): Option[Touchpad] = None
       def update(): Boolean = {
         !Display.isCloseRequested()
       }

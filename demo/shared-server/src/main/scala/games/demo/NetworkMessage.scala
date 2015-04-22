@@ -21,3 +21,4 @@ case object Pong extends ClientMessage
 case class ClientPositionUpdate(position: Vector3, velocity: Float, orientation: Vector3, rotation: Vector3) extends ClientMessage
 case class BulletShot(initialPosition: Vector3, orientation: Vector3) extends ClientMessage
 case class BulletHit(bulletId: Int, playerHitId: Int) extends ClientMessage
+case class Message(msg: String) extends ClientMessage // TODO for testing

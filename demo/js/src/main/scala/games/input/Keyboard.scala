@@ -3,8 +3,7 @@ package games.input
 import scala.scalajs.js
 import org.scalajs.dom
 
-import scala.collection.mutable.Queue
-import scala.collection.mutable.Set
+import scala.collection.mutable
 
 import games.JsUtils
 
@@ -126,10 +125,10 @@ object KeyboardJS {
 
 class KeyboardJS(element: js.Dynamic) extends Keyboard {
   def this() = this(dom.document.asInstanceOf[js.Dynamic])
-  def this(html: dom.raw.HTMLElement) = this(html.asInstanceOf[js.Dynamic])
+  def this(any: js.Any) = this(any.asInstanceOf[js.Dynamic])
 
-  private val eventQueue: Queue[KeyboardEvent] = Queue()
-  private val downKeys: Set[Key] = Set()
+  private val eventQueue: mutable.Queue[KeyboardEvent] = mutable.Queue()
+  private val downKeys: mutable.Set[Key] = mutable.Set()
 
   private def selectLocatedKey(leftKey: Key, rightKey: Key, location: Int) = location match {
     case 1 => leftKey

@@ -3,8 +3,7 @@ package games.input
 import scala.scalajs.js
 import org.scalajs.dom
 
-import scala.collection.mutable.Queue
-import scala.collection.mutable.Set
+import scala.collection.mutable
 
 import games.JsUtils
 
@@ -32,14 +31,14 @@ object MouseJS {
 
 class MouseJS(element: js.Dynamic) extends Mouse {
   def this() = this(dom.document.asInstanceOf[js.Dynamic])
-  def this(html: dom.raw.HTMLElement) = this(html.asInstanceOf[js.Dynamic])
+  def this(any: js.Any) = this(any.asInstanceOf[js.Dynamic])
 
   private var mouseInside = false
   private var dx, dy = 0
   private var x, y = 0
 
-  private val eventQueue: Queue[MouseEvent] = Queue()
-  private val downButtons: Set[Button] = Set()
+  private val eventQueue: mutable.Queue[MouseEvent] = mutable.Queue()
+  private val downButtons: mutable.Set[Button] = mutable.Set()
 
   private var lockRequested = false
 
@@ -88,20 +87,9 @@ class MouseJS(element: js.Dynamic) extends Mouse {
 
     val (posX, posY) = if (offX.isDefined && offY.isDefined) { // For WebKit browsers
       (offX.get, offY.get)
-    } else { // For... the others. From jQuery: https://github.com/jquery/jquery/blob/2.1.3/src/offset.js#L107-L108
-      val bounding = element.getBoundingClientRect()
-      val window = js.Dynamic.global.window
-
-      val boundingLeft = bounding.left.asInstanceOf[Double]
-      val boundingTop = bounding.top.asInstanceOf[Double]
-
-      val winOffsetX = window.pageXOffset.asInstanceOf[Double]
-      val winOffsetY = window.pageYOffset.asInstanceOf[Double]
-
-      val elemOffsetX = element.clientLeft.asInstanceOf[Double]
-      val elemOffsetY = element.clientTop.asInstanceOf[Double]
-
-      ((e.pageX - (boundingLeft + winOffsetX - elemOffsetX)).toInt, (e.pageY - (boundingTop + winOffsetY - elemOffsetY)).toInt)
+    } else { // For... the others
+      val (offsetX, offsetY) = JsUtils.offsetOfElement(element)
+      ((e.pageX - offsetX).toInt, (e.pageY - offsetY).toInt)
     }
 
     x = posX

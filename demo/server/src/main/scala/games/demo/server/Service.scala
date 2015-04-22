@@ -223,6 +223,7 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
     case x: demo.ClientPositionUpdate => positionData = Some(x)
     case x: demo.BulletShot           => bulletShotsData += x
     case x: demo.BulletHit            => bulletHitsData += x
+    case demo.Message(msg)            => Console.println("From player " + id + ": " + msg) // TODO for testing
   }
 }
 

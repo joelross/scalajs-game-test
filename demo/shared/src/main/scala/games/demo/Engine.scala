@@ -29,6 +29,7 @@ abstract class EngineInterface {
   def initAudio(): Context
   def initKeyboard(): Keyboard
   def initMouse(): Mouse
+  def initTouch(): Option[Touchpad]
   def update(): Boolean
   def close(): Unit
 }
@@ -54,6 +55,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var audioContext: Context = _
   private var keyboard: Keyboard = _
   private var mouse: Mouse = _
+  private var touchpad: Option[Touchpad] = None
 
   private var config: Map[String, String] = _
 
@@ -75,6 +77,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var lastTimeUpdateToServer: Option[Long] = None
 
   private var lastTimeBulletShot: Option[Long] = None
+
+  private var touchScreen: Boolean = false
+  private var touched = false // TODO for testing
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
@@ -109,6 +114,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.audioContext = itf.initAudio() // Init Audio
     this.keyboard = itf.initKeyboard() // Init Keyboard listening
     this.mouse = itf.initMouse() // Init Mouse listener
+    this.touchpad = itf.initTouch() // Init touch
 
     audioContext.volume = 0.25f // Lower the initial global volume
 
@@ -229,7 +235,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     var bulletShot = false
 
     //#### Update from inputs
-    val delta = mouse.deltaPosition
+    val delta = if (touchScreen) Position(0, 0) else mouse.deltaPosition
 
     def processKeyboard() {
       val optKeyEvent = keyboard.nextEvent()
@@ -249,7 +255,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     def processMouse() {
       val optMouseEvent = mouse.nextEvent()
       for (mouseEvent <- optMouseEvent) {
-        mouseEvent match {
+        if (!touchScreen) mouseEvent match {
           case ButtonEvent(Button.Left, true) => bulletShot = true
           case _                              =>
         }
@@ -258,6 +264,28 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
     processMouse()
+
+    for (touchpad <- this.touchpad) {
+      def processTouch() {
+        val optTouchEvent = touchpad.nextEvent()
+        for (touchEvent <- optTouchEvent) {
+          touchScreen = true
+          touchEvent match {
+            case TouchStart(data) =>
+              touched = true
+              if (data.position.y < height / 2 && data.position.x < width / 2) { // If tapped in the upper left corner
+                gl.display.fullscreen = !gl.display.fullscreen
+              }
+            case TouchEnd(data) =>
+              touched = false
+            case _ =>
+          }
+
+          processTouch() // process next event
+        }
+      }
+      processTouch()
+    }
 
     // Apply inputs to local ship
     if (keyboard.isKeyDown(Key.W)) localShipData.velocity = 6f
@@ -323,23 +351,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
       for (hit <- hits) {
         val (bulletId, shipId) = hit
-        val hitMsg = BulletHit(bulletId, shipId)
-        val hitMsgText = upickle.write(hitMsg)
-        conn.write(hitMsgText)
+        sendMsg(BulletHit(bulletId, shipId))
       }
 
       if (bulletShot && (lastTimeBulletShot.isEmpty || now - lastTimeBulletShot.get > shotIntervalMs)) {
-        val bulletMsg = BulletShot(position, orientation)
-        val bulletMsgText = upickle.write(bulletMsg)
-        conn.write(bulletMsgText)
+        sendMsg(BulletShot(position, orientation))
 
         lastTimeBulletShot = Some(now)
       }
 
       if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
-        val positionUpdateMsg = ClientPositionUpdate(position, velocity, orientation, rotation)
-        val positionUpdateMsgText = upickle.write(positionUpdateMsg)
-        conn.write(positionUpdateMsgText)
+        sendMsg(ClientPositionUpdate(position, velocity, orientation, rotation))
 
         lastTimeUpdateToServer = Some(now)
       }
@@ -362,7 +384,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Clear the buffers
     val r = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 1.0f)
     val gb = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 0.0f)
-    gl.clearColor(r, gb, gb, 1f)
+    if (touched) gl.clearColor(0f, 1f, 0f, 1f) // TODO for testing
+    else gl.clearColor(r, gb, gb, 1f)
+
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     // Ships

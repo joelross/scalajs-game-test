@@ -44,6 +44,10 @@ object Launcher extends js.JSApp {
         val mouse = new MouseJS(canvas)
         mouse
       }
+      def initTouch(): Option[Touchpad] = {
+        val touch = new TouchpadJS(canvas)
+        Some(touch)
+      }
       def update(): Boolean = true
       def close(): Unit = {}
     }
