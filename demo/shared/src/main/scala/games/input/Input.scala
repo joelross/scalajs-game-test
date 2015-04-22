@@ -1,5 +1,7 @@
 package games.input
 
+case class Position(x: Int, y: Int)
+
 private[games] class BiMap[R, T](entries: (R, T)*) {
   private val map = entries.toMap
   private val reverseMap = entries.map { case (a, b) => (b, a) }.toMap
