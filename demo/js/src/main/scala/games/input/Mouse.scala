@@ -236,11 +236,13 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   def locked_=(locked: Boolean): Unit = {
     lockRequested = locked // Remember the choice of the user
 
-    if (locked && !this.locked) {
+    val currentlyLocked = this.locked
+
+    if (locked && !currentlyLocked) {
       Future {
         element.lockRequest()
       }(JsUtils.userEventExecutionContext)
-    } else if (!locked && this.locked) {
+    } else if (!locked && currentlyLocked) {
       Future {
         document.lockExit()
       }(JsUtils.userEventExecutionContext)

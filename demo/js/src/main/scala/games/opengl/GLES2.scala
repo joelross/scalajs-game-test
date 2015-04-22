@@ -127,12 +127,14 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
   def fullscreen_=(fullscreen: Boolean): Unit = {
     fullscreenRequested = fullscreen // Remember the choice of the user
 
-    if (fullscreen && !this.fullscreen) {
+    val currentlyFullscreen = this.fullscreen
+
+    if (fullscreen && !currentlyFullscreen) {
       canvasPrevDim = (canvas.width.asInstanceOf[Int], canvas.height.asInstanceOf[Int])
       Future {
         canvas.fullscreenRequest()
       }(JsUtils.userEventExecutionContext)
-    } else if (!fullscreen && this.fullscreen) {
+    } else if (!fullscreen && currentlyFullscreen) {
       Future {
         document.fullscreenExit()
       }(JsUtils.userEventExecutionContext)
