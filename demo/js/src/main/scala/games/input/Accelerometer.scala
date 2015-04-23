@@ -6,6 +6,7 @@ import org.scalajs.dom
 import scala.concurrent.{ Future, Promise }
 
 import games.JsUtils
+import games.math.Vector3f
 
 object AccelerometerJS {
   private def window = js.Dynamic.global.window
@@ -83,11 +84,38 @@ object AccelerometerJS {
 }
 
 class AccelerometerJS extends Accelerometer {
-  private val onDeviceMotion: js.Function = (e: js.Dynamic) => {}
+  private val raw: Vector3f = new Vector3f
 
-  override def close(): Unit = {
+  private var last = System.currentTimeMillis()
 
+  private val onDeviceMotion: js.Function = (e: js.Dynamic) => {
+    val acc = e.accelerationIncludingGravity
+    // Correct the data according to right-hand coordinates
+    raw.x = -acc.x.asInstanceOf[Double].toFloat
+    raw.y = -acc.y.asInstanceOf[Double].toFloat
+    raw.z = -acc.z.asInstanceOf[Double].toFloat
   }
 
-  def current(): games.input.Acceleration = ???
+  private val window = js.Dynamic.global.window
+
+  // Init
+  {
+    window.addEventListener("devicemotion", onDeviceMotion, true)
+  }
+
+  override def close(): Unit = {
+    window.removeEventListener("devicemotion", onDeviceMotion, true)
+  }
+
+  def current(): games.math.Vector3f = {
+    // Adapt the data to the current orientation of the screen
+    val orientation = AccelerometerJS.currentOrientation()
+    orientation match {
+      case "portrait-primary"    => raw.copy()
+      case "portrait-secondary"  => new Vector3f(-raw.x, -raw.y, raw.z)
+      case "landscape-primary"   => new Vector3f(-raw.y, raw.x, raw.z)
+      case "landscape-secondary" => new Vector3f(raw.y, -raw.x, raw.z)
+      case _                     => raw.copy()
+    }
+  }
 }

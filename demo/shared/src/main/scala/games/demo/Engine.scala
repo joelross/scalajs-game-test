@@ -30,6 +30,7 @@ abstract class EngineInterface {
   def initKeyboard(): Keyboard
   def initMouse(): Mouse
   def initTouch(): Option[Touchpad]
+  def initAccelerometer(): Option[Accelerometer]
   def update(): Boolean
   def close(): Unit
 }
@@ -62,6 +63,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var keyboard: Keyboard = _
   private var mouse: Mouse = _
   private var touchpad: Option[Touchpad] = None
+  private var accelerometer: Option[Accelerometer] = None
 
   private var config: Map[String, String] = _
 
@@ -103,6 +105,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     itf.printLine("Closing...")
     itf.close()
 
+    for (acc <- accelerometer) acc.close()
     for (touch <- touchpad) touch.close()
     mouse.close()
     keyboard.close()
@@ -121,7 +124,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.audioContext = itf.initAudio() // Init Audio
     this.keyboard = itf.initKeyboard() // Init Keyboard listening
     this.mouse = itf.initMouse() // Init Mouse listener
-    this.touchpad = itf.initTouch() // Init touch
+    this.touchpad = itf.initTouch() // Init touch (if available)
+    this.accelerometer = itf.initAccelerometer() // Init accelerometer (if available)
 
     audioContext.volume = 0.25f // Lower the initial global volume
 

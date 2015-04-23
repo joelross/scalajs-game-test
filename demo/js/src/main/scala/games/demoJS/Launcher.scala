@@ -49,6 +49,10 @@ object Launcher extends js.JSApp {
         val touch = new TouchpadJS(canvas)
         Some(touch)
       }
+      def initAccelerometer: Option[Accelerometer] = {
+        val acc = new AccelerometerJS()
+        Some(acc)
+      }
       def update(): Boolean = true
       def close(): Unit = {}
     }
