@@ -13,9 +13,7 @@ object AccelerometerJS {
 
   private var isOrientationLocked: Boolean = false
 
-  def orientationLocked: Boolean = isOrientationLocked
-
-  def usingScreenOrientationItf(): Boolean = JsUtils.typeName(screen.orientation) == "ScreenOrientation"
+  private lazy val usingScreenOrientationItf: Boolean = JsUtils.typeName(screen.orientation) == "ScreenOrientation"
 
   def lockOrientation(orientation: String): Future[Unit] = {
     val screen = this.screen
@@ -80,6 +78,8 @@ object AccelerometerJS {
       "landscape-primary" // Just return standard orientation if not supported
     }
   }
+
+  def orientationLocked: Boolean = isOrientationLocked
 }
 
 class AccelerometerJS extends Accelerometer {
