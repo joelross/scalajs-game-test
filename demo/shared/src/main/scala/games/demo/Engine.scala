@@ -50,6 +50,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private val hitDamage: Float = 25f
   private val terrainSize: Float = 50f
   private val initHealth: Float = 100f
+  private val minSpeed: Float = 2f
+  private val maxSpeed: Float = 6f
 
   def context: games.opengl.GLES2 = gl
 
@@ -298,9 +300,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     // Apply inputs to local ship
-    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = 6f
-    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = 2f
-    else localShipData.velocity = 0.4f
+    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = maxSpeed
+    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = minSpeed
+    else localShipData.velocity = (maxSpeed + minSpeed) / 2
 
     val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
     val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
