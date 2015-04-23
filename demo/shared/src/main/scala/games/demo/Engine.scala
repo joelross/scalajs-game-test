@@ -281,11 +281,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 if (data.position.x < width / 2) {
                   gl.display.fullscreen = !gl.display.fullscreen
                 } else {
-                  if (games.input.AccelerometerJS.orientationLocked)
-                    games.input.AccelerometerJS.unlockOrientation()
-                  else
-                    games.input.AccelerometerJS.lockOrientation(games.input.AccelerometerJS.currentOrientation())
+                  // TODO something?
                 }
+              } else {
+                bulletShot = true
               }
             case TouchEnd(data) =>
               touched = false
