@@ -101,6 +101,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     itf.printLine("Closing...")
     itf.close()
 
+    for (touch <- touchpad) touch.close()
     mouse.close()
     keyboard.close()
     audioContext.close()
