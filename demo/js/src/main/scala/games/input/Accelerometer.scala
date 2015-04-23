@@ -6,7 +6,26 @@ import org.scalajs.dom
 import games.JsUtils
 
 object AccelerometerJS {
-  def currentOrientation(): Option[String] = {
+  private def window = js.Dynamic.global.window
+  private def screen = js.Dynamic.global.screen
+
+  def lockOrientation(orientation: String): Unit = {
+    val lockFun = JsUtils.getOptional[js.Function1[Unit, String]](screen, "lockOrientation", "mozLockOrientation", "msLockOrientation")
+    lockFun match {
+      case Some(fun) => fun(orientation)
+      case None      => JsUtils.throwFeatureUnsupported("Orientation Lock (Request)")
+    }
+  }
+
+  def unlockOrientation(): Unit = {
+    val unlockFun = JsUtils.getOptional[js.Function0[Unit]](screen, "lockOrientation", "mozLockOrientation", "msLockOrientation")
+    unlockFun match {
+      case Some(fun) => fun()
+      case None      => JsUtils.throwFeatureUnsupported("Orientation Lock (Exit)")
+    }
+  }
+
+  def currentOrientation(): String = {
     val screen = js.Dynamic.global.screen
     val orientation = JsUtils.getOptional[js.Any](screen, "orientation", "mozOrientation", "msOrientation").flatMap { data =>
       JsUtils.typeName(data) match {
@@ -17,7 +36,7 @@ object AccelerometerJS {
           None
       }
     }
-    orientation
+    orientation.getOrElse(JsUtils.throwFeatureUnsupported("Orientation Detection"))
   }
 }
 

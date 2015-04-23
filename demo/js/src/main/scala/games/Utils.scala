@@ -65,8 +65,16 @@ object JsUtils {
     getOptionalJS(fields: _*).toOption
   }
 
+  def featureUnsupportedText(feature: String): String = {
+    "Feature " + feature + " not supported"
+  }
+
   def featureUnsupportedFunction(feature: String): js.Function = {
-    () => { println("Feature " + feature + " not supported") }
+    () => { Console.err.println(featureUnsupportedText(feature)) }
+  }
+
+  def throwFeatureUnsupported(feature: String): Nothing = {
+    throw new RuntimeException(featureUnsupportedText(feature))
   }
 
   private val typeRegex = js.Dynamic.newInstance(g.RegExp)("^\\[object\\s(.*)\\]$")
