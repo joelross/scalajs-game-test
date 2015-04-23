@@ -140,6 +140,7 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
     document.addEventListener("mozfullscreenerror", onFullscreenError, true)
     document.addEventListener("MSFullscreenError", onFullscreenError, true)
 
+    // What about this one? https://w3c.github.io/screen-orientation/#widl-ScreenOrientation-onchange
     window.addEventListener("orientationchange", onOrientationChange, true)
     if (JsUtils.getOptional[js.Function](screen, "addEventListener").isDefined) {
       screen.addEventListener("orientationchange", onOrientationChange, true)
