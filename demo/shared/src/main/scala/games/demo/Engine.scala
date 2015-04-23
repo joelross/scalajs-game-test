@@ -78,7 +78,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var lastTimeBulletShot: Option[Long] = None
 
-  private var touchScreen: Boolean = false
   private var touched = false // TODO for testing
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
@@ -235,7 +234,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     var bulletShot = false
 
     //#### Update from inputs
-    val delta = if (touchScreen) Position(0, 0) else mouse.deltaPosition
+    val delta = mouse.deltaPosition
 
     def processKeyboard() {
       val optKeyEvent = keyboard.nextEvent()
@@ -255,7 +254,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     def processMouse() {
       val optMouseEvent = mouse.nextEvent()
       for (mouseEvent <- optMouseEvent) {
-        if (!touchScreen) mouseEvent match {
+        mouseEvent match {
           case ButtonEvent(Button.Left, true) => bulletShot = true
           case _                              =>
         }
@@ -269,11 +268,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       def processTouch() {
         val optTouchEvent = touchpad.nextEvent()
         for (touchEvent <- optTouchEvent) {
-          touchScreen = true
           touchEvent match {
             case TouchStart(data) =>
               touched = true
-              if (data.position.y < height / 2 && data.position.x < width / 2) { // If tapped in the upper left corner
+              if (data.position.y < height / 4 && data.position.x < width / 2) { // If tapped in the upper left corner
                 gl.display.fullscreen = !gl.display.fullscreen
               }
             case TouchEnd(data) =>

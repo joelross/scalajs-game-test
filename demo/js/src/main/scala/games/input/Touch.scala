@@ -13,44 +13,63 @@ class TouchpadJS(element: js.Dynamic) extends Touchpad {
   def this(any: js.Any) = this(any.asInstanceOf[js.Dynamic])
 
   private val eventQueue: mutable.Queue[TouchEvent] = mutable.Queue()
+  private val touchsMap: mutable.Map[Int, Touch] = mutable.Map()
+
+  private var nextId: Int = 0
 
   private val onTouchStart: js.Function = (e: dom.raw.TouchEvent) => {
-    if (lockRequested) e.preventDefault()
+    if (preventMouse) e.preventDefault()
     JsUtils.flushUserEventTasks()
 
     val list = e.changedTouches
     for (i <- 0 until list.length) {
-      val touch = list(i)
-      val identifier = touch.identifier
+      val touchJs = list(i)
+      val prvId = touchJs.identifier
+      val pubId = nextId
+      nextId += 1
+
       // Is there an offsetX/offsetY for such element?
       val (offsetX, offsetY) = JsUtils.offsetOfElement(element)
-      val pos = Position((touch.pageX - offsetX).toInt, (touch.pageY - offsetY).toInt)
-      val data = Touch(identifier, pos)
+      val pos = Position((touchJs.pageX - offsetX).toInt, (touchJs.pageY - offsetY).toInt)
+      val data = Touch(pubId, pos)
+      touchsMap += (prvId -> data)
       eventQueue += TouchStart(data)
     }
   }
   private val onTouchEnd: js.Function = (e: dom.raw.TouchEvent) => {
-    if (lockRequested) e.preventDefault()
+    if (preventMouse) e.preventDefault()
     JsUtils.flushUserEventTasks()
 
     val list = e.changedTouches
     for (i <- 0 until list.length) {
-      val touch = list(i)
-      val identifier = touch.identifier
+      val touchJs = list(i)
+      val prvId = touchJs.identifier
+      val pubId = touchsMap(prvId).identifier
+
       // Is there an offsetX/offsetY for such element?
       val (offsetX, offsetY) = JsUtils.offsetOfElement(element)
-      val pos = Position((touch.pageX - offsetX).toInt, (touch.pageY - offsetY).toInt)
-      val data = Touch(identifier, pos)
+      val pos = Position((touchJs.pageX - offsetX).toInt, (touchJs.pageY - offsetY).toInt)
+      val data = Touch(pubId, pos)
+      touchsMap -= prvId
       eventQueue += TouchEnd(data)
     }
   }
   private val onTouchMove: js.Function = (e: dom.raw.TouchEvent) => {
-    if (lockRequested) e.preventDefault()
+    if (preventMouse) e.preventDefault()
     JsUtils.flushUserEventTasks()
-  }
-  private val onTouchCancel: js.Function = (e: dom.raw.TouchEvent) => {
-    if (lockRequested) e.preventDefault()
-    JsUtils.flushUserEventTasks()
+
+    val list = e.changedTouches
+    for (i <- 0 until list.length) {
+      val touchJs = list(i)
+      val prvId = touchJs.identifier
+      val pubId = touchsMap(prvId).identifier
+
+      // Is there an offsetX/offsetY for such element?
+      val (offsetX, offsetY) = JsUtils.offsetOfElement(element)
+      val pos = Position((touchJs.pageX - offsetX).toInt, (touchJs.pageY - offsetY).toInt)
+      val data = Touch(pubId, pos)
+      touchsMap += (prvId -> data)
+    }
   }
 
   // Init
@@ -58,7 +77,7 @@ class TouchpadJS(element: js.Dynamic) extends Touchpad {
     element.addEventListener("touchstart", onTouchStart, true)
     element.addEventListener("touchend", onTouchEnd, true)
     element.addEventListener("touchleave", onTouchEnd, true)
-    element.addEventListener("touchcancel", onTouchCancel, true)
+    element.addEventListener("touchcancel", onTouchEnd, true)
     element.addEventListener("touchmove", onTouchMove, true)
   }
 
@@ -66,7 +85,7 @@ class TouchpadJS(element: js.Dynamic) extends Touchpad {
     element.removeEventListener("touchstart", onTouchStart, true)
     element.removeEventListener("touchend", onTouchEnd, true)
     element.removeEventListener("touchleave", onTouchEnd, true)
-    element.removeEventListener("touchcancel", onTouchCancel, true)
+    element.removeEventListener("touchcancel", onTouchEnd, true)
     element.removeEventListener("touchmove", onTouchMove, true)
   }
 
@@ -74,12 +93,9 @@ class TouchpadJS(element: js.Dynamic) extends Touchpad {
     if (eventQueue.nonEmpty) Some(eventQueue.dequeue())
     else None
   }
-  def touches: Seq[games.input.Touch] = ???
-
-  private var lockRequested: Boolean = false
-
-  def locked: Boolean = lockRequested
-  def locked_=(locked: Boolean): Unit = {
-    lockRequested = locked
+  def touches: Seq[games.input.Touch] = {
+    touchsMap.values.toSeq
   }
+
+  private var preventMouse: Boolean = true
 }
