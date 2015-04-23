@@ -276,8 +276,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           touchEvent match {
             case TouchStart(data) =>
               touched = true
-              if (data.position.y < height / 4 && data.position.x < width / 2) { // If tapped in the upper left corner
-                gl.display.fullscreen = !gl.display.fullscreen
+              if (data.position.y < height / 4) { // If tapped in the upper part of the screen
+                if (data.position.x < width / 2) {
+                  gl.display.fullscreen = !gl.display.fullscreen
+                } else {
+                  if (games.input.AccelerometerJS.orientationLocked)
+                    games.input.AccelerometerJS.unlockOrientation()
+                  else
+                    games.input.AccelerometerJS.lockOrientation(games.input.AccelerometerJS.currentOrientation())
+                }
               }
             case TouchEnd(data) =>
               touched = false
@@ -293,7 +300,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Apply inputs to local ship
     if (keyboard.isKeyDown(Key.W)) localShipData.velocity = 6f
     else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = 2f
-    else localShipData.velocity = 4f
+    else localShipData.velocity = 0.4f
 
     val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
     val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier

@@ -9,19 +9,40 @@ object AccelerometerJS {
   private def window = js.Dynamic.global.window
   private def screen = js.Dynamic.global.screen
 
+  private var isOrientationLocked: Boolean = false
+
+  def orientationLocked: Boolean = isOrientationLocked
+
   def lockOrientation(orientation: String): Unit = {
-    val lockFun = JsUtils.getOptional[js.Function1[Unit, String]](screen, "lockOrientation", "mozLockOrientation", "msLockOrientation")
-    lockFun match {
-      case Some(fun) => fun(orientation)
-      case None      => JsUtils.throwFeatureUnsupported("Orientation Lock (Request)")
+    val screen = this.screen
+    val lockFun = JsUtils.getOptional[js.Function](screen, "lockOrientation", "mozLockOrientation", "msLockOrientation")
+    val lockOrientation = lockFun.getOrElse(JsUtils.featureUnsupportedFunction("Orientation Lock"))
+    screen.lockOrientation = lockOrientation
+
+    if (screen.lockOrientation(orientation).asInstanceOf[Boolean]) {
+      isOrientationLocked = true
+    } else {
+      Console.err.println("Orientation Lock failed")
     }
   }
 
   def unlockOrientation(): Unit = {
-    val unlockFun = JsUtils.getOptional[js.Function0[Unit]](screen, "lockOrientation", "mozLockOrientation", "msLockOrientation")
-    unlockFun match {
-      case Some(fun) => fun()
-      case None      => JsUtils.throwFeatureUnsupported("Orientation Lock (Exit)")
+    val screen = this.screen
+    val unlockFun = JsUtils.getOptional[js.Function](screen, "unlockOrientation", "mozUnlockOrientation", "msUnlockOrientation")
+    val unlockOrientation = unlockFun.getOrElse(JsUtils.featureUnsupportedFunction("Orientation Unlock"))
+    screen.unlockOrientation = unlockOrientation
+
+    val retVal = screen.unlockOrientation()
+    JsUtils.typeName(retVal) match {
+      case "Boolean" =>
+        val boolRetVal = retVal.asInstanceOf[Boolean]
+        if (boolRetVal) {
+          isOrientationLocked = false
+        } else {
+          Console.err.println("Orientation Unlock failed")
+        }
+      case x =>
+        isOrientationLocked = false // Just assume it went fine...
     }
   }
 
@@ -36,7 +57,10 @@ object AccelerometerJS {
           None
       }
     }
-    orientation.getOrElse(JsUtils.throwFeatureUnsupported("Orientation Detection"))
+    orientation.getOrElse {
+      Console.err.println(JsUtils.featureUnsupportedText("Orientation Detection"))
+      "landscape-primary" // Just return standard orientation if not supported
+    }
   }
 }
 
