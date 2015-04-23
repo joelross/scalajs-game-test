@@ -111,8 +111,8 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
 
   private val canvas = gl.getWebGLRenderingContext().canvas.asInstanceOf[js.Dynamic]
   private val document = dom.document.asInstanceOf[js.Dynamic]
-  private val window = js.Dynamic.global.window
-  private val screen = js.Dynamic.global.screen
+  private def window = js.Dynamic.global.window
+  private def screen = js.Dynamic.global.screen
 
   // Init
   {

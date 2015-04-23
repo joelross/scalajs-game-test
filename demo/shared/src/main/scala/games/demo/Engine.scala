@@ -39,6 +39,10 @@ class ExternalShipData(var id: Int, var data: ShipData, var latency: Int)
 
 class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var orientation: Vector3f)
 
+object ForTest { // TODO for testing
+  var sendMsg: ClientMessage => Unit = _
+}
+
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   private val updateIntervalMs = 25 // Resend position at 40Hz
   private val shotIntervalMs = 500 // 2 shots per second max
@@ -89,6 +93,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val data = upickle.write(msg)
       conn.write(data)
   }
+  ForTest.sendMsg = sendMsg _
 
   def continue(): Boolean = continueCond
 
