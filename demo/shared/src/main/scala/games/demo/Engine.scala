@@ -49,7 +49,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   val initHealth: Float = 100f
   val minSpeed: Float = 2f
   val maxSpeed: Float = 6f
-  val maxDeviceAngle: Float = 45f
+  val maxDeviceAngle: Float = 90f
 
   def context: games.opengl.GLES2 = gl
 
