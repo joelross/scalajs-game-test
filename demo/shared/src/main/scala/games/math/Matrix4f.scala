@@ -812,7 +812,7 @@ object Matrix4f {
   }
 
   def setRotation3D(angle: Float, axis: Vector3f, dst: Matrix4f): Unit = {
-    val radAngle = Utils.degToRad(angle)
+    val radAngle = Math.toRadians(angle)
 
     val c = Math.cos(radAngle).toFloat
     val s = Math.sin(radAngle).toFloat
@@ -957,7 +957,7 @@ object Matrix4f {
   }
 
   def setPerspective3D(fovy: Float, aspect: Float, near: Float, far: Float, dst: Matrix4f): Unit = {
-    val fovyRad = Utils.degToRad(fovy)
+    val fovyRad = Math.toRadians(fovy)
     val f = Utils.cotan(fovyRad / 2).toFloat
 
     dst.m00 = f / aspect
