@@ -5,6 +5,12 @@ object Utils {
     1.0 / Math.tan(v)
   }
 
+  /*
+   * Orthogonalize an existing 3x3 matrix.
+   * Can be used to make sure a matrix meant to be orthogonal stays orthogonal
+   * despite floating-point rounding errors (e.g. a matrix used to accumulate
+   * a lot of rotations)
+   */
   def orthogonalize(mat: Matrix3f): Unit = {
     val r1 = mat.column(0)
     val r2 = mat.column(1)
