@@ -41,7 +41,7 @@ class ExternalShipData(var id: Int, var data: ShipData, var latency: Int)
 class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var orientation: Vector3f)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
-  val updateIntervalMs = 25 // Resend position at 40Hz
+  val updateIntervalMs = 50 // Resend position at 20Hz
   val shotIntervalMs = 500 // 2 shots per second max
   val rotationMultiplier: Float = 50.0f
   val hitDamage: Float = 25f

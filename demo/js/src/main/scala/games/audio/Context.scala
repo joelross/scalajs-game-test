@@ -12,6 +12,18 @@ import scala.collection.mutable.Set
 
 import js.Dynamic.{ global => g }
 
+object WebAudioContext {
+  lazy val canPlayOgg: Boolean = {
+    // From http://diveintohtml5.info/everything.html
+    val audio = dom.document.createElement("audio").asInstanceOf[js.Dynamic]
+    val typeRegex = js.Dynamic.newInstance(g.RegExp)("/ably/")
+    JsUtils.getOptional[js.Function](audio, "canPlayType").map { _ =>
+      val canPlay = audio.canPlayType("audio/ogg; codecs=\"vorbis\"").asInstanceOf[String].toLowerCase()
+      !(canPlay.isEmpty() || canPlay == "no")
+    }.getOrElse(false)
+  }
+}
+
 class WebAudioContext extends Context {
   val audioContext: js.Dynamic = JsUtils.getOptional[js.Dynamic](g, "AudioContext", "webkitAudioContext").getOrElse(throw new RuntimeException("Web Audio API not supported by your browser"))
   private[games] val webApi = js.Dynamic.newInstance(audioContext)()
