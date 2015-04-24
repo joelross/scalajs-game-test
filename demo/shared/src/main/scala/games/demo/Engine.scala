@@ -40,10 +40,6 @@ class ExternalShipData(var id: Int, var data: ShipData, var latency: Int)
 
 class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var orientation: Vector3f)
 
-object ForTest { // TODO for testing
-  var sendMsg: ClientMessage => Unit = _
-}
-
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   private val updateIntervalMs = 25 // Resend position at 40Hz
   private val shotIntervalMs = 500 // 2 shots per second max
@@ -86,7 +82,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var lastTimeBulletShot: Option[Long] = None
 
-  private var touched = false // TODO for testing
+  private var centerVAngle: Option[Float] = None
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
@@ -97,7 +93,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val data = upickle.write(msg)
       conn.write(data)
   }
-  ForTest.sendMsg = sendMsg _
 
   def continue(): Boolean = continueCond
 
@@ -282,19 +277,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         for (touchEvent <- optTouchEvent) {
           touchEvent match {
             case TouchStart(data) =>
-              touched = true
               if (data.position.y < height / 4) { // If tapped in the upper part of the screen
                 if (data.position.x < width / 2) {
                   gl.display.fullscreen = !gl.display.fullscreen
-                } else {
-                  // TODO something?
+                } else { // Reset vertical axis center
+                  centerVAngle = None // Will be set by the next accelerometer check
                 }
               } else {
                 bulletShot = true
               }
             case TouchEnd(data) =>
-              touched = false
-            case _ =>
+            case _              =>
           }
 
           processTouch() // process next event
@@ -303,10 +296,20 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       processTouch()
     }
 
-    for (
+    // Apply inputs to local ship
+    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = maxSpeed
+    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = minSpeed
+    else localShipData.velocity = (maxSpeed + minSpeed) / 2
+
+    val mouseRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
+    val mouseRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
+    val mouseRotationXSpeed = mouseRotationX / elapsedSinceLastFrame
+    val mouseRotationYSpeed = mouseRotationY / elapsedSinceLastFrame
+
+    val accRotationSpeed = for (
       acc <- accelerometer;
       accVec <- acc.current()
-    ) {
+    ) yield {
       val vAngle = Math.toDegrees(Math.atan2(-accVec.z, -accVec.y)).toFloat
       val hAngle = Math.toDegrees(Math.atan2(accVec.x, -accVec.y)).toFloat
 
@@ -317,17 +320,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
        * Tilting the device on his back: vAngle > 0
        * Tilting the device on his screen: vAngle < 0
        */
+
+      if (centerVAngle.isEmpty) centerVAngle = Some(vAngle) // If there isn't any center for vAngle yet, use the current one
+      val refVAngle = centerVAngle.get
+
+      (0f, 0f)
     }
 
-    // Apply inputs to local ship
-    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = maxSpeed
-    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = minSpeed
-    else localShipData.velocity = (maxSpeed + minSpeed) / 2
-
-    val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
-    val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
-    val inputRotationXSpeed = inputRotationX / elapsedSinceLastFrame
-    val inputRotationYSpeed = inputRotationY / elapsedSinceLastFrame
+    val inputRotationXSpeed = mouseRotationXSpeed + accRotationSpeed.map(_._1).getOrElse(0f)
+    val inputRotationYSpeed = mouseRotationYSpeed + accRotationSpeed.map(_._2).getOrElse(0f)
 
     localShipData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
     localShipData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
@@ -416,8 +417,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Clear the buffers
     val r = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 1.0f)
     val gb = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 0.0f)
-    if (touched) gl.clearColor(0f, 1f, 0f, 1f) // TODO for testing
-    else gl.clearColor(r, gb, gb, 1f)
+    gl.clearColor(r, gb, gb, 1f) // Background color depending of player's current health
 
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
