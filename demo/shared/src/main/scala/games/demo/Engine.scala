@@ -303,6 +303,22 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       processTouch()
     }
 
+    for (
+      acc <- accelerometer;
+      accVec <- acc.current()
+    ) {
+      val vAngle = Math.toDegrees(Math.atan2(-accVec.z, -accVec.y)).toFloat
+      val hAngle = Math.toDegrees(Math.atan2(accVec.x, -accVec.y)).toFloat
+
+      /*
+       * Holding the device straight up in front of you: vAngle = 0, hAngle = 0
+       * Tilting the device to the right: hAngle > 0
+       * Tilting the device to the left: hAngle < 0
+       * Tilting the device on his back: vAngle > 0
+       * Tilting the device on his screen: vAngle < 0
+       */
+    }
+
     // Apply inputs to local ship
     if (keyboard.isKeyDown(Key.W)) localShipData.velocity = maxSpeed
     else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = minSpeed
