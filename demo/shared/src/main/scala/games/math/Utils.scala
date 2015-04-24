@@ -12,6 +12,7 @@ object Utils {
    * a lot of rotations)
    */
   def orthogonalize(mat: Matrix3f): Unit = {
+    // Maybe a better way here: http://stackoverflow.com/questions/23080791/eigen-re-orthogonalization-of-rotation-matrix
     val r1 = mat.column(0)
     val r2 = mat.column(1)
     val r3 = mat.column(2)
