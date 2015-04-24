@@ -112,6 +112,8 @@ object JsUtils {
 
     ((boundingLeft + winOffsetX - elemOffsetX).toInt, (boundingTop + winOffsetY - elemOffsetY).toInt)
   }
+
+  var orientationLockOnFullscreen: Boolean = false
 }
 
 trait UtilsImpl extends UtilsRequirements {

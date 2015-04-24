@@ -71,10 +71,6 @@ object Token {
 
 // Main componenents
 
-object GLES2WebGL {
-  var orientationLockOnFullscreen: Boolean = false
-}
-
 class DisplayGLES2(gl: GLES2WebGL) extends Display {
 
   private var fullscreenRequested = false
@@ -88,7 +84,7 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
       canvas.width = screen.width
       canvas.height = screen.height
 
-      if (GLES2WebGL.orientationLockOnFullscreen) {
+      if (JsUtils.orientationLockOnFullscreen) {
         games.input.AccelerometerJS.lockOrientation(games.input.AccelerometerJS.currentOrientation())
       }
     }

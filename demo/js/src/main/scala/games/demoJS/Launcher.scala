@@ -16,7 +16,7 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 object Launcher extends js.JSApp {
   def main(): Unit = {
-    GLES2WebGL.orientationLockOnFullscreen = true
+    JsUtils.orientationLockOnFullscreen = true
     JsUtils.setResourcePath("/resources")
 
     val output = dom.document.getElementById("demo-output")
