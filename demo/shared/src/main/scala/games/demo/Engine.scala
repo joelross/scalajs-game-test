@@ -41,14 +41,15 @@ class ExternalShipData(var id: Int, var data: ShipData, var latency: Int)
 class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var orientation: Vector3f)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
-  private val updateIntervalMs = 25 // Resend position at 40Hz
-  private val shotIntervalMs = 500 // 2 shots per second max
-  private val rotationMultiplier: Float = 50.0f
-  private val hitDamage: Float = 25f
-  private val terrainSize: Float = 50f
-  private val initHealth: Float = 100f
-  private val minSpeed: Float = 2f
-  private val maxSpeed: Float = 6f
+  val updateIntervalMs = 25 // Resend position at 40Hz
+  val shotIntervalMs = 500 // 2 shots per second max
+  val rotationMultiplier: Float = 50.0f
+  val hitDamage: Float = 25f
+  val terrainSize: Float = 50f
+  val initHealth: Float = 100f
+  val minSpeed: Float = 2f
+  val maxSpeed: Float = 6f
+  val maxDeviceAngle: Float = 45f
 
   def context: games.opengl.GLES2 = gl
 
@@ -310,8 +311,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       acc <- accelerometer;
       accVec <- acc.current()
     ) yield {
-      val vAngle = Math.toDegrees(Math.atan2(-accVec.z, -accVec.y)).toFloat
-      val hAngle = Math.toDegrees(Math.atan2(accVec.x, -accVec.y)).toFloat
+      val vAngle = Physics.angleCentered(Math.toDegrees(Math.atan2(-accVec.z, -accVec.y)).toFloat)
+      val hAngle = Physics.angleCentered(Math.toDegrees(Math.atan2(accVec.x, -accVec.y)).toFloat)
 
       /*
        * Holding the device straight up in front of you: vAngle = 0, hAngle = 0
@@ -324,7 +325,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       if (centerVAngle.isEmpty) centerVAngle = Some(vAngle) // If there isn't any center for vAngle yet, use the current one
       val refVAngle = centerVAngle.get
 
-      (0f, 0f)
+      val diffVAngle = Physics.angleCentered(vAngle - refVAngle)
+
+      (Physics.interpol(hAngle, +maxDeviceAngle, -maxDeviceAngle, -Physics.maxRotationXSpeed, +Physics.maxRotationXSpeed),
+        Physics.interpol(diffVAngle, +maxDeviceAngle, -maxDeviceAngle, -Physics.maxRotationYSpeed, +Physics.maxRotationYSpeed))
     }
 
     val inputRotationXSpeed = mouseRotationXSpeed + accRotationSpeed.map(_._1).getOrElse(0f)
