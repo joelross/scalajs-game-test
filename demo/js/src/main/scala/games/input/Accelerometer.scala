@@ -84,16 +84,19 @@ object AccelerometerJS {
 }
 
 class AccelerometerJS extends Accelerometer {
-  private val raw: Vector3f = new Vector3f
-
-  private var last = System.currentTimeMillis()
+  private var raw: Option[Vector3f] = None
 
   private val onDeviceMotion: js.Function = (e: js.Dynamic) => {
     val acc = e.accelerationIncludingGravity
-    // Correct the data according to right-hand coordinates
-    raw.x = -acc.x.asInstanceOf[Double].toFloat
-    raw.y = -acc.y.asInstanceOf[Double].toFloat
-    raw.z = -acc.z.asInstanceOf[Double].toFloat
+    // Check it's a valid event (Chrome seems to throw some weird stuff on desktop version)
+    if (acc.x != null && acc.y != null && acc.z != null) {
+      if (raw.isEmpty) raw = Some(new Vector3f)
+      val vec = raw.get
+      // Correct the data according to right-hand coordinates
+      vec.x = -acc.x.asInstanceOf[Double].toFloat
+      vec.y = -acc.y.asInstanceOf[Double].toFloat
+      vec.z = -acc.z.asInstanceOf[Double].toFloat
+    }
   }
 
   private val window = js.Dynamic.global.window
@@ -107,15 +110,15 @@ class AccelerometerJS extends Accelerometer {
     window.removeEventListener("devicemotion", onDeviceMotion, true)
   }
 
-  def current(): games.math.Vector3f = {
+  def current(): Option[games.math.Vector3f] = raw.map { vec =>
     // Adapt the data to the current orientation of the screen
     val orientation = AccelerometerJS.currentOrientation()
     orientation match {
-      case "portrait-primary"    => raw.copy()
-      case "portrait-secondary"  => new Vector3f(-raw.x, -raw.y, raw.z)
-      case "landscape-primary"   => new Vector3f(-raw.y, raw.x, raw.z)
-      case "landscape-secondary" => new Vector3f(raw.y, -raw.x, raw.z)
-      case _                     => raw.copy()
+      case "portrait-primary"    => vec.copy()
+      case "portrait-secondary"  => new Vector3f(-vec.x, -vec.y, vec.z)
+      case "landscape-primary"   => new Vector3f(-vec.y, vec.x, vec.z)
+      case "landscape-secondary" => new Vector3f(vec.y, -vec.x, vec.z)
+      case _                     => vec.copy()
     }
   }
 }
