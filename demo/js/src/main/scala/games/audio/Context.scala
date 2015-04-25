@@ -24,7 +24,7 @@ object WebAudioContext {
   }
 
   lazy val canUseAurora: Boolean = {
-    JsUtils.getOptional[js.Dynamic](js.Dynamic.global, "AV").map(_ => true).getOrElse(false)
+    JsUtils.getOptional(js.Dynamic.global, "AV").isDefined
   }
 }
 
