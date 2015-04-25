@@ -16,7 +16,29 @@ private[games] trait DataJS {
 }
 
 private[games] object Helper {
+  def createDataFromAurora(ctx: WebAudioContext, arraybuffer: js.typedarray.ArrayBuffer): scala.concurrent.Future[DataJS] = {
+    val promise = Promise[DataJS]
+
+    Console.println("Decoding with Aurora...")
+    val asset = js.Dynamic.global.AV.Asset.fromBuffer(arraybuffer)
+    asset.on("error", (error: String) => {
+      promise.failure(new RuntimeException("Aurora returned error: " + error))
+    })
+    asset.decodeToBuffer((data: js.Dynamic) => {
+      Console.println("Decoding done: " + JsUtils.typeName(data))
+    })
+    asset.start()
+
+    promise.future
+  }
+
   def createDataFromAurora(ctx: WebAudioContext, res: Resource): scala.concurrent.Future[DataJS] = {
+    Utils.getBinaryDataFromResource(res).flatMap { bb =>
+      import scala.scalajs.js.typedarray.TypedArrayBufferOps._
+
+      val arrayBuffer = bb.arrayBuffer()
+      this.createDataFromAurora(ctx, arrayBuffer)
+    }
     Future.failed(new RuntimeException("Not implemented"))
   }
 
@@ -30,7 +52,7 @@ private[games] object Helper {
 }
 
 class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends games.audio.Data with DataJS {
-  private val bufferReady = Future {
+  private val bufferReady = Future { // Don't do it right now, it would block everything
     format match {
       case Format.Float32 => // good to go
       case _              => throw new RuntimeException("Unsupported data format: " + format)
@@ -80,17 +102,18 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
     dataFuture.map { bb =>
       import scala.scalajs.js.typedarray.TypedArrayBufferOps._
 
-      val arrayBuffer = bb.arrayBuffer()
-      ctx.webApi.decodeAudioData(arrayBuffer,
-        (decodedBuffer: js.Dynamic) => {
+      val arraybuffer = bb.arrayBuffer()
+      ctx.webApi.decodeAudioData(arraybuffer,
+        // Commented to force Aurora to kick in
+        /*(decodedBuffer: js.Dynamic) => {
           promise.success(Left(decodedBuffer))
-        },
+        },*/
         () => {
           val msg = "Failed to decode the audio data from resource " + res
           // If Aurora is available and this error seems due to decoding, try with Aurora
           if (WebAudioContext.canUseAurora) {
             Console.println("Trying with Aurora")
-            val auroraDataFuture = Helper.createDataFromAurora(ctx, res)
+            val auroraDataFuture = Helper.createDataFromAurora(ctx, arraybuffer)
             auroraDataFuture.onSuccess { case auroraData => promise.success(Right(auroraData)) }
             auroraDataFuture.onFailure { case t => promise.failure(new RuntimeException(msg + " (result with Aurora: " + t + ")", t)) }
           } else {
