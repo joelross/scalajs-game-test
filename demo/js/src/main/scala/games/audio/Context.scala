@@ -27,7 +27,7 @@ object WebAudioContext {
     JsUtils.getOptional[js.Dynamic](js.Dynamic.global, "AV").flatMap { av => JsUtils.getOptional[js.Dynamic](av, "Asset") }.isDefined
   }
 
-  def canUseAurora: Boolean = JsUtils.forceAuroraJs || (JsUtils.useAuroraJs && auroraPresent)
+  def canUseAurora: Boolean = JsUtils.useAuroraJs && auroraPresent
 }
 
 class WebAudioContext extends Context {

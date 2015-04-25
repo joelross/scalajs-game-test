@@ -123,7 +123,6 @@ object JsUtils {
 
   var orientationLockOnFullscreen: Boolean = false
   var useAuroraJs: Boolean = true
-  var forceAuroraJs: Boolean = false
 }
 
 trait UtilsImpl extends UtilsRequirements {
