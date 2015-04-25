@@ -97,37 +97,13 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
 }
 
 class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) extends games.audio.Data {
-  private val streamReady = Promise[String]
-
-  private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
-  private val path = JsUtils.pathForResource(res)
-  audio.src = path
-
-  audio.oncanplay = () => {
-    streamReady.success(path)
-  }
-
-  audio.onerror = () => {
-    val errorCode = audio.error.code.asInstanceOf[Int]
-
-    val errorMessage = errorCode match {
-      case 1 => "request aborted"
-      case 2 => "network error"
-      case 3 => "decoding error"
-      case 4 => "source not supported"
-      case _ => "unknown error"
-    }
-
-    streamReady.failure(new RuntimeException("Failed to load the stream " + res + ", cause: " + errorMessage))
-  }
-
   def createSource(): Future[games.audio.Source] = {
-    val source = new JsStreamingSource(ctx, streamReady.future, ctx.mainOutput)
+    val source = new JsStreamingSource(ctx, res, ctx.mainOutput)
     source.ready.map { x => source }
   }
   def createSource3D(): Future[games.audio.Source3D] = {
     val pannerNode = ctx.webApi.createPanner()
-    val source = new JsStreamingSource(ctx, streamReady.future, pannerNode)
+    val source = new JsStreamingSource(ctx, res, pannerNode)
     source.ready.map { x =>
       pannerNode.connect(ctx.mainOutput)
       new JsSource3D(ctx, source, pannerNode)

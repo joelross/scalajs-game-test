@@ -9,6 +9,7 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 import games.JsUtils
 import games.math.Vector3f
+import games.Resource
 
 class JsBufferedSource private[games] (ctx: WebAudioContext, buffer: js.Dynamic, outputNode: js.Dynamic) extends Source {
   // Init
@@ -80,10 +81,12 @@ class JsBufferedSource private[games] (ctx: WebAudioContext, buffer: js.Dynamic,
   def playing: Boolean = isPlaying
 }
 
-class JsStreamingSource private[games] (ctx: WebAudioContext, pathFuture: Future[String], outputNode: js.Dynamic) extends Source {
+class JsStreamingSource private[games] (ctx: WebAudioContext, res: Resource, outputNode: js.Dynamic) extends Source {
   // Init
+  private val path = JsUtils.pathForResource(res)
   private val promiseReady = Promise[Unit]
   private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
+  audio.src = path
   private val sourceNode = ctx.webApi.createMediaElementSource(audio)
   sourceNode.connect(outputNode)
 
@@ -96,21 +99,21 @@ class JsStreamingSource private[games] (ctx: WebAudioContext, pathFuture: Future
     ctx.removeSource(this)
   }
 
-  pathFuture.onSuccess {
-    case path =>
-      audio.src = path
-  }
-  pathFuture.onFailure {
-    case t =>
-      promiseReady.failure(t)
-  }
-
   audio.oncanplay = () => {
     promiseReady.success((): Unit)
   }
 
   audio.onerror = () => {
-    val msg = "Failure of streaming"
+    val errorCode = audio.error.code.asInstanceOf[Int]
+    val errorMessage = errorCode match {
+      case 1 => "request aborted"
+      case 2 => "network error"
+      case 3 => "decoding error"
+      case 4 => "source not supported"
+      case _ => "unknown error"
+    }
+
+    val msg = "Failed to load the stream " + res + ", cause: " + errorMessage
 
     if (!promiseReady.isCompleted) promiseReady.failure(new RuntimeException(msg))
     else println(msg)

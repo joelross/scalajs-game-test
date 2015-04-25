@@ -218,15 +218,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }.flatMap { _ => helloPacketReceived.future }
 
     val audioFuture = networkFuture.flatMap { _ =>
-      val audioData = this.audioContext.createStreamingData(Resource("/games/demo/sounds/test_stereo.ogg"))
+      val audioData = this.audioContext.createStreamingData(Resource("/games/demo/sounds/test_stereo.mp3"))
       audioData.createSource
     }.map { audioSource =>
       audioSource.play
-      Console.println("Playing ogg")
+      Console.println("Playing mp3")
     }
-
-    // Setup OpenGL
-    gl.clearColor(0.75f, 0.75f, 0.75f, 1) // black background
 
     gl.enable(GLES2.DEPTH_TEST)
     gl.depthFunc(GLES2.LESS)
