@@ -217,6 +217,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }.flatMap { _ => helloPacketReceived.future }
 
+    val audioFuture = networkFuture.flatMap { _ =>
+      val audioData = this.audioContext.createBufferedData(Resource("/games/demo/sounds/test_stereo.ogg"))
+      audioData.createSource
+    }.map { audioSource =>
+      audioSource.play
+    }
+
     // Setup OpenGL
     gl.clearColor(0.75f, 0.75f, 0.75f, 1) // black background
 
@@ -229,7 +236,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     screenDim = (width, height)
     Rendering.setProjection(width, height)
 
-    Some(networkFuture) // wait for network setup (last part) to complete before proceding
+    Some(audioFuture) // wait for network setup (last part) to complete before proceding
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {
