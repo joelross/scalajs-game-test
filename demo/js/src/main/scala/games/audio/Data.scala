@@ -17,7 +17,7 @@ private[games] trait DataJS {
 
 private[games] object Helper {
   def createDataFromAurora(ctx: WebAudioContext, res: Resource): scala.concurrent.Future[DataJS] = {
-    ???
+    Future.failed(new RuntimeException("Not implemented"))
   }
 
   def createSource3D(ctx: WebAudioContext, data: DataJS): scala.concurrent.Future[games.audio.Source3D] = {
@@ -75,7 +75,7 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
   // Init
   private val decodedDataReady = {
     val dataFuture = Utils.getBinaryDataFromResource(res)
-    val promise = Promise[js.Dynamic]
+    val promise = Promise[Either[js.Dynamic, DataJS]]
 
     dataFuture.map { bb =>
       import scala.scalajs.js.typedarray.TypedArrayBufferOps._
@@ -83,10 +83,19 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
       val arrayBuffer = bb.arrayBuffer()
       ctx.webApi.decodeAudioData(arrayBuffer,
         (decodedBuffer: js.Dynamic) => {
-          promise.success(decodedBuffer)
+          promise.success(Left(decodedBuffer))
         },
         () => {
-          promise.failure(new RuntimeException("Failed to decode the audio data from resource " + res))
+          val msg = "Failed to decode the audio data from resource " + res
+          // If Aurora is available and this error seems due to decoding, try with Aurora
+          if (WebAudioContext.canUseAurora) {
+            Console.println("Trying with Aurora")
+            val auroraDataFuture = Helper.createDataFromAurora(ctx, res)
+            auroraDataFuture.onSuccess { case auroraData => promise.success(Right(auroraData)) }
+            auroraDataFuture.onFailure { case t => promise.failure(new RuntimeException(msg + " (result with Aurora: " + t + ")", t)) }
+          } else {
+            promise.failure(new RuntimeException(msg))
+          }
         })
     }
 
@@ -94,7 +103,10 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
   }
 
   private[games] def createSource(outputNode: js.Dynamic): Future[games.audio.Source] = {
-    decodedDataReady.map { buffer => new JsBufferedSource(ctx, buffer, outputNode) }
+    decodedDataReady.flatMap {
+      case Left(buffer)      => Future.successful(new JsBufferedSource(ctx, buffer, outputNode))
+      case Right(auroraData) => auroraData.createSource(outputNode)
+    }
   }
 
   def createSource(): Future[games.audio.Source] = this.createSource(ctx.mainOutput)
@@ -126,9 +138,9 @@ class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) exten
 
       // If Aurora is available and this error seems due to decoding, try with Aurora
       if (WebAudioContext.canUseAurora && (errorCode == 3 || errorCode == 4)) {
-        val dataFuture = Helper.createDataFromAurora(ctx, res).flatMap { data => data.createSource(outputNode) }
-        dataFuture.onSuccess { case source => promise.success(source) }
-        dataFuture.onFailure { case t => promise.failure(new RuntimeException(msg + " (result with Aurora: " + t + ")", t)) }
+        val auroraDataFuture = Helper.createDataFromAurora(ctx, res).flatMap { data => data.createSource(outputNode) }
+        auroraDataFuture.onSuccess { case source => promise.success(source) }
+        auroraDataFuture.onFailure { case t => promise.failure(new RuntimeException(msg + " (result with Aurora: " + t + ")", t)) }
       } else {
         if (!promise.isCompleted) promise.failure(new RuntimeException(msg))
         else Console.err.println(msg)
