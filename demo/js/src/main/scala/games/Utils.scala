@@ -127,6 +127,8 @@ object JsUtils {
 trait UtilsImpl extends UtilsRequirements {
   def getLoopThreadExecutionContext(): ExecutionContext = scalajs.concurrent.JSExecutionContext.Implicits.queue
 
+  private def isHTTPCodeOk(code: Int): Boolean = (code >= 200 && code < 300) || code == 304 // HTTP Code 2xx or 304, Ok
+
   def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer] = {
     val xmlRequest = new dom.XMLHttpRequest()
 
@@ -142,7 +144,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     xmlRequest.onload = (e: dom.Event) => {
       val code = xmlRequest.status
-      if (code >= 200 && code < 300 || code == 304) { // HTTP Code 2xx or 304, Ok
+      if (isHTTPCodeOk(code)) {
         val arrayBuffer = xmlRequest.response.asInstanceOf[js.typedarray.ArrayBuffer]
         val byteBuffer = js.typedarray.TypedArrayBuffer.wrap(arrayBuffer)
         promise.success(byteBuffer)
@@ -174,7 +176,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     xmlRequest.onload = (e: dom.Event) => {
       val code = xmlRequest.status
-      if (code >= 200 && code < 300 || code == 304) { // HTTP Code 2xx or 304, Ok
+      if (isHTTPCodeOk(code)) { // HTTP Code 2xx or 304, Ok
         val text: String = xmlRequest.responseText
         promise.success(text)
       } else {

@@ -4,20 +4,32 @@ import scala.scalajs.js
 import org.scalajs.dom
 import games.Resource
 import scala.concurrent.Promise
-import games.JsUtils
+import games.{ Utils, JsUtils }
 import scala.concurrent.Future
 
 import java.nio.{ ByteBuffer, ByteOrder, FloatBuffer }
 
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-object AuroraHelper {
-  def createRawData(ctx: WebAudioContext, res: Resource): Future[games.audio.Data] = {
+private[games] trait DataJS {
+  private[games] def createSource(outputNode: js.Dynamic): scala.concurrent.Future[games.audio.Source]
+}
+
+private[games] object Helper {
+  def createDataFromAurora(ctx: WebAudioContext, res: Resource): scala.concurrent.Future[DataJS] = {
     ???
+  }
+
+  def createSource3D(ctx: WebAudioContext, data: DataJS): scala.concurrent.Future[games.audio.Source3D] = {
+    val pannerNode = ctx.webApi.createPanner()
+    data.createSource(pannerNode).map { source2d =>
+      pannerNode.connect(ctx.mainOutput)
+      new JsSource3D(ctx, source2d, pannerNode)
+    }
   }
 }
 
-class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends games.audio.Data {
+class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends games.audio.Data with DataJS {
   private val bufferReady = Future {
     format match {
       case Format.Float32 => // good to go
@@ -51,59 +63,46 @@ class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: 
     buffer
   }
 
-  def createSource(): scala.concurrent.Future[games.audio.Source] = {
-    bufferReady.map { buffer => new JsBufferedSource(ctx, buffer, ctx.mainOutput) }
+  private[games] def createSource(outputNode: js.Dynamic): scala.concurrent.Future[games.audio.Source] = {
+    bufferReady.map { buffer => new JsBufferedSource(ctx, buffer, outputNode) }
   }
-  def createSource3D(): scala.concurrent.Future[games.audio.Source3D] = {
-    bufferReady.map { buffer =>
-      val pannerNode = ctx.webApi.createPanner()
-      val source2d = new JsBufferedSource(ctx, buffer, pannerNode)
-      pannerNode.connect(ctx.mainOutput)
-      new JsSource3D(ctx, source2d, pannerNode)
-    }
-  }
+
+  def createSource(): scala.concurrent.Future[games.audio.Source] = this.createSource(ctx.mainOutput)
+  def createSource3D(): scala.concurrent.Future[games.audio.Source3D] = Helper.createSource3D(ctx, this)
 }
 
-class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extends games.audio.Data {
-  private val decodedDataReady = Promise[js.Dynamic]
+class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extends games.audio.Data with DataJS {
+  // Init
+  private val decodedDataReady = {
+    val dataFuture = Utils.getBinaryDataFromResource(res)
+    val promise = Promise[js.Dynamic]
 
-  private val request = new dom.XMLHttpRequest()
-  request.open("GET", JsUtils.pathForResource(res), true)
-  request.responseType = "arraybuffer"
+    dataFuture.map { bb =>
+      import scala.scalajs.js.typedarray.TypedArrayBufferOps._
 
-  request.onload = (e: dom.Event) => {
-    val buffer = request.response.asInstanceOf[js.Dynamic]
-
-    ctx.webApi.decodeAudioData(buffer,
-      (decodedBuffer: js.Dynamic) => {
-        decodedDataReady.success(decodedBuffer)
-      },
-      () => {
-        decodedDataReady.failure(new RuntimeException("Failed to decode the audio data from resource " + res))
-      })
-
-  }
-  request.onerror = (e: dom.Event) => {
-    decodedDataReady.failure(new RuntimeException("Failed to retrieve resource " + res + ", cause: HTTP error " + request.status + " (" + request.responseText + ")"))
-  }
-
-  request.send()
-
-  def createSource(): Future[games.audio.Source] = {
-    decodedDataReady.future.map { buffer => new JsBufferedSource(ctx, buffer, ctx.mainOutput) }
-  }
-  def createSource3D(): Future[games.audio.Source3D] = {
-    decodedDataReady.future.map { buffer =>
-      val pannerNode = ctx.webApi.createPanner()
-      val source2d = new JsBufferedSource(ctx, buffer, pannerNode)
-      pannerNode.connect(ctx.mainOutput)
-      new JsSource3D(ctx, source2d, pannerNode)
+      val arrayBuffer = bb.arrayBuffer()
+      ctx.webApi.decodeAudioData(arrayBuffer,
+        (decodedBuffer: js.Dynamic) => {
+          promise.success(decodedBuffer)
+        },
+        () => {
+          promise.failure(new RuntimeException("Failed to decode the audio data from resource " + res))
+        })
     }
+
+    promise.future
   }
+
+  private[games] def createSource(outputNode: js.Dynamic): Future[games.audio.Source] = {
+    decodedDataReady.map { buffer => new JsBufferedSource(ctx, buffer, outputNode) }
+  }
+
+  def createSource(): Future[games.audio.Source] = this.createSource(ctx.mainOutput)
+  def createSource3D(): Future[games.audio.Source3D] = Helper.createSource3D(ctx, this)
 }
 
-class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) extends games.audio.Data {
-  private def createSource(outputNode: js.Dynamic): Future[games.audio.Source] = {
+class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) extends games.audio.Data with DataJS {
+  private[games] def createSource(outputNode: js.Dynamic): Future[games.audio.Source] = {
     val path = JsUtils.pathForResource(res)
     val promise = Promise[games.audio.Source]
     val audio: js.Dynamic = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
@@ -127,7 +126,7 @@ class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) exten
 
       // If Aurora is available and this error seems due to decoding, try with Aurora
       if (WebAudioContext.canUseAurora && (errorCode == 3 || errorCode == 4)) {
-        val dataFuture = AuroraHelper.createRawData(ctx, res).flatMap { data => data.createSource() }
+        val dataFuture = Helper.createDataFromAurora(ctx, res).flatMap { data => data.createSource(outputNode) }
         dataFuture.onSuccess { case source => promise.success(source) }
         dataFuture.onFailure { case t => promise.failure(new RuntimeException(msg + " (result with Aurora: " + t + ")", t)) }
       } else {
@@ -140,13 +139,5 @@ class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) exten
   }
 
   def createSource(): Future[games.audio.Source] = this.createSource(ctx.mainOutput)
-
-  def createSource3D(): Future[games.audio.Source3D] = {
-    val pannerNode = ctx.webApi.createPanner()
-    val sourceFuture = this.createSource(pannerNode)
-    sourceFuture.map { source =>
-      pannerNode.connect(ctx.mainOutput)
-      new JsSource3D(ctx, source, pannerNode)
-    }
-  }
+  def createSource3D(): Future[games.audio.Source3D] = Helper.createSource3D(ctx, this)
 }
