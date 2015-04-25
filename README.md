@@ -39,5 +39,3 @@ The dependencies for the JVM code are:
 
 The dependencies for the Scala.js code are:
 * [Aurora.js](https://github.com/audiocogs/aurora.js) (optional)
-* [ogg.js](https://github.com/audiocogs/ogg.js) (with underlying [libogg](https://xiph.org/ogg/)) (optional)
-* [vorbis.js](https://github.com/audiocogs/vorbis.js) (with underlying [libvorbis](https://xiph.org/vorbis/)) (optional)
