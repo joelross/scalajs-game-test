@@ -23,6 +23,7 @@ private[games] object Helper {
     asset.on("error", (error: String) => {
       promise.failure(new RuntimeException("Aurora returned error: " + error))
     })
+
     asset.decodeToBuffer((data: js.typedarray.Float32Array) => {
       val arraybuffer = data.buffer
       val byteBuffer = js.typedarray.TypedArrayBuffer.wrap(arraybuffer)
@@ -43,7 +44,6 @@ private[games] object Helper {
           promise.failure(new RuntimeException("Decoding done, but failed to retrieve the format from Aurora"))
       }
     })
-    asset.start()
 
     promise.future
   }
