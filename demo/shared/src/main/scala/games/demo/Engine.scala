@@ -47,8 +47,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   val hitDamage: Float = 25f
   val terrainSize: Float = 50f
   val initHealth: Float = 100f
-  val minSpeed: Float = 2f
-  val maxSpeed: Float = 6f
+  val minSpeed: Float = 0.1f
+  val maxSpeed: Float = 0.3f
   val maxDeviceAngle: Float = 90f
 
   def context: games.opengl.GLES2 = gl
@@ -218,7 +218,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }.flatMap { _ => helloPacketReceived.future }
 
     val audioFuture = networkFuture.flatMap { _ =>
-      val audioData = this.audioContext.createBufferedData(Resource("/games/demo/sounds/test_stereo.ogg"))
+      val audioData = this.audioContext.createBufferedData(Resource("/games/demo/sounds/test.mp3"))
       audioData.createSource
     }.map { audioSource =>
       audioSource.play

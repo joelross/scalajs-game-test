@@ -39,9 +39,9 @@ class WebAudioContext extends Context {
     node
   }
 
-  def createBufferedData(res: Resource): BufferedData = new JsBufferedData(this, res)
-  def createStreamingData(res: Resource): StreamingData = new JsStreamingData(this, res)
-  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): RawData = new JsRawData(this, data, format, channels, freq)
+  def createBufferedData(res: Resource): games.audio.Data = new JsBufferedData(this, res)
+  def createStreamingData(res: Resource): games.audio.Data = new JsStreamingData(this, res)
+  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.Data = new JsRawData(this, data, format, channels, freq)
 
   override def close(): Unit = {
     super.close()
