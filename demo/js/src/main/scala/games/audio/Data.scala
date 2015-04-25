@@ -19,13 +19,29 @@ private[games] object Helper {
   def createDataFromAurora(ctx: WebAudioContext, arraybuffer: js.typedarray.ArrayBuffer): scala.concurrent.Future[DataJS] = {
     val promise = Promise[DataJS]
 
-    Console.println("Decoding with Aurora...")
     val asset = js.Dynamic.global.AV.Asset.fromBuffer(arraybuffer)
     asset.on("error", (error: String) => {
       promise.failure(new RuntimeException("Aurora returned error: " + error))
     })
-    asset.decodeToBuffer((data: js.Dynamic) => {
-      Console.println("Decoding done: " + JsUtils.typeName(data))
+    asset.decodeToBuffer((data: js.typedarray.Float32Array) => {
+      val arraybuffer = data.buffer
+      val byteBuffer = js.typedarray.TypedArrayBuffer.wrap(arraybuffer)
+
+      var optFormat: Option[js.Dynamic] = None
+      asset.get("format", (format: js.Dynamic) => {
+        optFormat = Some(format)
+      })
+
+      optFormat match {
+        case Some(format) =>
+          val channels = format.channelsPerFrame.asInstanceOf[Int]
+          val sampleRate = format.sampleRate.asInstanceOf[Int]
+          val rawData = new JsRawData(ctx, byteBuffer, Format.Float32, channels, sampleRate)
+          promise.success(rawData)
+
+        case None =>
+          promise.failure(new RuntimeException("Decoding done, but failed to retrieve the format from Aurora"))
+      }
     })
     asset.start()
 
@@ -39,7 +55,6 @@ private[games] object Helper {
       val arrayBuffer = bb.arrayBuffer()
       this.createDataFromAurora(ctx, arrayBuffer)
     }
-    Future.failed(new RuntimeException("Not implemented"))
   }
 
   def createSource3D(ctx: WebAudioContext, data: DataJS): scala.concurrent.Future[games.audio.Source3D] = {
