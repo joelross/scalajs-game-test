@@ -22,6 +22,10 @@ object WebAudioContext {
       !(canPlay.isEmpty() || canPlay == "no")
     }.getOrElse(false)
   }
+
+  lazy val canUseAurora: Boolean = {
+    JsUtils.getOptional[js.Dynamic](js.Dynamic.global, "AV").map(_ => true).getOrElse(false)
+  }
 }
 
 class WebAudioContext extends Context {

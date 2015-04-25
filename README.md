@@ -1,4 +1,4 @@
-# scalajs-games
+# Scalajs-games
 
 Library for graphics/audio/inputs for Scala.js
 
@@ -28,3 +28,15 @@ The address the clients will attempt to reach is located in ```demo/shared/src/m
 #### JVM client (requires a running server to connect to)
 
 Run ```sbt "demoJVM/run"```.
+
+## License
+
+Scalajs-games code itself is under the BSD license
+
+The dependencies for the JVM code are:
+* [JOrbis](http://www.jcraft.com/jorbis/)
+
+The dependencies for the Scala.js code are:
+* [Aurora.js](https://github.com/audiocogs/aurora.js) (optional)
+* [ogg.js](https://github.com/audiocogs/ogg.js) (with underlying [libogg](https://xiph.org/ogg/)) (optional)
+* [vorbis.js](https://github.com/audiocogs/vorbis.js) (with underlying [libvorbis](https://xiph.org/vorbis/)) (optional)
