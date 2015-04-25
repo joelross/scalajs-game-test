@@ -119,15 +119,13 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
 
       val arraybuffer = bb.arrayBuffer()
       ctx.webApi.decodeAudioData(arraybuffer,
-        // Commented to force Aurora to kick in
-        /*(decodedBuffer: js.Dynamic) => {
+        (decodedBuffer: js.Dynamic) => {
           promise.success(Left(decodedBuffer))
-        },*/
+        },
         () => {
           val msg = "Failed to decode the audio data from resource " + res
           // If Aurora is available and this error seems due to decoding, try with Aurora
           if (WebAudioContext.canUseAurora) {
-            Console.println("Trying with Aurora")
             val auroraDataFuture = Helper.createDataFromAurora(ctx, arraybuffer)
             auroraDataFuture.onSuccess { case auroraData => promise.success(Right(auroraData)) }
             auroraDataFuture.onFailure { case t => promise.failure(new RuntimeException(msg + " (result with Aurora: " + t + ")", t)) }

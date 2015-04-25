@@ -218,7 +218,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }.flatMap { _ => helloPacketReceived.future }
 
     val audioFuture = networkFuture.flatMap { _ =>
-      val audioData = this.audioContext.createBufferedData(Resource("/games/demo/sounds/test_mono.ogg"))
+      val audioData = this.audioContext.createBufferedData(Resource("/games/demo/sounds/test_stereo.ogg"))
       audioData.createSource
     }.map { audioSource =>
       audioSource.play
