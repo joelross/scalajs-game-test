@@ -40,7 +40,13 @@ class WebAudioContext extends Context {
   }
 
   def createBufferedData(res: Resource): games.audio.Data = new JsBufferedData(this, res)
-  def createStreamingData(res: Resource): games.audio.Data = new JsStreamingData(this, res)
+  def createStreamingData(res: Resource): games.audio.Data = {
+    // Streaming data is not a good idea on Android Chrome: https://code.google.com/p/chromium/issues/detail?id=138132#c6
+    if (JsUtils.Browser.chrome && JsUtils.Browser.android) {
+      Console.err.println("Warning: Android Chrome does not support streaming data, switching to buffered data")
+      this.createBufferedData(res)
+    } else new JsStreamingData(this, res)
+  }
   def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.Data = new JsRawData(this, data, format, channels, freq)
 
   override def close(): Unit = {

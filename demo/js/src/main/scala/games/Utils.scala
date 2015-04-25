@@ -113,6 +113,14 @@ object JsUtils {
     ((boundingLeft + winOffsetX - elemOffsetX).toInt, (boundingTop + winOffsetY - elemOffsetY).toInt)
   }
 
+  object Browser {
+    private val userAgent: String = js.Dynamic.global.navigator.userAgent.asInstanceOf[String].toLowerCase()
+
+    val chrome: Boolean = userAgent.contains("chrome/")
+    val firefox: Boolean = userAgent.contains("firefox/")
+    val android: Boolean = userAgent.contains("android")
+  }
+
   var orientationLockOnFullscreen: Boolean = false
 }
 
