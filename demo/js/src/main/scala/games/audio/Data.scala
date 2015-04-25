@@ -11,6 +11,12 @@ import java.nio.{ ByteBuffer, ByteOrder, FloatBuffer }
 
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
+object AuroraHelper {
+  def createRawData(ctx: WebAudioContext, res: Resource): Future[games.audio.Data] = {
+    ???
+  }
+}
+
 class JsRawData private[games] (ctx: WebAudioContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends games.audio.Data {
   private val bufferReady = Future {
     format match {
@@ -117,11 +123,17 @@ class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) exten
         case 4 => "source not supported"
         case _ => "unknown error"
       }
-
       val msg = "Failed to load the stream " + res + ", cause: " + errorMessage
 
-      if (!promise.isCompleted) promise.failure(new RuntimeException(msg))
-      else Console.err.println(msg)
+      // If Aurora is available and this error seems due to decoding, try with Aurora
+      if (WebAudioContext.canUseAurora && (errorCode == 3 || errorCode == 4)) {
+        val dataFuture = AuroraHelper.createRawData(ctx, res).flatMap { data => data.createSource() }
+        dataFuture.onSuccess { case source => promise.success(source) }
+        dataFuture.onFailure { case t => promise.failure(new RuntimeException(msg + " (result with Aurora: " + t + ")", t)) }
+      } else {
+        if (!promise.isCompleted) promise.failure(new RuntimeException(msg))
+        else Console.err.println(msg)
+      }
     }
 
     promise.future

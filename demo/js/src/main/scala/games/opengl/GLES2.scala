@@ -11,7 +11,6 @@ import scala.concurrent.Future
 
 import games.JsUtils
 
-//import scala.scalajs.js.typedarray.TypedArrayBufferOps
 import scala.scalajs.js.typedarray.TypedArrayBufferOps._
 
 // See https://github.com/scala-js/scala-js-dom/blob/master/src/main/scala/org/scalajs/dom/WebGL.scala for documentation
