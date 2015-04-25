@@ -97,14 +97,42 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
 }
 
 class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) extends games.audio.Data {
-  def createSource(): Future[games.audio.Source] = {
-    val source = new JsStreamingSource(ctx, res, ctx.mainOutput)
-    source.ready.map { x => source }
+  private def createSource(outputNode: js.Dynamic): Future[games.audio.Source] = {
+    val path = JsUtils.pathForResource(res)
+    val promise = Promise[games.audio.Source]
+    val audio: js.Dynamic = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
+    audio.src = path
+
+    audio.oncanplay = () => {
+      val source = new JsStreamingSource(ctx, audio, outputNode)
+      promise.success(source)
+    }
+
+    audio.onerror = () => {
+      val errorCode = audio.error.code.asInstanceOf[Int]
+      val errorMessage = errorCode match {
+        case 1 => "request aborted"
+        case 2 => "network error"
+        case 3 => "decoding error"
+        case 4 => "source not supported"
+        case _ => "unknown error"
+      }
+
+      val msg = "Failed to load the stream " + res + ", cause: " + errorMessage
+
+      if (!promise.isCompleted) promise.failure(new RuntimeException(msg))
+      else Console.err.println(msg)
+    }
+
+    promise.future
   }
+
+  def createSource(): Future[games.audio.Source] = this.createSource(ctx.mainOutput)
+
   def createSource3D(): Future[games.audio.Source3D] = {
     val pannerNode = ctx.webApi.createPanner()
-    val source = new JsStreamingSource(ctx, res, pannerNode)
-    source.ready.map { x =>
+    val sourceFuture = this.createSource(pannerNode)
+    sourceFuture.map { source =>
       pannerNode.connect(ctx.mainOutput)
       new JsSource3D(ctx, source, pannerNode)
     }

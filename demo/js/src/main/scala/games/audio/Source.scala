@@ -81,12 +81,7 @@ class JsBufferedSource private[games] (ctx: WebAudioContext, buffer: js.Dynamic,
   def playing: Boolean = isPlaying
 }
 
-class JsStreamingSource private[games] (ctx: WebAudioContext, res: Resource, outputNode: js.Dynamic) extends Source {
-  // Init
-  private val path = JsUtils.pathForResource(res)
-  private val promiseReady = Promise[Unit]
-  private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
-  audio.src = path
+class JsStreamingSource private[games] (ctx: WebAudioContext, audio: js.Dynamic, outputNode: js.Dynamic) extends Source {
   private val sourceNode = ctx.webApi.createMediaElementSource(audio)
   sourceNode.connect(outputNode)
 
@@ -97,26 +92,6 @@ class JsStreamingSource private[games] (ctx: WebAudioContext, res: Resource, out
   override def close(): Unit = {
     super.close()
     ctx.removeSource(this)
-  }
-
-  audio.oncanplay = () => {
-    promiseReady.success((): Unit)
-  }
-
-  audio.onerror = () => {
-    val errorCode = audio.error.code.asInstanceOf[Int]
-    val errorMessage = errorCode match {
-      case 1 => "request aborted"
-      case 2 => "network error"
-      case 3 => "decoding error"
-      case 4 => "source not supported"
-      case _ => "unknown error"
-    }
-
-    val msg = "Failed to load the stream " + res + ", cause: " + errorMessage
-
-    if (!promiseReady.isCompleted) promiseReady.failure(new RuntimeException(msg))
-    else println(msg)
   }
 
   audio.onpause = audio.onended = () => {
@@ -151,8 +126,6 @@ class JsStreamingSource private[games] (ctx: WebAudioContext, res: Resource, out
   }
 
   def playing: Boolean = isPlaying
-
-  private[games] val ready = promiseReady.future
 }
 
 class JsSource3D private[games] (ctx: WebAudioContext, source: AbstractSource, pannerNode: js.Dynamic) extends Source3D {
