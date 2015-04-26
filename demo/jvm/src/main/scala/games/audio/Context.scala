@@ -13,9 +13,9 @@ import scala.collection.mutable.Set
 class ALContext extends Context {
   AL.create()
 
-  def createBufferedData(res: games.Resource): games.audio.BufferedData = new ALBufferedData(this, res)
-  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.RawData = new ALRawData(this, data, format, channels, freq)
-  def createStreamingData(res: games.Resource): games.audio.StreamingData = new ALStreamingData(this, res)
+  def createBufferedData(res: games.Resource): games.audio.Data = new ALBufferedData(this, res)
+  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.Data = new ALRawData(this, data, format, channels, freq)
+  def createStreamingData(res: games.Resource): games.audio.Data = new ALStreamingData(this, res)
 
   override def close(): Unit = {
     super.close()

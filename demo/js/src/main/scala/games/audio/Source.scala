@@ -9,6 +9,7 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 import games.JsUtils
 import games.math.Vector3f
+import games.Resource
 
 class JsBufferedSource private[games] (ctx: WebAudioContext, buffer: js.Dynamic, outputNode: js.Dynamic) extends Source {
   // Init
@@ -80,10 +81,7 @@ class JsBufferedSource private[games] (ctx: WebAudioContext, buffer: js.Dynamic,
   def playing: Boolean = isPlaying
 }
 
-class JsStreamingSource private[games] (ctx: WebAudioContext, pathFuture: Future[String], outputNode: js.Dynamic) extends Source {
-  // Init
-  private val promiseReady = Promise[Unit]
-  private val audio = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
+class JsStreamingSource private[games] (ctx: WebAudioContext, audio: js.Dynamic, outputNode: js.Dynamic) extends Source {
   private val sourceNode = ctx.webApi.createMediaElementSource(audio)
   sourceNode.connect(outputNode)
 
@@ -94,26 +92,6 @@ class JsStreamingSource private[games] (ctx: WebAudioContext, pathFuture: Future
   override def close(): Unit = {
     super.close()
     ctx.removeSource(this)
-  }
-
-  pathFuture.onSuccess {
-    case path =>
-      audio.src = path
-  }
-  pathFuture.onFailure {
-    case t =>
-      promiseReady.failure(t)
-  }
-
-  audio.oncanplay = () => {
-    promiseReady.success((): Unit)
-  }
-
-  audio.onerror = () => {
-    val msg = "Failure of streaming"
-
-    if (!promiseReady.isCompleted) promiseReady.failure(new RuntimeException(msg))
-    else println(msg)
   }
 
   audio.onpause = audio.onended = () => {
@@ -148,8 +126,6 @@ class JsStreamingSource private[games] (ctx: WebAudioContext, pathFuture: Future
   }
 
   def playing: Boolean = isPlaying
-
-  private[games] val ready = promiseReady.future
 }
 
 class JsSource3D private[games] (ctx: WebAudioContext, source: AbstractSource, pannerNode: js.Dynamic) extends Source3D {

@@ -65,8 +65,16 @@ object JsUtils {
     getOptionalJS(fields: _*).toOption
   }
 
+  def featureUnsupportedText(feature: String): String = {
+    "Feature " + feature + " not supported"
+  }
+
   def featureUnsupportedFunction(feature: String): js.Function = {
-    () => { println("Feature " + feature + " not supported") }
+    () => { Console.err.println(featureUnsupportedText(feature)) }
+  }
+
+  def throwFeatureUnsupported(feature: String): Nothing = {
+    throw new RuntimeException(featureUnsupportedText(feature))
   }
 
   private val typeRegex = js.Dynamic.newInstance(g.RegExp)("^\\[object\\s(.*)\\]$")
@@ -84,10 +92,43 @@ object JsUtils {
     val name = execArray(1)
     name
   }
+
+  /*
+   * Get the offset of the element.
+   * From jQuery: https://github.com/jquery/jquery/blob/2.1.3/src/offset.js#L107-L108
+   */
+  def offsetOfElement(element: js.Dynamic): (Int, Int) = {
+    val bounding = element.getBoundingClientRect()
+    val window = js.Dynamic.global.window
+
+    val boundingLeft = bounding.left.asInstanceOf[Double]
+    val boundingTop = bounding.top.asInstanceOf[Double]
+
+    val winOffsetX = window.pageXOffset.asInstanceOf[Double]
+    val winOffsetY = window.pageYOffset.asInstanceOf[Double]
+
+    val elemOffsetX = element.clientLeft.asInstanceOf[Double]
+    val elemOffsetY = element.clientTop.asInstanceOf[Double]
+
+    ((boundingLeft + winOffsetX - elemOffsetX).toInt, (boundingTop + winOffsetY - elemOffsetY).toInt)
+  }
+
+  object Browser {
+    private val userAgent: String = js.Dynamic.global.navigator.userAgent.asInstanceOf[String].toLowerCase()
+
+    val chrome: Boolean = userAgent.contains("chrome/")
+    val firefox: Boolean = userAgent.contains("firefox/")
+    val android: Boolean = userAgent.contains("android")
+  }
+
+  var orientationLockOnFullscreen: Boolean = false
+  var useAuroraJs: Boolean = true
 }
 
 trait UtilsImpl extends UtilsRequirements {
   def getLoopThreadExecutionContext(): ExecutionContext = scalajs.concurrent.JSExecutionContext.Implicits.queue
+
+  private def isHTTPCodeOk(code: Int): Boolean = (code >= 200 && code < 300) || code == 304 // HTTP Code 2xx or 304, Ok
 
   def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer] = {
     val xmlRequest = new dom.XMLHttpRequest()
@@ -104,7 +145,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     xmlRequest.onload = (e: dom.Event) => {
       val code = xmlRequest.status
-      if (code >= 200 && code < 300 || code == 304) { // HTTP Code 2xx or 304, Ok
+      if (isHTTPCodeOk(code)) {
         val arrayBuffer = xmlRequest.response.asInstanceOf[js.typedarray.ArrayBuffer]
         val byteBuffer = js.typedarray.TypedArrayBuffer.wrap(arrayBuffer)
         promise.success(byteBuffer)
@@ -136,7 +177,7 @@ trait UtilsImpl extends UtilsRequirements {
 
     xmlRequest.onload = (e: dom.Event) => {
       val code = xmlRequest.status
-      if (code >= 200 && code < 300 || code == 304) { // HTTP Code 2xx or 304, Ok
+      if (isHTTPCodeOk(code)) { // HTTP Code 2xx or 304, Ok
         val text: String = xmlRequest.responseText
         promise.success(text)
       } else {

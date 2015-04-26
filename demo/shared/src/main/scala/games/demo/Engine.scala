@@ -29,6 +29,8 @@ abstract class EngineInterface {
   def initAudio(): Context
   def initKeyboard(): Keyboard
   def initMouse(): Mouse
+  def initTouch(): Option[Touchpad]
+  def initAccelerometer(): Option[Accelerometer]
   def update(): Boolean
   def close(): Unit
 }
@@ -39,12 +41,15 @@ class ExternalShipData(var id: Int, var data: ShipData, var latency: Int)
 class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var orientation: Vector3f)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
-  private val updateIntervalMs = 25 // Resend position at 40Hz
-  private val shotIntervalMs = 500 // 2 shots per second max
-  private val rotationMultiplier: Float = 50.0f
-  private val hitDamage: Float = 25f
-  private val terrainSize: Float = 50f
-  private val initHealth: Float = 100f
+  val updateIntervalMs = 50 // Resend position at 20Hz
+  val shotIntervalMs = 500 // 2 shots per second max
+  val rotationMultiplier: Float = 50.0f
+  val hitDamage: Float = 25f
+  val terrainSize: Float = 50f
+  val initHealth: Float = 100f
+  val minSpeed: Float = 2f
+  val maxSpeed: Float = 6f
+  val maxDeviceAngle: Float = 90f
 
   def context: games.opengl.GLES2 = gl
 
@@ -54,6 +59,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var audioContext: Context = _
   private var keyboard: Keyboard = _
   private var mouse: Mouse = _
+  private var touchpad: Option[Touchpad] = None
+  private var accelerometer: Option[Accelerometer] = None
+
+  private var config: Map[String, String] = _
 
   private var connection: Option[ConnectionHandle] = None
   private var localPlayerId: Int = 0
@@ -74,6 +83,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var lastTimeBulletShot: Option[Long] = None
 
+  private var centerVAngle: Option[Float] = None
+
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
 
@@ -90,6 +101,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     itf.printLine("Closing...")
     itf.close()
 
+    for (acc <- accelerometer) acc.close()
+    for (touch <- touchpad) touch.close()
     mouse.close()
     keyboard.close()
     audioContext.close()
@@ -107,29 +120,42 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.audioContext = itf.initAudio() // Init Audio
     this.keyboard = itf.initKeyboard() // Init Keyboard listening
     this.mouse = itf.initMouse() // Init Mouse listener
+    this.touchpad = itf.initTouch() // Init touch (if available)
+    this.accelerometer = itf.initAccelerometer() // Init accelerometer (if available)
 
     audioContext.volume = 0.25f // Lower the initial global volume
 
+    // Load main config file
+    val configFuture = Misc.loadConfigFile(Resource("/games/demo/config"))
+
     // Loading data
-    val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
-    val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
+    val dataFuture = configFuture.flatMap { config =>
+      this.config = config
+
+      val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
+      val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
+
+      Future.sequence(Seq(modelsFuture, shadersFuture))
+    }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
-    val retrieveInfoFromDataFuture = modelsFuture.flatMap { models =>
-      shadersFuture.map { shaders =>
+    val retrieveInfoFromDataFuture = dataFuture.map {
+      case Seq(models: Map[String, OpenGLMesh], shaders: Map[String, Token.Program]) =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
 
         Rendering.Ship.setup(shaders("simple3d"), models("ship"))
         Rendering.Bullet.setup(shaders("simple3d"), models("bullet"))
         Rendering.Health.setup(shaders("health"))
-      }(loopExecutionContext)
-    }
+    }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
 
     // Init network (wait for data loading to complete before that)
     val networkFuture = retrieveInfoFromDataFuture.flatMap { _ =>
-      val futureConnection = new WebSocketClient().connect(WebSocketUrl(Data.server))
+      val serverAddress = config("server")
+      itf.printLine("Server address: " + serverAddress)
+
+      val futureConnection = new WebSocketClient().connect(WebSocketUrl(serverAddress))
       futureConnection.map { conn =>
         itf.printLine("Websocket connection established")
         // Wait for the Hello packet to register the connection
@@ -191,9 +217,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }.flatMap { _ => helloPacketReceived.future }
 
-    // Setup OpenGL
-    gl.clearColor(0.75f, 0.75f, 0.75f, 1) // black background
-
     gl.enable(GLES2.DEPTH_TEST)
     gl.depthFunc(GLES2.LESS)
 
@@ -246,15 +269,67 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     processMouse()
 
-    // Apply inputs to local ship
-    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = 6f
-    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = 2f
-    else localShipData.velocity = 4f
+    for (touchpad <- this.touchpad) {
+      def processTouch() {
+        val optTouchEvent = touchpad.nextEvent()
+        for (touchEvent <- optTouchEvent) {
+          touchEvent match {
+            case TouchStart(data) =>
+              if (data.position.y < height / 4) { // If tapped in the upper part of the screen
+                if (data.position.x < width / 2) {
+                  gl.display.fullscreen = !gl.display.fullscreen
+                } else { // Reset vertical axis center
+                  centerVAngle = None // Will be set by the next accelerometer check
+                }
+              } else {
+                bulletShot = true
+              }
+            case TouchEnd(data) =>
+            case _              =>
+          }
 
-    val inputRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
-    val inputRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
-    val inputRotationXSpeed = inputRotationX / elapsedSinceLastFrame
-    val inputRotationYSpeed = inputRotationY / elapsedSinceLastFrame
+          processTouch() // process next event
+        }
+      }
+      processTouch()
+    }
+
+    // Apply inputs to local ship
+    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = maxSpeed
+    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = minSpeed
+    else localShipData.velocity = (maxSpeed + minSpeed) / 2
+
+    val mouseRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
+    val mouseRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
+    val mouseRotationXSpeed = mouseRotationX / elapsedSinceLastFrame
+    val mouseRotationYSpeed = mouseRotationY / elapsedSinceLastFrame
+
+    val accRotationSpeed = for (
+      acc <- accelerometer;
+      accVec <- acc.current()
+    ) yield {
+      val vAngle = Physics.angleCentered(Math.toDegrees(Math.atan2(-accVec.z, -accVec.y)).toFloat)
+      val hAngle = Physics.angleCentered(Math.toDegrees(Math.atan2(accVec.x, -accVec.y)).toFloat)
+
+      /*
+       * Holding the device straight up in front of you: vAngle = 0, hAngle = 0
+       * Tilting the device to the right: hAngle > 0
+       * Tilting the device to the left: hAngle < 0
+       * Tilting the device on his back: vAngle > 0
+       * Tilting the device on his screen: vAngle < 0
+       */
+
+      if (centerVAngle.isEmpty) centerVAngle = Some(vAngle) // If there isn't any center for vAngle yet, use the current one
+      val refVAngle = centerVAngle.get
+
+      val diffVAngle = Physics.angleCentered(vAngle - refVAngle)
+
+      (Physics.interpol(hAngle, +maxDeviceAngle, -maxDeviceAngle, -Physics.maxRotationXSpeed, +Physics.maxRotationXSpeed),
+        Physics.interpol(diffVAngle, +maxDeviceAngle, -maxDeviceAngle, -Physics.maxRotationYSpeed, +Physics.maxRotationYSpeed))
+    }
+
+    val inputRotationXSpeed = mouseRotationXSpeed + accRotationSpeed.map(_._1).getOrElse(0f)
+    val inputRotationYSpeed = mouseRotationYSpeed + accRotationSpeed.map(_._2).getOrElse(0f)
 
     localShipData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
     localShipData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
@@ -310,23 +385,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
       for (hit <- hits) {
         val (bulletId, shipId) = hit
-        val hitMsg = BulletHit(bulletId, shipId)
-        val hitMsgText = upickle.write(hitMsg)
-        conn.write(hitMsgText)
+        sendMsg(BulletHit(bulletId, shipId))
       }
 
       if (bulletShot && (lastTimeBulletShot.isEmpty || now - lastTimeBulletShot.get > shotIntervalMs)) {
-        val bulletMsg = BulletShot(position, orientation)
-        val bulletMsgText = upickle.write(bulletMsg)
-        conn.write(bulletMsgText)
+        sendMsg(BulletShot(position, orientation))
 
         lastTimeBulletShot = Some(now)
       }
 
       if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
-        val positionUpdateMsg = ClientPositionUpdate(position, velocity, orientation, rotation)
-        val positionUpdateMsgText = upickle.write(positionUpdateMsg)
-        conn.write(positionUpdateMsgText)
+        sendMsg(ClientPositionUpdate(position, velocity, orientation, rotation))
 
         lastTimeUpdateToServer = Some(now)
       }
@@ -349,7 +418,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Clear the buffers
     val r = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 1.0f)
     val gb = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 0.0f)
-    gl.clearColor(r, gb, gb, 1f)
+    gl.clearColor(r, gb, gb, 1f) // Background color depending of player's current health
+
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     // Ships

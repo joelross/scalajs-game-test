@@ -13,9 +13,9 @@ object Format {
 }
 
 abstract class Context extends Closeable {
-  def createBufferedData(res: Resource): BufferedData
-  def createStreamingData(res: Resource): StreamingData
-  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): RawData
+  def createBufferedData(res: Resource): games.audio.Data
+  def createStreamingData(res: Resource): games.audio.Data
+  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.Data
 
   def listener: Listener
 

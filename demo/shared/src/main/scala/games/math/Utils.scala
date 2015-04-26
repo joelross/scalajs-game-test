@@ -1,22 +1,18 @@
 package games.math
 
 object Utils {
-  val degToRadFactor: Float = (Math.PI / 180.0).toFloat
-  val radToDegFactor: Float = (180.0 / Math.PI).toFloat
-
-  def degToRad(deg: Float): Float = {
-    deg * degToRadFactor
-  }
-
-  def radToDeg(rad: Float): Float = {
-    rad * radToDegFactor
-  }
-
   def cotan(v: Double): Double = {
     1.0 / Math.tan(v)
   }
 
+  /**
+   * Orthogonalize an existing 3x3 matrix.
+   * Can be used to make sure a matrix meant to be orthogonal stays orthogonal
+   * despite floating-point rounding errors (e.g. a matrix used to accumulate
+   * a lot of rotations)
+   */
   def orthogonalize(mat: Matrix3f): Unit = {
+    // Maybe a better way here: http://stackoverflow.com/questions/23080791/eigen-re-orthogonalization-of-rotation-matrix
     val r1 = mat.column(0)
     val r2 = mat.column(1)
     val r3 = mat.column(2)

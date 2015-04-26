@@ -17,6 +17,8 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 object Launcher extends js.JSApp {
   def main(): Unit = {
     JsUtils.setResourcePath("/resources")
+    JsUtils.orientationLockOnFullscreen = true
+    if (WebAudioContext.canUseAurora) Console.println("Aurora.js available as fallback")
 
     val output = dom.document.getElementById("demo-output")
     val canvas = dom.document.getElementById("demo-canvas-main").asInstanceOf[dom.html.Canvas]
@@ -43,6 +45,14 @@ object Launcher extends js.JSApp {
       def initMouse(): Mouse = {
         val mouse = new MouseJS(canvas)
         mouse
+      }
+      def initTouch(): Option[Touchpad] = {
+        val touch = new TouchpadJS(canvas)
+        Some(touch)
+      }
+      def initAccelerometer: Option[Accelerometer] = {
+        val acc = new AccelerometerJS()
+        Some(acc)
       }
       def update(): Boolean = true
       def close(): Unit = {}

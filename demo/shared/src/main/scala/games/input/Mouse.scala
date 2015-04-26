@@ -24,7 +24,6 @@ object Wheel {
   case object Right extends Wheel
 }
 
-case class Position(x: Int, y: Int)
 abstract sealed class MouseEvent
 case class ButtonEvent(button: Button, down: Boolean) extends MouseEvent
 case class WheelEvent(direction: Wheel) extends MouseEvent

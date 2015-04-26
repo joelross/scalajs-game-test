@@ -12,7 +12,7 @@ import java.io.EOFException
 import scala.concurrent._
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class ALRawData private[games] (ctx: ALContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends RawData {
+class ALRawData private[games] (ctx: ALContext, data: ByteBuffer, format: Format, channels: Int, freq: Int) extends games.audio.Data {
   private val bufferReady = Future {
     format match {
       case Format.Float32 => // good to go
@@ -67,7 +67,7 @@ class ALRawData private[games] (ctx: ALContext, data: ByteBuffer, format: Format
   }
 }
 
-class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends BufferedData {
+class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends games.audio.Data {
   private val bufferReady = Future {
     val alBuffer = AL10.alGenBuffers()
 
@@ -134,7 +134,7 @@ class ALBufferedData private[games] (ctx: ALContext, res: Resource) extends Buff
   }
 }
 
-class ALStreamingData private[games] (ctx: ALContext, res: Resource) extends StreamingData {
+class ALStreamingData private[games] (ctx: ALContext, res: Resource) extends games.audio.Data {
   def createSource(): scala.concurrent.Future[games.audio.Source] = {
     val source = new ALStreamingSource(ctx, res)
     source.ready.map { x => source }

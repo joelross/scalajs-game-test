@@ -12,6 +12,14 @@ import scala.collection.mutable.Set
 
 import js.Dynamic.{ global => g }
 
+object WebAudioContext {
+  lazy val auroraPresent: Boolean = {
+    JsUtils.getOptional[js.Dynamic](js.Dynamic.global, "AV").flatMap { av => JsUtils.getOptional[js.Dynamic](av, "Asset") }.isDefined
+  }
+
+  def canUseAurora: Boolean = JsUtils.useAuroraJs && auroraPresent
+}
+
 class WebAudioContext extends Context {
   val audioContext: js.Dynamic = JsUtils.getOptional[js.Dynamic](g, "AudioContext", "webkitAudioContext").getOrElse(throw new RuntimeException("Web Audio API not supported by your browser"))
   private[games] val webApi = js.Dynamic.newInstance(audioContext)()
@@ -23,9 +31,15 @@ class WebAudioContext extends Context {
     node
   }
 
-  def createBufferedData(res: Resource): BufferedData = new JsBufferedData(this, res)
-  def createStreamingData(res: Resource): StreamingData = new JsStreamingData(this, res)
-  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): RawData = new JsRawData(this, data, format, channels, freq)
+  def createBufferedData(res: Resource): games.audio.Data = new JsBufferedData(this, res)
+  def createStreamingData(res: Resource): games.audio.Data = {
+    // Streaming data is not a good idea on Android Chrome: https://code.google.com/p/chromium/issues/detail?id=138132#c6
+    if (JsUtils.Browser.chrome && JsUtils.Browser.android) {
+      Console.err.println("Warning: Android Chrome does not support streaming data, switching to buffered data")
+      this.createBufferedData(res)
+    } else new JsStreamingData(this, res)
+  }
+  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.Data = new JsRawData(this, data, format, channels, freq)
 
   override def close(): Unit = {
     super.close()

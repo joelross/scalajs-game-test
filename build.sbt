@@ -111,5 +111,6 @@ lazy val serverDemoJS = project
         },
         unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared-server" / "src" / "main" / "scala",
         unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared-server" / "src" / "test" / "scala",
-        (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data
+        (resources in Compile) += (fastOptJS in (demoJS, Compile)).value.data,
+        (resources in Compile) += (fullOptJS in (demoJS, Compile)).value.data
     )

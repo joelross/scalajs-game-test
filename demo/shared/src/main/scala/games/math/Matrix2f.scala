@@ -398,7 +398,7 @@ object Matrix2f {
   }
 
   def setRotation2D(angle: Float, dst: Matrix2f): Unit = {
-    val radAngle = Utils.degToRad(angle)
+    val radAngle = Math.toRadians(angle)
 
     val c = Math.cos(radAngle).toFloat
     val s = Math.sin(radAngle).toFloat
