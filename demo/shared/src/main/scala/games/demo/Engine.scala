@@ -217,14 +217,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }.flatMap { _ => helloPacketReceived.future }
 
-    val audioFuture = networkFuture.flatMap { _ =>
-      val audioData = this.audioContext.createBufferedData(Resource("/games/demo/sounds/test_stereo.ogg"))
-      audioData.createSource
-    }.map { audioSource =>
-      audioSource.play
-      Console.println("Playing ogg")
-    }
-
     gl.enable(GLES2.DEPTH_TEST)
     gl.depthFunc(GLES2.LESS)
 
@@ -234,7 +226,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     screenDim = (width, height)
     Rendering.setProjection(width, height)
 
-    Some(audioFuture) // wait for network setup (last part) to complete before proceding
+    Some(networkFuture) // wait for network setup (last part) to complete before proceding
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {
