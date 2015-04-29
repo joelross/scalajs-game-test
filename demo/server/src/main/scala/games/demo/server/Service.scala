@@ -1,9 +1,7 @@
 package games.demo.server
 
 import games.demo
-
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import scala.concurrent.{ Future, Promise, ExecutionContext }
 import akka.pattern.ask
 import akka.actor.ActorRef
@@ -21,11 +19,10 @@ import spray.can.websocket.FrameCommand
 import akka.actor.ActorRefFactory
 import spray.can.Http
 import akka.actor.Props
-
 import scala.collection.mutable
 import scala.collection.immutable
-
 import scala.concurrent.duration._
+import java.util.concurrent.Semaphore
 
 sealed trait LocalMessage
 
@@ -52,6 +49,8 @@ case class DataResponse(bulletShots: immutable.Seq[demo.BulletShot], bulletHits:
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
 
+  private val lock = new Semaphore(1)
+
   private var nextRoomId = 0
   private val system = akka.actor.ActorSystem("GlobalLogic")
 
@@ -63,17 +62,23 @@ object GlobalLogic {
     actor
   }
 
-  def registerPlayer(playerActor: ConnectionActor): Unit = this.synchronized {
+  def registerPlayer(playerActor: ConnectionActor): Unit = {
+    lock.acquire()
     implicit val timeout = Timeout(5.seconds)
 
     def tryRegister(): Unit = {
       val playerRegistered = currentRoom ? RegisterPlayer(playerActor)
       playerRegistered.onSuccess {
         case RoomJoined => // Ok, nothing to do
+          lock.release()
 
         case RoomFull => // Room rejected the player, create a new room and try again
           currentRoom = newRoom()
           tryRegister()
+      }
+      playerRegistered.onFailure {
+        case _ =>
+          lock.release()
       }
     }
 
