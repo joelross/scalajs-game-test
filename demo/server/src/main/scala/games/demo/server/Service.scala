@@ -23,6 +23,7 @@ import scala.collection.mutable
 import scala.collection.immutable
 import scala.concurrent.duration._
 import java.util.concurrent.Semaphore
+import scala.concurrent.Await
 
 sealed trait LocalMessage
 
@@ -163,23 +164,26 @@ class Room(val id: Int) extends Actor {
 
       val allFuture = Future.sequence(playersData)
 
-      for (all <- allFuture) {
-        val playersData = (for (playerResponse <- all) yield {
-          playerResponse.data
-        }).toSeq
-        val bulletShotsData = (for (playerResponse <- all; bulletShot <- playerResponse.bulletShots) yield {
-          val bulletCreation = demo.BulletCreation(bulletId, playerResponse.data.id, bulletShot.initialPosition, bulletShot.orientation)
-          bulletId += 1
-          bulletCreation.asInstanceOf[demo.Event]
-        }).toSeq
-        val bulletHitsData = (for (playerResponse <- all; bulletHit <- playerResponse.bulletHits) yield {
-          demo.BulletDestruction(bulletHit.bulletId, bulletHit.playerHitId).asInstanceOf[demo.Event]
-        }).toSeq
-        val events = immutable.Seq() ++ bulletShotsData ++ bulletHitsData
-        val updateMsg = demo.ServerUpdate(playersData, events)
-        players.foreach { player =>
-          player.sendToClient(updateMsg)
-        }
+      val all = Await.result(allFuture, Duration.Inf)
+
+      val playersMsgData = (for (playerResponse <- all) yield {
+        playerResponse.data
+      }).toSeq
+
+      val bulletShotsData = (for (playerResponse <- all; bulletShot <- playerResponse.bulletShots) yield {
+        val bulletCreation = demo.BulletCreation(bulletId, playerResponse.data.id, bulletShot.initialPosition, bulletShot.orientation)
+        bulletId += 1
+        bulletCreation.asInstanceOf[demo.Event]
+      }).toSeq
+
+      val bulletHitsData = (for (playerResponse <- all; bulletHit <- playerResponse.bulletHits) yield {
+        demo.BulletDestruction(bulletHit.bulletId, bulletHit.playerHitId).asInstanceOf[demo.Event]
+      }).toSeq
+
+      val events = immutable.Seq() ++ bulletShotsData ++ bulletHitsData
+      val updateMsg = demo.ServerUpdate(playersMsgData, events)
+      players.foreach { player =>
+        player.sendToClient(updateMsg)
       }
   }
 }
