@@ -199,6 +199,8 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
 }
 
 class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext) extends GLES2 {
+  require(webGL != null)
+
   def this(canvas: dom.html.Canvas) = {
     this((canvas.getContext("webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).orElse(canvas.getContext("experimental-webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).getOrElse(throw new RuntimeException("WebGL not supported by the browser")))
   }
