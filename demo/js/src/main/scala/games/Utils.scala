@@ -236,6 +236,12 @@ trait UtilsImpl extends UtilsRequirements {
       fl.onClose()
     }
 
+    val requestAnimation = JsUtils.getOptional[js.Function1[js.Function, Unit]](g.window, "requestAnimationFrame", "webkitRequestAnimationFrame", "mozRequestAnimationFrame", "msRequestAnimationFrame", "oRequestAnimationFrame")
+      .getOrElse(((fun: js.Function) => {
+        g.setTimeout(fun, 1000.0 / 60.0)
+        ()
+      }): js.Function1[js.Function, Unit])
+
     def loop(timeStamp: js.Any): Unit = {
       if (!ctx.closed) {
         try if (fl.continue()) {
@@ -245,7 +251,7 @@ trait UtilsImpl extends UtilsRequirements {
           ctx.lastLoopTime = currentTime
           val frameEvent = FrameEvent(diff)
           fl.onDraw(frameEvent)
-          g.window.requestAnimationFrame(loop _)
+          requestAnimation(loop _)
         } else {
           close()
         } catch {
