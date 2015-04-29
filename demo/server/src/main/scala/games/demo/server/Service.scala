@@ -159,7 +159,7 @@ class Room(val id: Int) extends Actor {
       implicit val timeout = Timeout(100.milliseconds)
 
       val playersData = players.map { player =>
-        (player.actor.self ? AskData).asInstanceOf[Future[DataResponse]]
+        (player.actor.self ? AskData).mapTo[DataResponse]
       }
 
       val allFuture = Future.sequence(playersData)
