@@ -35,21 +35,8 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-class ShipData(var position: Vector3f, var velocity: Float, var orientation: Vector3f, var rotation: Vector3f)
-class ExternalShipData(var id: Int, var data: ShipData, var latency: Int)
-
-class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var orientation: Vector3f)
-
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   val updateIntervalMs = 50 // Resend position at 20Hz
-  val shotIntervalMs = 500 // 2 shots per second max
-  val rotationMultiplier: Float = 50.0f
-  val hitDamage: Float = 25f
-  val terrainSize: Float = 50f
-  val initHealth: Float = 100f
-  val minSpeed: Float = 2f
-  val maxSpeed: Float = 6f
-  val maxDeviceAngle: Float = 90f
 
   def context: games.opengl.GLES2 = gl
 
@@ -65,23 +52,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var config: Map[String, String] = _
 
   private var connection: Option[ConnectionHandle] = None
-  private var localPlayerId: Int = 0
-  private var localPlayerHealth: Float = initHealth
 
   private var screenDim: (Int, Int) = _
 
-  private var initPosition: Vector3f = _
-  private var initOrientation: Vector3f = _
-
-  private var localShipData: ShipData = new ShipData(new Vector3f, 0f, new Vector3f, new Vector3f)
-  private var extShipsData: Map[Int, ExternalShipData] = Map()
-
-  private var bulletsData: mutable.Map[Int, BulletData] = mutable.Map()
+  private var localPlayerId: Int = 0
 
   private var lastTimeUpdateFromServer: Option[Long] = None
   private var lastTimeUpdateToServer: Option[Long] = None
 
-  private var lastTimeBulletShot: Option[Long] = None
+  private var lastTimeProjectileShot: Option[Long] = None
 
   private var centerVAngle: Option[Float] = None
 
@@ -143,9 +122,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       case Seq(models: Map[String, OpenGLMesh], shaders: Map[String, Token.Program]) =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
 
-        Rendering.Ship.setup(shaders("simple3d"), models("ship"))
-        Rendering.Bullet.setup(shaders("simple3d"), models("bullet"))
-        Rendering.Health.setup(shaders("health"))
+        Rendering.Standard.setup(shaders("simple3d"), models("ship"))
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
@@ -168,14 +145,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
               case Ping => // answer that ASAP
                 sendMsg(Pong)
 
-              case Hello(playerId, initPosition, initOrientation) =>
+              case Hello(playerId) =>
                 if (this.connection.isEmpty) {
                   this.connection = Some(conn)
-                  localPlayerId = playerId
-                  localShipData.position = conv(initPosition)
-                  localShipData.orientation = conv(initOrientation)
-                  this.initPosition = localShipData.position.copy()
-                  this.initOrientation = localShipData.orientation.copy()
+                  this.localPlayerId = playerId
                   itf.printLine("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
                 }
@@ -188,21 +161,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 assert(locals.size == 1)
                 val local = locals.head
 
-                extShipsData = externals.flatMap { serverUpdatePlayerData =>
-                  serverUpdatePlayerData.space.map { spaceData =>
-                    (serverUpdatePlayerData.id, new ExternalShipData(serverUpdatePlayerData.id, new ShipData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation), conv(spaceData.rotation)), serverUpdatePlayerData.latency + local.latency))
-                  }
-                }.toMap
+                // TODO process players
+
                 newEvents.foreach {
-                  case BulletCreation(shotId, shooterId, initialPosition, orientation) => bulletsData += (shotId -> new BulletData(shotId, shooterId, conv(initialPosition), conv(orientation)))
-                  case BulletDestruction(shotId, playerHitId) =>
-                    bulletsData.remove(shotId)
-                    if (playerHitId == localPlayerId) localPlayerHealth -= hitDamage
-                    if (localPlayerHealth <= 0f) { // Reset the player's ship
-                      localPlayerHealth = initHealth
-                      localShipData.position = this.initPosition.copy()
-                      localShipData.orientation = this.initOrientation.copy()
-                    }
+                  case ProjectileCreation(projId, position, orientation) =>
+                  // TODO
+                  case ProjectileDestruction(projId) =>
+                  // TODO
+                  case PlayerHit(playerId) =>
+                  // TODO
                   case _ =>
                 }
             }
@@ -219,6 +186,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     gl.enable(GLES2.DEPTH_TEST)
     gl.depthFunc(GLES2.LESS)
+
+    gl.clearColor(0.75f, 0.75f, 0.75f, 1f) // Grey background
 
     val width = gl.display.width
     val height = gl.display.height
@@ -294,111 +263,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       processTouch()
     }
 
-    // Apply inputs to local ship
-    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = maxSpeed
-    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = minSpeed
-    else localShipData.velocity = (maxSpeed + minSpeed) / 2
-
-    val mouseRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
-    val mouseRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
-    val mouseRotationXSpeed = mouseRotationX / elapsedSinceLastFrame
-    val mouseRotationYSpeed = mouseRotationY / elapsedSinceLastFrame
-
-    val accRotationSpeed = for (
-      acc <- accelerometer;
-      accVec <- acc.current()
-    ) yield {
-      val vAngle = Physics.angleCentered(Math.toDegrees(Math.atan2(-accVec.z, -accVec.y)).toFloat)
-      val hAngle = Physics.angleCentered(Math.toDegrees(Math.atan2(accVec.x, -accVec.y)).toFloat)
-
-      /*
-       * Holding the device straight up in front of you: vAngle = 0, hAngle = 0
-       * Tilting the device to the right: hAngle > 0
-       * Tilting the device to the left: hAngle < 0
-       * Tilting the device on his back: vAngle > 0
-       * Tilting the device on his screen: vAngle < 0
-       */
-
-      if (centerVAngle.isEmpty) centerVAngle = Some(vAngle) // If there isn't any center for vAngle yet, use the current one
-      val refVAngle = centerVAngle.get
-
-      val diffVAngle = Physics.angleCentered(vAngle - refVAngle)
-
-      (Physics.interpol(hAngle, +maxDeviceAngle, -maxDeviceAngle, -Physics.maxRotationXSpeed, +Physics.maxRotationXSpeed),
-        Physics.interpol(diffVAngle, +maxDeviceAngle, -maxDeviceAngle, -Physics.maxRotationYSpeed, +Physics.maxRotationYSpeed))
-    }
-
-    val inputRotationXSpeed = mouseRotationXSpeed + accRotationSpeed.map(_._1).getOrElse(0f)
-    val inputRotationYSpeed = mouseRotationYSpeed + accRotationSpeed.map(_._2).getOrElse(0f)
-
-    localShipData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
-    localShipData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
-
     //#### Simulation
-
-    // Ships
-    Physics.stepShip(elapsedSinceLastFrame, localShipData) // Local Player
-    for ((shipId, shipData) <- extShipsData) { // External players
-      Physics.stepShip(elapsedSinceLastFrame, shipData.data)
-    }
-
-    // Make sure the ship remains on the terrain
-    if (Math.abs(localShipData.position.x) > terrainSize) localShipData.position.x = Math.signum(localShipData.position.x) * terrainSize
-    if (Math.abs(localShipData.position.y) > terrainSize) localShipData.position.y = Math.signum(localShipData.position.y) * terrainSize
-    if (Math.abs(localShipData.position.z) > terrainSize) localShipData.position.z = Math.signum(localShipData.position.z) * terrainSize
-
-    // Bullets
-    for ((bulletId, bulletData) <- bulletsData) {
-      Physics.stepBullet(elapsedSinceLastFrame, bulletData)
-    }
-
-    // Remove bullets out of the terrain
-    bulletsData --= (bulletsData.filter {
-      case (bulletId, bulletData) =>
-        Math.abs(bulletData.position.x) > terrainSize ||
-          Math.abs(bulletData.position.y) > terrainSize ||
-          Math.abs(bulletData.position.z) > terrainSize
-    }).keys
-
-    val hits: mutable.Set[(Int, Int)] = mutable.Set()
-    // Check collisions for our owns bullets
-    bulletsData.filter { case (bulletId, bulletData) => bulletData.shooterId == localPlayerId }.foreach {
-      case (bulletId, bulletData) => extShipsData.foreach {
-        case (shipId, shipData) =>
-          if ((bulletData.position - shipData.data.position).length <= 1f) {
-            hits += ((bulletId, shipId))
-          }
-      }
-    }
-
-    // Remove bullets that reached a target
-    for ((bulletId, shipId) <- hits) {
-      bulletsData.remove(bulletId)
-    }
 
     //#### Network
     for (conn <- connection) {
-      val position = conv(localShipData.position)
-      val velocity = localShipData.velocity
-      val orientation = conv(localShipData.orientation)
-      val rotation = conv(localShipData.rotation)
-
-      for (hit <- hits) {
-        val (bulletId, shipId) = hit
-        sendMsg(BulletHit(bulletId, shipId))
-      }
-
-      if (bulletShot && (lastTimeBulletShot.isEmpty || now - lastTimeBulletShot.get > shotIntervalMs)) {
-        sendMsg(BulletShot(position, orientation))
-
-        lastTimeBulletShot = Some(now)
-      }
-
-      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
-        sendMsg(ClientPositionUpdate(position, velocity, orientation, rotation))
-
-        lastTimeUpdateToServer = Some(now)
-      }
+      // TODO
     }
 
     //#### Rendering
@@ -409,39 +278,21 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     // Camera data
-    val cameraOrientation = localShipData.orientation.copy()
-    cameraOrientation.z = 0
-
-    val cameraTransform = Matrix4f.translate3D(localShipData.position) * Physics.matrixForOrientation(cameraOrientation).toHomogeneous()
+    val cameraTransform = new Matrix4f
     val cameraTransformInv = cameraTransform.invertedCopy()
 
     // Clear the buffers
-    val r = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 1.0f)
-    val gb = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 0.0f)
-    gl.clearColor(r, gb, gb, 1f) // Background color depending of player's current health
-
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
-    // Ships
-    Rendering.Ship.init()
-    for ((extId, shipData) <- extShipsData) {
-      val transform = Matrix4f.translate3D(shipData.data.position) * Physics.matrixForOrientation(shipData.data.orientation).toHomogeneous()
-      Rendering.Ship.render(extId, transform, cameraTransformInv)
-    }
-    Rendering.Ship.close()
+    // Entites
+    Rendering.Standard.init()
 
-    // Bullets
-    Rendering.Bullet.init()
-    for ((bulletId, bulletData) <- bulletsData) {
-      val transform = Matrix4f.translate3D(bulletData.position) * Physics.matrixForOrientation(bulletData.orientation).toHomogeneous()
-      Rendering.Bullet.render(bulletData.shooterId, transform, cameraTransformInv)
+    { // for each entity
+      val transform = new Matrix4f
+      Rendering.Standard.render(localPlayerId, transform, cameraTransformInv)
     }
-    Rendering.Bullet.close()
 
-    //Hud: health
-    Rendering.Health.init()
-    Rendering.Health.render(localPlayerHealth)
-    Rendering.Health.close()
+    Rendering.Standard.close()
 
     //#### Ending
     continueCond = continueCond && itf.update()

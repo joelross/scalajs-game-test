@@ -45,7 +45,7 @@ case object Disconnected extends ToPlayerMessage // Signal that the client has d
 case object AskData extends ToPlayerMessage // request data of the player (expect responses)
 
 // Player response to GetData
-case class DataResponse(bulletShots: immutable.Seq[demo.BulletShot], bulletHits: immutable.Seq[demo.BulletHit], data: demo.ServerUpdatePlayerData) extends LocalMessage
+case class DataResponse(projShots: immutable.Seq[demo.ProjectileShot], projHits: immutable.Seq[demo.ProjectileHit], data: demo.ServerUpdatePlayerData) extends LocalMessage
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
@@ -87,22 +87,8 @@ object GlobalLogic {
   }
 }
 
-object Init {
-  val positions = Map(1 -> demo.Vector3(0, 0, 50), // Player 1 starts behind
-    2 -> demo.Vector3(0, 0, -50), // Player 2 starts in front
-    3 -> demo.Vector3(50, 0, 0), // Player 3 starts on the right
-    4 -> demo.Vector3(-50, 0, 0)) // Player 4 starts on the left
-
-  val orientations = Map(1 -> demo.Vector3(0, 0, 0),
-    2 -> demo.Vector3(180, 0, 0),
-    3 -> demo.Vector3(90, 0, 0),
-    4 -> demo.Vector3(270, 0, 0))
-}
-
 class Room(val id: Int) extends Actor {
   println("Creating room " + id)
-
-  private var bulletId = 1
 
   val maxPlayers = 4
 
@@ -170,14 +156,16 @@ class Room(val id: Int) extends Actor {
         playerResponse.data
       }).toSeq
 
-      val bulletShotsData = (for (playerResponse <- all; bulletShot <- playerResponse.bulletShots) yield {
-        val bulletCreation = demo.BulletCreation(bulletId, playerResponse.data.id, bulletShot.initialPosition, bulletShot.orientation)
-        bulletId += 1
-        bulletCreation.asInstanceOf[demo.Event]
+      val bulletShotsData = (for (playerResponse <- all; projShot <- playerResponse.projShots) yield {
+        val projId = demo.ProjectileIdentifier(playerResponse.data.id, projShot.id)
+        val projCreation = demo.ProjectileCreation(projId, projShot.position, projShot.orientation)
+        projCreation.asInstanceOf[demo.Event]
       }).toSeq
 
-      val bulletHitsData = (for (playerResponse <- all; bulletHit <- playerResponse.bulletHits) yield {
-        demo.BulletDestruction(bulletHit.bulletId, bulletHit.playerHitId).asInstanceOf[demo.Event]
+      val bulletHitsData = (for (playerResponse <- all; projHit <- playerResponse.projHits) yield {
+        val projId = demo.ProjectileIdentifier(playerResponse.data.id, projHit.id)
+        val projDestruction = demo.ProjectileDestruction(projId)
+        projDestruction.asInstanceOf[demo.Event]
       }).toSeq
 
       val events = immutable.Seq() ++ bulletShotsData ++ bulletHitsData
@@ -191,15 +179,15 @@ class Room(val id: Int) extends Actor {
 class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
   // Init
   actor.playerLogic = Some(this)
-  sendToClient(demo.Hello(id, Init.positions(id), Init.orientations(id)))
+  sendToClient(demo.Hello(id))
 
   private var lastPingTime: Option[Long] = None
 
   var latency: Option[Int] = None
 
-  var positionData: Option[demo.ClientPositionUpdate] = None
-  val bulletShotsData: mutable.Queue[demo.BulletShot] = mutable.Queue()
-  val bulletHitsData: mutable.Queue[demo.BulletHit] = mutable.Queue()
+  var updateData: Option[demo.ClientPositionUpdate] = None
+  val bulletShotsData: mutable.Queue[demo.ProjectileShot] = mutable.Queue()
+  val bulletHitsData: mutable.Queue[demo.ProjectileHit] = mutable.Queue()
 
   def sendToClient(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
@@ -216,7 +204,7 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
       sendToClient(demo.Ping)
 
     case AskData =>
-      actor.sender ! DataResponse(immutable.Seq() ++ bulletShotsData, immutable.Seq() ++ bulletHitsData, demo.ServerUpdatePlayerData(this.id, this.latency.getOrElse(0), positionData.map { data => demo.SpaceData(data.position, data.velocity, data.orientation, data.rotation) }))
+      actor.sender ! DataResponse(immutable.Seq() ++ bulletShotsData, immutable.Seq() ++ bulletHitsData, demo.ServerUpdatePlayerData(this.id, this.latency.getOrElse(0), updateData.map { data => data.move }))
       bulletShotsData.clear()
       bulletHitsData.clear()
   }
@@ -229,9 +217,9 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
         latency = Some(elapsed.toInt)
         lastPingTime = None
       }
-    case x: demo.ClientPositionUpdate => positionData = Some(x)
-    case x: demo.BulletShot           => bulletShotsData += x
-    case x: demo.BulletHit            => bulletHitsData += x
+    case x: demo.ClientPositionUpdate => updateData = Some(x)
+    case x: demo.ProjectileShot       => bulletShotsData += x
+    case x: demo.ProjectileHit        => bulletHitsData += x
   }
 }
 
