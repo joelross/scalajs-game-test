@@ -242,7 +242,7 @@ trait UtilsImpl extends UtilsRequirements {
         ()
       }): js.Function1[js.Function, Unit])
 
-    def loop(timeStamp: js.Any): Unit = {
+    def loop(): Unit = {
       if (!ctx.closed) {
         try if (fl.continue()) {
           // Main loop call
@@ -264,16 +264,16 @@ trait UtilsImpl extends UtilsRequirements {
       }
     }
 
-    def loopInit(timeStamp: js.Any): Unit = {
+    def loopInit(): Unit = {
       val readyOptFuture = try { fl.onCreate() } catch { case t: Throwable => Some(Future.failed(t)) }
       readyOptFuture match {
-        case None => loop(timeStamp) // ready right now
+        case None => loop() // ready right now
 
         case Some(future) => // wait for the future to complete
           val ec = scalajs.concurrent.JSExecutionContext.Implicits.runNow
           future.onSuccess {
             case _ =>
-              loop(timeStamp)
+              loop()
           }(ec)
           future.onFailure {
             case t => // Don't start the loop in case of failure of the given future
@@ -288,6 +288,6 @@ trait UtilsImpl extends UtilsRequirements {
     }
 
     // Start listener
-    g.requestAnimationFrame(loopInit _)
+    requestAnimation(loopInit _)
   }
 }
