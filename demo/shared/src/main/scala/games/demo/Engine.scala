@@ -163,7 +163,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 assert(locals.size == 1)
                 val local = locals.head
 
-                // TODO process players
+                // TODO process players externals
 
                 newEvents.foreach {
                   case ProjectileCreation(projId, position, orientation) =>
