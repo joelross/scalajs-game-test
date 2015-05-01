@@ -560,7 +560,7 @@ class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext) extends GLES2 {
   }
 
   final def getError(): Int = {
-    webGL.getError().toInt
+    webGL.getError().asInstanceOf[Double].toInt
   }
 
   final def getFramebufferAttachmentParameteri(target: Int, attachment: Int, pname: Int): Int = {

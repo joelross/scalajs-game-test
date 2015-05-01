@@ -205,8 +205,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val width = gl.display.width
     val height = gl.display.height
 
-    var bulletShot = false
-
     //#### Update from inputs
     val delta = mouse.deltaPosition
 
@@ -229,7 +227,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val optMouseEvent = mouse.nextEvent()
       for (mouseEvent <- optMouseEvent) {
         mouseEvent match {
-          case ButtonEvent(Button.Left, true) => bulletShot = true
+          case ButtonEvent(Button.Left, true) =>
           case _                              =>
         }
 
@@ -244,15 +242,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         for (touchEvent <- optTouchEvent) {
           touchEvent match {
             case TouchStart(data) =>
-              if (data.position.y < height / 4) { // If tapped in the upper part of the screen
-                if (data.position.x < width / 2) {
-                  gl.display.fullscreen = !gl.display.fullscreen
-                } else { // Reset vertical axis center
-                  centerVAngle = None // Will be set by the next accelerometer check
-                }
-              } else {
-                bulletShot = true
-              }
             case TouchEnd(data) =>
             case _              =>
           }
