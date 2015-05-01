@@ -113,14 +113,16 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
       val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
       val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
+      val mapFuture = Map.load(Resource("/games/demo/maps/map1"))
 
-      Future.sequence(Seq(modelsFuture, shadersFuture))
+      Future.sequence(Seq(modelsFuture, shadersFuture, mapFuture))
     }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: immutable.Map[String, OpenGLMesh], shaders: immutable.Map[String, Token.Program]) =>
+      case Seq(models: immutable.Map[String, OpenGLMesh], shaders: immutable.Map[String, Token.Program], map: Map) =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
+        itf.printLine("Map size: " + map.width + " by " + map.height)
 
         Rendering.Standard.setup(shaders("simple3d"), models("ship"))
     }(loopExecutionContext)
