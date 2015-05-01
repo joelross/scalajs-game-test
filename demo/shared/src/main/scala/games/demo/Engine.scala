@@ -49,7 +49,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var touchpad: Option[Touchpad] = None
   private var accelerometer: Option[Accelerometer] = None
 
-  private var config: Map[String, String] = _
+  private var config: immutable.Map[String, String] = _
 
   private var connection: Option[ConnectionHandle] = None
 
@@ -119,7 +119,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: Map[String, OpenGLMesh], shaders: Map[String, Token.Program]) =>
+      case Seq(models: immutable.Map[String, OpenGLMesh], shaders: immutable.Map[String, Token.Program]) =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
 
         Rendering.Standard.setup(shaders("simple3d"), models("ship"))
@@ -242,8 +242,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         for (touchEvent <- optTouchEvent) {
           touchEvent match {
             case TouchStart(data) =>
-            case TouchEnd(data) =>
-            case _              =>
+            case TouchEnd(data)   =>
+            case _                =>
           }
 
           processTouch() // process next event
