@@ -66,10 +66,12 @@ case class Room(x: Int, y: Int) {
 case class Map(rooms: Array[Array[Option[Room]]], starts: immutable.Map[Int, Room], width: Int, height: Int) {
   def roomAt(x: Int, y: Int): Option[Room] = if (x >= 0 && x < width && y >= 0 && y < height) rooms(x)(y) else None
 
-  val (floors, vWalls, hWalls) = {
+  val (floors, lWalls, rWalls, tWalls, bWalls) = {
     val floors: mutable.ArrayBuffer[Vector2f] = mutable.ArrayBuffer()
-    val vWalls: mutable.ArrayBuffer[Vector2f] = mutable.ArrayBuffer()
-    val hWalls: mutable.ArrayBuffer[Vector2f] = mutable.ArrayBuffer()
+    val lWalls: mutable.ArrayBuffer[Vector2f] = mutable.ArrayBuffer() // Left walls
+    val rWalls: mutable.ArrayBuffer[Vector2f] = mutable.ArrayBuffer() // Right walls
+    val tWalls: mutable.ArrayBuffer[Vector2f] = mutable.ArrayBuffer() // Top walls
+    val bWalls: mutable.ArrayBuffer[Vector2f] = mutable.ArrayBuffer() // Bottom walls
 
     for (
       x <- 0 until width;
@@ -78,15 +80,15 @@ case class Map(rooms: Array[Array[Option[Room]]], starts: immutable.Map[Int, Roo
       rooms(x)(y) match {
         case Some(room) =>
           floors += new Vector2f(Map.roomSize * room.x + Map.roomHalfSize, Map.roomSize * room.y + Map.roomHalfSize)
-          if (!roomAt(room.x - 1, room.y).isDefined) vWalls += new Vector2f(Map.roomSize * room.x, Map.roomSize * room.y + Map.roomHalfSize)
-          if (!roomAt(room.x + 1, room.y).isDefined) vWalls += new Vector2f(Map.roomSize * (room.x + 1), Map.roomSize * room.y + Map.roomHalfSize)
-          if (!roomAt(room.x, room.y - 1).isDefined) hWalls += new Vector2f(Map.roomSize * room.x + Map.roomHalfSize, Map.roomSize * room.y)
-          if (!roomAt(room.x, room.y + 1).isDefined) hWalls += new Vector2f(Map.roomSize * room.x + Map.roomHalfSize, Map.roomSize * (room.y + 1))
+          if (!roomAt(room.x - 1, room.y).isDefined) lWalls += new Vector2f(Map.roomSize * room.x, Map.roomSize * room.y + Map.roomHalfSize)
+          if (!roomAt(room.x + 1, room.y).isDefined) rWalls += new Vector2f(Map.roomSize * (room.x + 1), Map.roomSize * room.y + Map.roomHalfSize)
+          if (!roomAt(room.x, room.y - 1).isDefined) tWalls += new Vector2f(Map.roomSize * room.x + Map.roomHalfSize, Map.roomSize * room.y)
+          if (!roomAt(room.x, room.y + 1).isDefined) bWalls += new Vector2f(Map.roomSize * room.x + Map.roomHalfSize, Map.roomSize * (room.y + 1))
 
         case None =>
       }
     }
 
-    (floors.toArray, vWalls.toArray, hWalls.toArray)
+    (floors.toArray, lWalls.toArray, rWalls.toArray, tWalls.toArray, bWalls.toArray)
   }
 }

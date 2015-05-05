@@ -198,7 +198,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     gl.enable(GLES2.DEPTH_TEST)
     gl.depthFunc(GLES2.LESS)
-    gl.frontFace(GLES2.CW)
 
     gl.clearColor(0.75f, 0.75f, 0.75f, 1f) // Grey background
 
@@ -299,21 +298,39 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     Rendering.Standard.init()
 
-    val vTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(90, Vector3f.Up)
-    for (vWall <- map.vWalls) {
-      val pos2d = vWall
+    val lTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(270, Vector3f.Up)
+    for (lWall <- map.lWalls) {
+      val pos2d = lWall
       val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
 
-      val transform = Matrix4f.translate3D(pos3d) * vTransform
+      val transform = Matrix4f.translate3D(pos3d) * lTransform
       Rendering.Standard.render(localPlayerId, wall, transform, cameraTransformInv)
     }
 
-    val hTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize)
-    for (hWall <- map.hWalls) {
-      val pos2d = hWall
+    val rTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(90, Vector3f.Up)
+    for (rWall <- map.rWalls) {
+      val pos2d = rWall
       val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
 
-      val transform = Matrix4f.translate3D(pos3d) * hTransform
+      val transform = Matrix4f.translate3D(pos3d) * rTransform
+      Rendering.Standard.render(localPlayerId, wall, transform, cameraTransformInv)
+    }
+
+    val tTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(180, Vector3f.Up)
+    for (tWall <- map.tWalls) {
+      val pos2d = tWall
+      val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
+
+      val transform = Matrix4f.translate3D(pos3d) * tTransform
+      Rendering.Standard.render(localPlayerId, wall, transform, cameraTransformInv)
+    }
+
+    val bTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(0, Vector3f.Up)
+    for (bWall <- map.bWalls) {
+      val pos2d = bWall
+      val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
+
+      val transform = Matrix4f.translate3D(pos3d) * bTransform
       Rendering.Standard.render(localPlayerId, wall, transform, cameraTransformInv)
     }
 
