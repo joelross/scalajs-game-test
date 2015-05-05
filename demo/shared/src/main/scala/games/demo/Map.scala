@@ -59,7 +59,9 @@ object Map {
   }
 }
 
-case class Room(x: Int, y: Int, startForPlayer: Option[Int] = None)
+case class Room(x: Int, y: Int) {
+  lazy val center = new Vector2f(Map.roomSize * x + Map.roomHalfSize, Map.roomSize * y + Map.roomHalfSize)
+}
 
 case class Map(rooms: Array[Array[Option[Room]]], starts: immutable.Map[Int, Room], width: Int, height: Int) {
   def roomAt(x: Int, y: Int): Option[Room] = if (x >= 0 && x < width && y >= 0 && y < height) rooms(x)(y) else None

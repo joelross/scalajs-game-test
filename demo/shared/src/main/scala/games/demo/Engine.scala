@@ -6,8 +6,7 @@ import games.demo.Specifics.WebSocketClient
 
 import scala.concurrent.{ Promise, Future, ExecutionContext }
 import games._
-import games.math
-import games.math.{ Vector3f, Vector4f, Matrix3f, Matrix4f }
+import games.math._
 import games.opengl._
 import games.audio._
 import games.input._
@@ -35,6 +34,10 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
+sealed abstract class PlayerState
+object Away extends PlayerState
+class Playing(var position: Vector2f, var orientation: Float) extends PlayerState
+
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   val updateIntervalMs = 50 // Resend position at 20Hz
 
@@ -55,7 +58,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var screenDim: (Int, Int) = _
 
+  private var map: Map = _
+  private var wall: OpenGLMesh = _
+
   private var localPlayerId: Int = 0
+  private var currentState: PlayerState = Away
 
   private var lastTimeUpdateFromServer: Option[Long] = None
   private var lastTimeUpdateToServer: Option[Long] = None
@@ -124,7 +131,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
-        Rendering.Standard.setup(shaders("simple3d"), models("ship"))
+        this.map = map
+        this.wall = models("wall")
+        Rendering.Standard.setup(shaders("simple3d"))
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
@@ -151,6 +160,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 if (this.connection.isEmpty) {
                   this.connection = Some(conn)
                   this.localPlayerId = playerId
+                  this.currentState = new Playing(this.map.starts(localPlayerId).center.copy(), 0f)
                   itf.printLine("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
                 }
@@ -188,6 +198,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     gl.enable(GLES2.DEPTH_TEST)
     gl.depthFunc(GLES2.LESS)
+    gl.frontFace(GLES2.CW)
 
     gl.clearColor(0.75f, 0.75f, 0.75f, 1f) // Grey background
 
@@ -208,6 +219,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val height = gl.display.height
 
     //#### Update from inputs
+    val playing = this.currentState.asInstanceOf[Playing]
+
     val delta = mouse.deltaPosition
 
     def processKeyboard() {
@@ -254,6 +267,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       processTouch()
     }
 
+    playing.orientation += delta.x.toFloat / width.toFloat * -100f
+    val playerRotation = Matrix2f.rotation2D(270 - playing.orientation)
+    val movement = new Vector2f
+    if (keyboard.isKeyDown(Key.W)) movement += new Vector2f(1, 0) * (4f * elapsedSinceLastFrame)
+    if (keyboard.isKeyDown(Key.S)) movement += new Vector2f(1, 0) * (-2f * elapsedSinceLastFrame)
+    if (keyboard.isKeyDown(Key.D)) movement += new Vector2f(0, 1) * (3f * elapsedSinceLastFrame)
+    if (keyboard.isKeyDown(Key.A)) movement += new Vector2f(0, 1) * (-3f * elapsedSinceLastFrame)
+    playing.position += (playerRotation * movement)
+
     //#### Simulation
 
     //#### Network
@@ -268,19 +290,31 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       Rendering.setProjection(width, height)
     }
 
-    // Camera data
-    val cameraTransform = new Matrix4f
-    val cameraTransformInv = cameraTransform.invertedCopy()
-
     // Clear the buffers
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
-    // Entites
+    // Camera data
+    val cameraTransform = Matrix4f.translate3D(new Vector3f(playing.position.x, 0f, playing.position.y)) * Matrix4f.rotation3D(playing.orientation, Vector3f.Up)
+    val cameraTransformInv = cameraTransform.invertedCopy()
+
     Rendering.Standard.init()
 
-    { // for each entity
-      val transform = new Matrix4f
-      Rendering.Standard.render(localPlayerId, transform, cameraTransformInv)
+    val vTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(90, Vector3f.Up)
+    for (vWall <- map.vWalls) {
+      val pos2d = vWall
+      val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
+
+      val transform = Matrix4f.translate3D(pos3d) * vTransform
+      Rendering.Standard.render(localPlayerId, wall, transform, cameraTransformInv)
+    }
+
+    val hTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize)
+    for (hWall <- map.hWalls) {
+      val pos2d = hWall
+      val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
+
+      val transform = Matrix4f.translate3D(pos3d) * hTransform
+      Rendering.Standard.render(localPlayerId, wall, transform, cameraTransformInv)
     }
 
     Rendering.Standard.close()

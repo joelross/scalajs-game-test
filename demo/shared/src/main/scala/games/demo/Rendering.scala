@@ -15,15 +15,15 @@ case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer,
 object Rendering {
   def validAttribLocation(aloc: Int): Boolean = aloc >= 0
 
-  def loadAllShaders(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[Map[String, Token.Program]] = {
+  def loadAllShaders(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[immutable.Map[String, Token.Program]] = {
     loadAllFromList(resourceFolder, gl, openglContext, path => { loadShadersFromResourceFolder(path, gl, openglContext) })
   }
 
-  def loadAllModels(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[Map[String, OpenGLMesh]] = {
+  def loadAllModels(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[immutable.Map[String, OpenGLMesh]] = {
     loadAllFromList(resourceFolder, gl, openglContext, path => { loadModelFromResourceFolder(path, gl, openglContext) })
   }
 
-  def loadAllFromList[T](resourceFolder: String, gl: GLES2, openglContext: ExecutionContext, asyncGet: (String) => Future[T])(implicit ec: ExecutionContext): Future[Map[String, T]] = {
+  def loadAllFromList[T](resourceFolder: String, gl: GLES2, openglContext: ExecutionContext, asyncGet: (String) => Future[T])(implicit ec: ExecutionContext): Future[immutable.Map[String, T]] = {
     val listResource = Resource(resourceFolder + "/list")
     val listFileFuture = Utils.getTextDataFromResource(listResource)
     listFileFuture.flatMap { listFile =>
@@ -197,7 +197,6 @@ object Rendering {
 
   object Standard {
     var program: Token.Program = _
-    var mesh: OpenGLMesh = _
 
     var positionAttrLoc: Int = _
     var normalAttrLoc: Int = _
@@ -206,9 +205,8 @@ object Rendering {
     var modelViewUniLoc: Token.UniformLocation = _
     var modelViewInvTrUniLoc: Token.UniformLocation = _
 
-    def setup(program: Token.Program, mesh: OpenGLMesh)(implicit gl: GLES2): Unit = {
+    def setup(program: Token.Program)(implicit gl: GLES2): Unit = {
       this.program = program
-      this.mesh = mesh
 
       positionAttrLoc = gl.getAttribLocation(program, "position")
       normalAttrLoc = gl.getAttribLocation(program, "normal")
@@ -232,7 +230,7 @@ object Rendering {
       gl.disableVertexAttribArray(positionAttrLoc)
     }
 
-    def render(playerId: Int, transform: Matrix4f, cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
+    def render(playerId: Int, mesh: OpenGLMesh, transform: Matrix4f, cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
       val modelView = cameraTransformInv * transform
       val modelViewInvTr = modelView.invertedCopy().transpose()
 
