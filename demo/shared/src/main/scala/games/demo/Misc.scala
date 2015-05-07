@@ -3,8 +3,10 @@ package games.demo
 import scala.concurrent.{ Future, ExecutionContext }
 import games.{ Utils, Resource }
 
+import scala.collection.immutable
+
 object Misc {
-  def loadConfigFile(resourceConfig: Resource)(implicit ec: ExecutionContext): Future[Map[String, String]] = {
+  def loadConfigFile(resourceConfig: Resource)(implicit ec: ExecutionContext): Future[immutable.Map[String, String]] = {
     val configFileFuture = Utils.getTextDataFromResource(resourceConfig)
 
     for (configFile <- configFileFuture) yield {
