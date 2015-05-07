@@ -262,7 +262,6 @@ object Rendering {
 
     var positionAttrLoc: Int = _
     var normalAttrLoc: Int = _
-    var diffuseColorUniLoc: Token.UniformLocation = _
     var projectionUniLoc: Token.UniformLocation = _
     var modelViewUniLoc: Token.UniformLocation = _
     var modelViewInvTrUniLoc: Token.UniformLocation = _
@@ -273,7 +272,6 @@ object Rendering {
       positionAttrLoc = gl.getAttribLocation(program, "position")
       normalAttrLoc = gl.getAttribLocation(program, "normal")
 
-      diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
       projectionUniLoc = gl.getUniformLocation(program, "projection")
       modelViewUniLoc = gl.getUniformLocation(program, "modelView")
       modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
@@ -284,13 +282,15 @@ object Rendering {
       assert(vertices.length == normals.length) // sanity check
 
       val entityCount = (map.lWalls.length + map.rWalls.length + map.tWalls.length + map.bWalls.length)
+      val entityTrisCount = mesh.submeshes.map(_.tris.length).sum
+
+      //Console.println("Per mesh, vertices=" + vertices.length + ", normals="+vertices.length + ", tris="+entityTrisCount)
 
       val globalVerticesCount = entityCount * vertices.length
       val globalNormalsCount = entityCount * normals.length
-      val entityTrisCount = mesh.submeshes.map(_.tris.length).sum
       val globalTrisCount = entityCount * entityTrisCount
 
-      assert(globalTrisCount * 3 <= Short.MaxValue) // Sanity check
+      assert(globalTrisCount * 3 <= Short.MaxValue) // Sanity check, make sure the indexing will be within short limits (could use "<= 0xFFFF" as the short are unsigned in latter opengl)
 
       val globalVerticesData = GLES2.createFloatBuffer(globalVerticesCount * 3) // 3 floats (x, y, z) per vertex
       val globalNormalsData = GLES2.createFloatBuffer(globalNormalsCount * 3) // 3 floats (x, y, z) per normal
@@ -358,6 +358,8 @@ object Rendering {
       this.indicesBuffer = globalIndicesBuffer
 
       this.verticesCount = globalVerticesCount
+
+      gl.checkError()
     }
 
     def init()(implicit gl: GLES2): Unit = {
@@ -379,8 +381,6 @@ object Rendering {
 
       gl.uniformMatrix4f(modelViewUniLoc, modelView)
       gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
-
-      gl.uniform3f(diffuseColorUniLoc, new Vector3f(0f, 0f, 0f))
 
       gl.bindBuffer(GLES2.ARRAY_BUFFER, this.verticesBuffer)
       gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)

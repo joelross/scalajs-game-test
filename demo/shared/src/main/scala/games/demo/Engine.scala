@@ -134,7 +134,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
         this.map = map
         this.wallMesh = models("wall")
-        Rendering.Wall.setup(shaders("simple3d"), wallMesh, map)
+        Rendering.Wall.setup(shaders("wall"), wallMesh, map)
         Rendering.Standard.setup(shaders("simple3d"))
     }(loopExecutionContext)
 
