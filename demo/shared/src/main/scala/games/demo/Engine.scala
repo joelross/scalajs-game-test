@@ -296,6 +296,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // Camera data
     val cameraTransform = Matrix4f.translate3D(new Vector3f(playing.position.x, Map.roomHalfSize, playing.position.y)) * Matrix4f.rotation3D(playing.orientation, Vector3f.Up)
+    //val cameraTransform = Matrix4f.translate3D(new Vector3f(0, Map.roomHalfSize, -50f))
     val cameraTransformInv = cameraTransform.invertedCopy()
 
     //    Rendering.Standard.init()

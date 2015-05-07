@@ -183,7 +183,7 @@ object Vector3f {
     dst.x = src.x
     dst.y = src.y
     dst.z = src.z
-    dst.z = 1f
+    dst.w = 1f
   }
 
   def negate(v1: Vector3f, dst: Vector3f): Unit = {
