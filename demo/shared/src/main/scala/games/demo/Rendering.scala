@@ -3,7 +3,7 @@ package games.demo
 import scala.concurrent.{ Future, ExecutionContext }
 import games.{ Utils, Resource }
 import games.opengl.{ Token, GLES2 }
-import games.math.{ Vector3f, Matrix4f }
+import games.math.{ Vector2f, Vector3f, Vector4f, Matrix2f, Matrix3f, Matrix4f }
 import games.utils.SimpleOBJParser
 
 import scala.collection.mutable
@@ -183,6 +183,63 @@ object Rendering {
     }
   }
 
+  def loadTriMeshFromResourceFolder(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[games.utils.SimpleOBJParser.TriMesh] = {
+    val mainResource = Resource(resourceFolder + "/main")
+    val mainFileFuture = Utils.getTextDataFromResource(mainResource)
+    mainFileFuture.flatMap { mainFile =>
+      val mainLines = Utils.lines(mainFile)
+
+      var nameOpt: Option[String] = None
+      var objPathOpt: Option[String] = None
+      val mtlPaths: mutable.Queue[String] = mutable.Queue()
+
+      mainLines.foreach { line =>
+        val tokens = line.split("=", 2)
+        if (tokens.size != 2) throw new RuntimeException("Main model file malformed: \"" + line + "\"")
+        val key = tokens(0)
+        val value = tokens(1)
+
+        key match {
+          case "name" => nameOpt = Some(value)
+          case "obj"  => objPathOpt = Some(value)
+          case "mtl"  => mtlPaths += value
+          case _      => Console.err.println("Warning: unknown model key in line: \"" + line + "\"")
+        }
+      }
+
+      def missing(missingKey: String) = throw new RuntimeException("Missing key for " + missingKey + " in model")
+
+      val name = nameOpt.getOrElse(missing("name"))
+      val objPath = objPathOpt.getOrElse(missing("obj path"))
+
+      val objResource = Resource(resourceFolder + "/" + objPath)
+      val objFileFuture = Utils.getTextDataFromResource(objResource)
+
+      val mtlFileFutures = for (mtlPath <- mtlPaths) yield {
+        val mtlResource = Resource(resourceFolder + "/" + mtlPath)
+        val mtlFileFuture = Utils.getTextDataFromResource(mtlResource)
+        mtlFileFuture
+      }
+
+      val mtlFilesFuture = Future.sequence(mtlFileFutures)
+
+      for (
+        objFile <- objFileFuture;
+        mtlFiles <- mtlFilesFuture
+      ) yield {
+        val objLines = Utils.lines(objFile)
+        val mtlLines = mtlPaths.zip(mtlFiles.map(Utils.lines(_))).toMap
+
+        val objs = SimpleOBJParser.parseOBJ(objLines, mtlLines)
+        val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
+
+        val mesh = meshes(name)
+
+        mesh
+      }
+    }
+  }
+
   var projection: Matrix4f = new Matrix4f
 
   private val fovy: Float = 60f // vertical field of view: 60°
@@ -193,6 +250,147 @@ object Rendering {
   def setProjection(width: Int, height: Int)(implicit gl: GLES2): Unit = {
     gl.viewport(0, 0, width, height)
     Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
+  }
+
+  object Wall {
+    var program: Token.Program = _
+
+    var verticesBuffer: Token.Buffer = _
+    var normalsBuffer: Token.Buffer = _
+    var indicesBuffer: Token.Buffer = _
+    var verticesCount: Int = _
+
+    var positionAttrLoc: Int = _
+    var normalAttrLoc: Int = _
+    var diffuseColorUniLoc: Token.UniformLocation = _
+    var projectionUniLoc: Token.UniformLocation = _
+    var modelViewUniLoc: Token.UniformLocation = _
+    var modelViewInvTrUniLoc: Token.UniformLocation = _
+
+    def setup(program: Token.Program, mesh: games.utils.SimpleOBJParser.TriMesh, map: Map)(implicit gl: GLES2): Unit = {
+      this.program = program
+
+      positionAttrLoc = gl.getAttribLocation(program, "position")
+      normalAttrLoc = gl.getAttribLocation(program, "normal")
+
+      diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
+      projectionUniLoc = gl.getUniformLocation(program, "projection")
+      modelViewUniLoc = gl.getUniformLocation(program, "modelView")
+      modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
+
+      val vertices = mesh.vertices
+      val normals = mesh.normals.get
+
+      assert(vertices.length == normals.length) // sanity check
+
+      val entityCount = (map.lWalls.length + map.rWalls.length + map.tWalls.length + map.bWalls.length)
+
+      val globalVerticesCount = entityCount * vertices.length
+      val globalNormalsCount = entityCount * normals.length
+      val entityTrisCount = mesh.submeshes.map(_.tris.length).sum
+      val globalTrisCount = entityCount * entityTrisCount
+
+      assert(globalTrisCount * 3 <= Short.MaxValue) // Sanity check
+
+      val globalVerticesData = GLES2.createFloatBuffer(globalVerticesCount * 3) // 3 floats (x, y, z) per vertex
+      val globalNormalsData = GLES2.createFloatBuffer(globalNormalsCount * 3) // 3 floats (x, y, z) per normal
+      val globalIndicesData = GLES2.createShortBuffer(globalTrisCount * 3) // 3 indices (vertices) per triangle
+
+      var indicesOffset = 0
+
+      def extractWalls(walls: Array[Vector2f], orientation: Float): Unit = {
+        val wallTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(orientation, Vector3f.Up)
+        for (wall <- walls) {
+          val pos2d = wall
+          val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
+
+          val transform = Matrix4f.translate3D(pos3d) * wallTransform
+          val transformInvTr = transform.invertedCopy().transpose()
+
+          for (vertex <- vertices) {
+            val transformedVertex = transform * vertex.toHomogeneous()
+            transformedVertex.toCartesian().store(globalVerticesData)
+          }
+          for (normal <- normals) {
+            val transformedNormal = transformInvTr * normal.toHomogeneous()
+            transformedNormal.toCartesian().store(globalNormalsData)
+          }
+          for (submesh <- mesh.submeshes) {
+            val tris = submesh.tris
+            for ((i0, i1, i2) <- tris) {
+              globalIndicesData.put((i0 + indicesOffset).toShort)
+              globalIndicesData.put((i1 + indicesOffset).toShort)
+              globalIndicesData.put((i2 + indicesOffset).toShort)
+            }
+          }
+          indicesOffset += vertices.length
+        }
+      }
+
+      extractWalls(map.lWalls, 270f)
+      extractWalls(map.rWalls, 90f)
+      extractWalls(map.tWalls, 180f)
+      extractWalls(map.bWalls, 0f)
+
+      assert(globalVerticesData.remaining() == 0) // sanity check
+      assert(globalNormalsData.remaining() == 0) // sanity check
+      assert(globalIndicesData.remaining() == 0) // sanity check
+
+      globalVerticesData.flip()
+      globalNormalsData.flip()
+      globalIndicesData.flip()
+
+      val globalVerticesBuffer = gl.createBuffer()
+      val globalNormalsBuffer = gl.createBuffer()
+      val globalIndicesBuffer = gl.createBuffer()
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, globalVerticesBuffer)
+      gl.bufferData(GLES2.ARRAY_BUFFER, globalVerticesData, GLES2.STATIC_DRAW)
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, globalNormalsBuffer)
+      gl.bufferData(GLES2.ARRAY_BUFFER, globalNormalsData, GLES2.STATIC_DRAW)
+
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, globalIndicesBuffer)
+      gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, globalIndicesData, GLES2.STATIC_DRAW)
+
+      this.verticesBuffer = globalVerticesBuffer
+      this.normalsBuffer = globalNormalsBuffer
+      this.indicesBuffer = globalIndicesBuffer
+
+      this.verticesCount = globalVerticesCount
+    }
+
+    def init()(implicit gl: GLES2): Unit = {
+      gl.useProgram(program)
+      gl.uniformMatrix4f(projectionUniLoc, projection)
+
+      gl.enableVertexAttribArray(positionAttrLoc)
+      gl.enableVertexAttribArray(normalAttrLoc)
+    }
+
+    def close()(implicit gl: GLES2): Unit = {
+      gl.disableVertexAttribArray(normalAttrLoc)
+      gl.disableVertexAttribArray(positionAttrLoc)
+    }
+
+    def render(cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
+      val modelView = cameraTransformInv
+      val modelViewInvTr = modelView.invertedCopy().transpose()
+
+      gl.uniformMatrix4f(modelViewUniLoc, modelView)
+      gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
+
+      gl.uniform3f(diffuseColorUniLoc, new Vector3f(0f, 0f, 0f))
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, this.verticesBuffer)
+      gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, this.normalsBuffer)
+      gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, this.indicesBuffer)
+      gl.drawElements(GLES2.TRIANGLES, this.verticesCount, GLES2.UNSIGNED_SHORT, 0)
+    }
   }
 
   object Standard {

@@ -119,20 +119,22 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       this.config = config
 
       val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
+      val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
       val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
       val mapFuture = Map.load(Resource("/games/demo/maps/map1"))
 
-      Future.sequence(Seq(modelsFuture, shadersFuture, mapFuture))
+      Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture))
     }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: immutable.Map[String, OpenGLMesh], shaders: immutable.Map[String, Token.Program], map: Map) =>
+      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map) =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
         this.map = map
         this.wallMesh = models("wall")
+        Rendering.Wall.setup(shaders("simple3d"), wallMesh, map)
         Rendering.Standard.setup(shaders("simple3d"))
     }(loopExecutionContext)
 
@@ -296,25 +298,29 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val cameraTransform = Matrix4f.translate3D(new Vector3f(playing.position.x, Map.roomHalfSize, playing.position.y)) * Matrix4f.rotation3D(playing.orientation, Vector3f.Up)
     val cameraTransformInv = cameraTransform.invertedCopy()
 
-    Rendering.Standard.init()
+    //    Rendering.Standard.init()
+    //
+    //    def renderWalls(walls: Array[Vector2f], orientation: Float): Unit = {
+    //      val wallTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(orientation, Vector3f.Up)
+    //      for (wall <- walls) {
+    //        val pos2d = wall
+    //        val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
+    //
+    //        val transform = Matrix4f.translate3D(pos3d) * wallTransform
+    //        Rendering.Standard.render(localPlayerId, wallMesh, transform, cameraTransformInv)
+    //      }
+    //    }
+    //
+    //    renderWalls(map.lWalls, 270f)
+    //    renderWalls(map.rWalls, 90)
+    //    renderWalls(map.tWalls, 180)
+    //    renderWalls(map.bWalls, 0)
+    //
+    //    Rendering.Standard.close()
 
-    def renderWalls(walls: Array[Vector2f], orientation: Float): Unit = {
-      val wallTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(orientation, Vector3f.Up)
-      for (wall <- walls) {
-        val pos2d = wall
-        val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
-
-        val transform = Matrix4f.translate3D(pos3d) * wallTransform
-        Rendering.Standard.render(localPlayerId, wallMesh, transform, cameraTransformInv)
-      }
-    }
-
-    renderWalls(map.lWalls, 270f)
-    renderWalls(map.rWalls, 90)
-    renderWalls(map.tWalls, 180)
-    renderWalls(map.bWalls, 0)
-
-    Rendering.Standard.close()
+    Rendering.Wall.init()
+    Rendering.Wall.render(cameraTransformInv)
+    Rendering.Wall.close()
 
     //#### Ending
     continueCond = continueCond && itf.update()
