@@ -391,13 +391,13 @@ object Matrix2f {
   /**
    * Generates the non-homogeneous rotation matrix for a given angle (in degrees) around the origin
    */
-  def rotation2D(angle: Float): Matrix2f = {
+  def rotate2D(angle: Float): Matrix2f = {
     val ret = new Matrix2f
-    setRotation2D(angle, ret)
+    setRotate2D(angle, ret)
     ret
   }
 
-  def setRotation2D(angle: Float, dst: Matrix2f): Unit = {
+  def setRotate2D(angle: Float, dst: Matrix2f): Unit = {
     val radAngle = Math.toRadians(angle)
 
     val c = Math.cos(radAngle).toFloat

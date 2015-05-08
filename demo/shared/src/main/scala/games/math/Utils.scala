@@ -17,13 +17,13 @@ object Utils {
     val r2 = mat.column(1)
     val r3 = mat.column(2)
 
-    r1.normalise()
+    r1.normalize()
 
     val newR2 = r2 - r1 * (r1 * r2)
-    newR2.normalise()
+    newR2.normalize()
 
     val newR3 = r1.cross(newR2)
-    newR3.normalise()
+    newR3.normalize()
 
     Matrix3f.setColumn(r1, mat, 0)
     Matrix3f.setColumn(newR2, mat, 1)

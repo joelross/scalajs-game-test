@@ -269,7 +269,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     playing.orientation += delta.x.toFloat / width.toFloat * -100f
-    val playerRotation = Matrix2f.rotation2D(270 - playing.orientation)
+    val playerRotation = Matrix2f.rotate2D(270 - playing.orientation)
     val movement = new Vector2f
     if (keyboard.isKeyDown(Key.W)) movement += new Vector2f(1, 0) * (4f * elapsedSinceLastFrame)
     if (keyboard.isKeyDown(Key.S)) movement += new Vector2f(1, 0) * (-2f * elapsedSinceLastFrame)
@@ -295,7 +295,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     // Camera data
-    val cameraTransform = Matrix4f.translate3D(new Vector3f(playing.position.x, Map.roomHalfSize, playing.position.y)) * Matrix4f.rotation3D(playing.orientation, Vector3f.Up)
+    val cameraTransform = Matrix4f.translate3D(new Vector3f(playing.position.x, Map.roomHalfSize, playing.position.y)) * Matrix4f.rotate3D(playing.orientation, Vector3f.Up)
     //val cameraTransform = Matrix4f.translate3D(new Vector3f(0, Map.roomHalfSize, -50f))
     val cameraTransformInv = cameraTransform.invertedCopy()
 

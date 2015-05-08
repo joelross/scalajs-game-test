@@ -591,13 +591,13 @@ object Matrix3f {
   /**
    * Generates the homogeneous rotation matrix for a given angle (in degrees) around the origin
    */
-  def rotation2D(angle: Float): Matrix3f = {
+  def rotate2D(angle: Float): Matrix3f = {
     val ret = new Matrix3f
-    setRotation2D(angle, ret)
+    setRotate2D(angle, ret)
     ret
   }
 
-  def setRotation2D(angle: Float, dst: Matrix3f): Unit = {
+  def setRotate2D(angle: Float, dst: Matrix3f): Unit = {
     val radAngle = Math.toRadians(angle)
 
     val c = Math.cos(radAngle).toFloat
@@ -665,13 +665,13 @@ object Matrix3f {
   /**
    * Generates the non-homogeneous rotation matrix for a given angle (in degrees) and a given unitary axis around the origin
    */
-  def rotation3D(angle: Float, axis: Vector3f): Matrix3f = {
+  def rotate3D(angle: Float, axis: Vector3f): Matrix3f = {
     val ret = new Matrix3f
-    setRotation3D(angle, axis, ret)
+    setRotate3D(angle, axis, ret)
     ret
   }
 
-  def setRotation3D(angle: Float, axis: Vector3f, dst: Matrix3f): Unit = {
+  def setRotate3D(angle: Float, axis: Vector3f, dst: Matrix3f): Unit = {
     val radAngle = Math.toRadians(angle)
 
     val c = Math.cos(radAngle).toFloat

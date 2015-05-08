@@ -9,7 +9,7 @@ abstract class Vector {
   def load(src: FloatBuffer): Vector
   def store(dst: FloatBuffer): Vector
 
-  def normalise(): Vector
+  def normalize(): Vector
   def normalizedCopy(): Vector
 
   def negate(): Vector

@@ -258,7 +258,7 @@ object Rendering {
     var verticesBuffer: Token.Buffer = _
     var normalsBuffer: Token.Buffer = _
     var indicesBuffer: Token.Buffer = _
-    var verticesCount: Int = _
+    var renderCount: Int = _
 
     var positionAttrLoc: Int = _
     var normalAttrLoc: Int = _
@@ -269,12 +269,12 @@ object Rendering {
     def setup(program: Token.Program, mesh: games.utils.SimpleOBJParser.TriMesh, map: Map)(implicit gl: GLES2): Unit = {
       this.program = program
 
-      positionAttrLoc = gl.getAttribLocation(program, "position")
-      normalAttrLoc = gl.getAttribLocation(program, "normal")
+      this.positionAttrLoc = gl.getAttribLocation(program, "position")
+      this.normalAttrLoc = gl.getAttribLocation(program, "normal")
 
-      projectionUniLoc = gl.getUniformLocation(program, "projection")
-      modelViewUniLoc = gl.getUniformLocation(program, "modelView")
-      modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
+      this.projectionUniLoc = gl.getUniformLocation(program, "projection")
+      this.modelViewUniLoc = gl.getUniformLocation(program, "modelView")
+      this.modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
 
       val vertices = mesh.vertices
       val normals = mesh.normals.get
@@ -284,13 +284,13 @@ object Rendering {
       val entityCount = (map.lWalls.length + map.rWalls.length + map.tWalls.length + map.bWalls.length)
       val entityTrisCount = mesh.submeshes.map(_.tris.length).sum
 
-      //Console.println("Per mesh, vertices=" + vertices.length + ", normals="+vertices.length + ", tris="+entityTrisCount)
-
       val globalVerticesCount = entityCount * vertices.length
       val globalNormalsCount = entityCount * normals.length
       val globalTrisCount = entityCount * entityTrisCount
 
-      assert(globalTrisCount * 3 <= Short.MaxValue) // Sanity check, make sure the indexing will be within short limits (could use "<= 0xFFFF" as the short are unsigned in latter opengl)
+      this.renderCount = globalTrisCount * 3
+
+      assert(this.renderCount <= Short.MaxValue) // Sanity check, make sure the indexing will be within short limits (could use "<= 0xFFFF" as the short are unsigned in latter opengl)
 
       val globalVerticesData = GLES2.createFloatBuffer(globalVerticesCount * 3) // 3 floats (x, y, z) per vertex
       val globalNormalsData = GLES2.createFloatBuffer(globalNormalsCount * 3) // 3 floats (x, y, z) per normal
@@ -299,24 +299,27 @@ object Rendering {
       var indicesOffset = 0
 
       def extractWalls(walls: Array[Vector2f], orientation: Float): Unit = {
-        val wallTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(orientation, Vector3f.Up)
+        val wallTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotate3D(orientation, Vector3f.Up)
         for (wall <- walls) {
           val pos2d = wall
           val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
 
           val transform = Matrix4f.translate3D(pos3d) * wallTransform
-          val transformInvTr = transform.invertedCopy().transpose()
+          val transformInvTr = transform.invertedCopy().transposedCopy()
 
           for (vertex <- vertices) {
             val transformedVertex = transform * vertex.toHomogeneous()
             transformedVertex.toCartesian().store(globalVerticesData)
           }
           for (normal <- normals) {
+            // Really not sure about the .w = 1f and the normalization, but the vectors look weird otherwise
             val transformedNormal = transformInvTr * normal.toHomogeneous()
-            transformedNormal.toCartesian().store(globalNormalsData)
+            transformedNormal.w = 1f
+            transformedNormal.toCartesian().normalizedCopy().store(globalNormalsData)
           }
           for (submesh <- mesh.submeshes) {
             val tris = submesh.tris
+
             for ((i0, i1, i2) <- tris) {
               globalIndicesData.put((i0 + indicesOffset).toShort)
               globalIndicesData.put((i1 + indicesOffset).toShort)
@@ -357,8 +360,6 @@ object Rendering {
       this.normalsBuffer = globalNormalsBuffer
       this.indicesBuffer = globalIndicesBuffer
 
-      this.verticesCount = globalVerticesCount
-
       gl.checkError()
     }
 
@@ -389,7 +390,7 @@ object Rendering {
       gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
 
       gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, this.indicesBuffer)
-      gl.drawElements(GLES2.TRIANGLES, this.verticesCount, GLES2.UNSIGNED_SHORT, 0)
+      gl.drawElements(GLES2.TRIANGLES, this.renderCount, GLES2.UNSIGNED_SHORT, 0)
     }
   }
 

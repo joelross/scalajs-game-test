@@ -39,7 +39,7 @@ class Vector2f extends Vector {
     this
   }
 
-  def normalise(): Vector2f = {
+  def normalize(): Vector2f = {
     val l = length
     this /= l
     this
