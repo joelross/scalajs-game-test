@@ -312,7 +312,6 @@ object Rendering {
             transformedVertex.store(globalVerticesData)
           }
           for (normal <- normals) {
-            // Not sure about that part, but the normal looks weird otherwise. I may need to refresh the cartesian <> homogeneous thing
             val transformedNormal = (normalTransform * normal).normalizedCopy()
             transformedNormal.store(globalNormalsData)
           }
