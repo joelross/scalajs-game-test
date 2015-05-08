@@ -200,8 +200,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.depthFunc(GLES2.LESS)
 
     gl.enable(GLES2.CULL_FACE)
-    gl.cullFace(GLES2.FRONT)
-    gl.frontFace(GLES2.CW)
+    gl.cullFace(GLES2.BACK)
+    gl.frontFace(GLES2.CCW)
 
     gl.clearColor(0.75f, 0.75f, 0.75f, 1f) // Grey background
 
