@@ -269,12 +269,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     playing.orientation += delta.x.toFloat / width.toFloat * -100f
-    val playerRotation = Matrix2f.rotate2D(270 - playing.orientation)
+    val playerRotation = Matrix2f.rotate2D(-playing.orientation)
     val movement = new Vector2f
-    if (keyboard.isKeyDown(Key.W)) movement += new Vector2f(1, 0) * (4f * elapsedSinceLastFrame)
-    if (keyboard.isKeyDown(Key.S)) movement += new Vector2f(1, 0) * (-2f * elapsedSinceLastFrame)
-    if (keyboard.isKeyDown(Key.D)) movement += new Vector2f(0, 1) * (3f * elapsedSinceLastFrame)
-    if (keyboard.isKeyDown(Key.A)) movement += new Vector2f(0, 1) * (-3f * elapsedSinceLastFrame)
+    if (keyboard.isKeyDown(Key.W)) movement += new Vector2f(0, 1) * (-4f * elapsedSinceLastFrame)
+    if (keyboard.isKeyDown(Key.S)) movement += new Vector2f(0, 1) * (2f * elapsedSinceLastFrame)
+    if (keyboard.isKeyDown(Key.D)) movement += new Vector2f(1, 0) * (3f * elapsedSinceLastFrame)
+    if (keyboard.isKeyDown(Key.A)) movement += new Vector2f(1, 0) * (-3f * elapsedSinceLastFrame)
     playing.position += (playerRotation * movement)
 
     //#### Simulation
