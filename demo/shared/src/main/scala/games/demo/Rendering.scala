@@ -305,18 +305,16 @@ object Rendering {
           val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
 
           val transform = Matrix4f.translate3D(pos3d) * wallTransform
-          val transformInvTr = transform.invertedCopy().transposedCopy()
+          val normalTransform = transform.toCartesian().invertedCopy().transposedCopy()
 
           for (vertex <- vertices) {
-            val transformedVertex = transform * vertex.toHomogeneous()
-            transformedVertex.toCartesian().store(globalVerticesData)
+            val transformedVertex = (transform * vertex.toHomogeneous()).toCartesian()
+            transformedVertex.store(globalVerticesData)
           }
           for (normal <- normals) {
             // Not sure about that part, but the normal looks weird otherwise. I may need to refresh the cartesian <> homogeneous thing
-            val hNormal = normal.toHomogeneous()
-            hNormal.w = 0f
-            val transformedNormal = transformInvTr * hNormal
-            transformedNormal.toCartesian().normalizedCopy().store(globalNormalsData)
+            val transformedNormal = (normalTransform * normal).normalizedCopy()
+            transformedNormal.store(globalNormalsData)
           }
           for (submesh <- mesh.submeshes) {
             val tris = submesh.tris
