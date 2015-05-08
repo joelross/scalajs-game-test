@@ -313,8 +313,9 @@ object Rendering {
           }
           for (normal <- normals) {
             // Really not sure about the .w = 1f and the normalization, but the vectors look weird otherwise
-            val transformedNormal = transformInvTr * normal.toHomogeneous()
-            transformedNormal.w = 1f
+            val hNormal = normal.toHomogeneous()
+            hNormal.w = 0f
+            val transformedNormal = transformInvTr * hNormal
             transformedNormal.toCartesian().normalizedCopy().store(globalNormalsData)
           }
           for (submesh <- mesh.submeshes) {

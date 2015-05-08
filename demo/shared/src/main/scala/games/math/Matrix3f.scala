@@ -411,11 +411,11 @@ object Matrix3f {
   }
 
   def setCartesian(src: Matrix3f, dst: Matrix2f): Unit = {
-    dst.m00 = src.m00 / src.m22
-    dst.m01 = src.m01 / src.m22
+    dst.m00 = src.m00
+    dst.m01 = src.m01
 
-    dst.m10 = src.m10 / src.m22
-    dst.m11 = src.m11 / src.m22
+    dst.m10 = src.m10
+    dst.m11 = src.m11
   }
 
   def setHomogeneous(src: Matrix3f, dst: Matrix4f): Unit = {

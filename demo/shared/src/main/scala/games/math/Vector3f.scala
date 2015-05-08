@@ -186,8 +186,8 @@ object Vector3f {
   }
 
   def setCartesian(src: Vector3f, dst: Vector2f): Unit = {
-    dst.x = src.x / src.z
-    dst.y = src.y / src.z
+    dst.x = src.x
+    dst.y = src.y
   }
 
   def setHomogeneous(src: Vector3f, dst: Vector4f): Unit = {
