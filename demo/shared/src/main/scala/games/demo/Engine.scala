@@ -296,28 +296,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // Camera data
     val cameraTransform = Matrix4f.translate3D(new Vector3f(playing.position.x, Map.roomHalfSize, playing.position.y)) * Matrix4f.rotate3D(playing.orientation, Vector3f.Up)
-    //val cameraTransform = Matrix4f.translate3D(new Vector3f(0, Map.roomHalfSize, -50f))
     val cameraTransformInv = cameraTransform.invertedCopy()
-
-    //    Rendering.Standard.init()
-    //
-    //    def renderWalls(walls: Array[Vector2f], orientation: Float): Unit = {
-    //      val wallTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotation3D(orientation, Vector3f.Up)
-    //      for (wall <- walls) {
-    //        val pos2d = wall
-    //        val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
-    //
-    //        val transform = Matrix4f.translate3D(pos3d) * wallTransform
-    //        Rendering.Standard.render(localPlayerId, wallMesh, transform, cameraTransformInv)
-    //      }
-    //    }
-    //
-    //    renderWalls(map.lWalls, 270f)
-    //    renderWalls(map.rWalls, 90)
-    //    renderWalls(map.tWalls, 180)
-    //    renderWalls(map.bWalls, 0)
-    //
-    //    Rendering.Standard.close()
 
     Rendering.Wall.init()
     Rendering.Wall.render(cameraTransformInv)
