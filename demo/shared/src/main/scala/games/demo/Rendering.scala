@@ -312,7 +312,7 @@ object Rendering {
             transformedVertex.toCartesian().store(globalVerticesData)
           }
           for (normal <- normals) {
-            // Really not sure about the .w = 1f and the normalization, but the vectors look weird otherwise
+            // Not sure about that part, but the normal looks weird otherwise. I may need to refresh the cartesian <> homogeneous thing
             val hNormal = normal.toHomogeneous()
             hNormal.w = 0f
             val transformedNormal = transformInvTr * hNormal
