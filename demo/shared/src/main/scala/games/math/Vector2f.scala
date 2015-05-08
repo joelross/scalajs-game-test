@@ -122,6 +122,12 @@ class Vector2f extends Vector {
     Vector2f.div(this, v, this)
   }
 
+  def toHomogeneous(): Vector3f = {
+    val ret = new Vector3f
+    Vector2f.setHomogeneous(this, ret)
+    ret
+  }
+
   override def toString = {
     "Vector2f[" + x + ", " + y + "]"
   }
@@ -146,6 +152,12 @@ object Vector2f {
   def set(src: Vector2f, dst: Vector2f): Unit = {
     dst.x = src.x
     dst.y = src.y
+  }
+
+  def setHomogeneous(src: Vector2f, dst: Vector3f): Unit = {
+    dst.x = src.x
+    dst.y = src.y
+    dst.z = 1f
   }
 
   def negate(v1: Vector2f, dst: Vector2f): Unit = {
