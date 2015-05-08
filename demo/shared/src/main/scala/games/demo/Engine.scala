@@ -59,7 +59,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var screenDim: (Int, Int) = _
 
   private var map: Map = _
-  private var wallMesh: OpenGLMesh = _
 
   private var localPlayerId: Int = 0
   private var currentState: PlayerState = Away
@@ -133,7 +132,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
         this.map = map
-        this.wallMesh = models("wall")
         Rendering.Wall.setup(shaders("wall"), wallMesh, map)
         Rendering.Standard.setup(shaders("simple3d"))
     }(loopExecutionContext)
