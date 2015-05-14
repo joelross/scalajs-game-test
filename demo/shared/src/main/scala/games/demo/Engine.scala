@@ -117,10 +117,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val dataFuture = configFuture.flatMap { config =>
       this.config = config
 
-      val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
+      val modelsFuture = Rendering.loadAllModels(config("models"), gl, loopExecutionContext)
       val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
-      val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
-      val mapFuture = Map.load(Resource("/games/demo/maps/map1"))
+      val shadersFuture = Rendering.loadAllShaders(config("shaders"), gl, loopExecutionContext)
+      val mapFuture = Map.load(Resource(config("map")))
 
       Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture))
     }

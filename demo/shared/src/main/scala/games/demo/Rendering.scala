@@ -243,8 +243,8 @@ object Rendering {
   var projection: Matrix4f = new Matrix4f
 
   private val fovy: Float = 60f // vertical field of view: 60°
-  // render between 10cm and 1km
-  private val near: Float = 0.1f
+  // render between 1cm and 1km
+  private val near: Float = 0.01f
   private val far: Float = 1000f
 
   def setProjection(width: Int, height: Int)(implicit gl: GLES2): Unit = {

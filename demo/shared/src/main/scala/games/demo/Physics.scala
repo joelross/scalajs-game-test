@@ -35,42 +35,86 @@ object Physics {
     }
 
     def playerCollision(playerPos: Vector2f): Unit = {
-      for (wall <- map.tWalls) {
-        if (Math.abs(wall.y - playerPos.y) < playerRadius && Math.abs(wall.x - playerPos.x) < (playerRadius + Map.roomHalfSize)) { // AABB test
-          if (Math.abs(wall.x - playerPos.x) < Map.roomHalfSize) { // front contact
-            playerPos.y = wall.y + playerRadius
+      for (wall <- map.ctWalls) {
+        val pos = wall.position
+        val length = wall.length
+        val halfLength = length / 2
+        if (Math.abs(pos.y - playerPos.y) < playerRadius && Math.abs(pos.x - playerPos.x) < (playerRadius + halfLength)) { // AABB test
+          if (Math.abs(pos.x - playerPos.x) < halfLength) { // front contact
+            playerPos.y = pos.y + playerRadius
           } else { // contact on the corner
-            // What to do? There may be another wall to continue this one
+            val cornerPos = if (playerPos.x > pos.x) { // Right corner
+              pos + new Vector2f(halfLength, 0)
+            } else { // Left corner
+              pos + new Vector2f(-halfLength, 0)
+            }
+            val diff = (playerPos - cornerPos)
+            diff.normalize()
+            diff *= playerRadius
+            Vector2f.set(cornerPos + diff, playerPos)
           }
         }
       }
 
-      for (wall <- map.bWalls) {
-        if (Math.abs(wall.y - playerPos.y) < playerRadius && Math.abs(wall.x - playerPos.x) < (playerRadius + Map.roomHalfSize)) { // AABB test
-          if (Math.abs(wall.x - playerPos.x) < Map.roomHalfSize) { // front contact
-            playerPos.y = wall.y - playerRadius
+      for (wall <- map.cbWalls) {
+        val pos = wall.position
+        val length = wall.length
+        val halfLength = length / 2
+        if (Math.abs(pos.y - playerPos.y) < playerRadius && Math.abs(pos.x - playerPos.x) < (playerRadius + halfLength)) { // AABB test
+          if (Math.abs(pos.x - playerPos.x) < halfLength) { // front contact
+            playerPos.y = pos.y - playerRadius
           } else { // contact on the corner
-            // What to do? There may be another wall to continue this one
+            val cornerPos = if (playerPos.x > pos.x) { // Right corner
+              pos + new Vector2f(halfLength, 0)
+            } else { // Left corner
+              pos + new Vector2f(-halfLength, 0)
+            }
+            val diff = (playerPos - cornerPos)
+            diff.normalize()
+            diff *= playerRadius
+            Vector2f.set(cornerPos + diff, playerPos)
           }
         }
       }
 
-      for (wall <- map.lWalls) {
-        if (Math.abs(wall.x - playerPos.x) < playerRadius && Math.abs(wall.y - playerPos.y) < (playerRadius + Map.roomHalfSize)) { // AABB test
-          if (Math.abs(wall.y - playerPos.y) < Map.roomHalfSize) { // front contact
-            playerPos.x = wall.x + playerRadius
+      for (wall <- map.clWalls) {
+        val pos = wall.position
+        val length = wall.length
+        val halfLength = length / 2
+        if (Math.abs(pos.x - playerPos.x) < playerRadius && Math.abs(pos.y - playerPos.y) < (playerRadius + halfLength)) { // AABB test
+          if (Math.abs(pos.y - playerPos.y) < halfLength) { // front contact
+            playerPos.x = pos.x + playerRadius
           } else { // contact on the corner
-            // What to do? There may be another wall to continue this one
+            val cornerPos = if (playerPos.y > pos.y) { // down corner
+              pos + new Vector2f(0, halfLength)
+            } else { // up corner
+              pos + new Vector2f(0, -halfLength)
+            }
+            val diff = (playerPos - cornerPos)
+            diff.normalize()
+            diff *= playerRadius
+            Vector2f.set(cornerPos + diff, playerPos)
           }
         }
       }
 
-      for (wall <- map.rWalls) {
-        if (Math.abs(wall.x - playerPos.x) < playerRadius && Math.abs(wall.y - playerPos.y) < (playerRadius + Map.roomHalfSize)) { // AABB test
-          if (Math.abs(wall.y - playerPos.y) < Map.roomHalfSize) { // front contact
-            playerPos.x = wall.x - playerRadius
+      for (wall <- map.crWalls) {
+        val pos = wall.position
+        val length = wall.length
+        val halfLength = length / 2
+        if (Math.abs(pos.x - playerPos.x) < playerRadius && Math.abs(pos.y - playerPos.y) < (playerRadius + halfLength)) { // AABB test
+          if (Math.abs(pos.y - playerPos.y) < halfLength) { // front contact
+            playerPos.x = pos.x - playerRadius
           } else { // contact on the corner
-            // What to do? There may be another wall to continue this one
+            val cornerPos = if (playerPos.y > pos.y) { // down corner
+              pos + new Vector2f(0, halfLength)
+            } else { // up corner
+              pos + new Vector2f(0, -halfLength)
+            }
+            val diff = (playerPos - cornerPos)
+            diff.normalize()
+            diff *= playerRadius
+            Vector2f.set(cornerPos + diff, playerPos)
           }
         }
       }
