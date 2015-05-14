@@ -49,9 +49,11 @@ object Physics {
               pos + new Vector2f(-halfLength, 0)
             }
             val diff = (playerPos - cornerPos)
-            diff.normalize()
-            diff *= playerRadius
-            Vector2f.set(cornerPos + diff, playerPos)
+            if (diff.length() < playerRadius) {
+              diff.normalize()
+              diff *= playerRadius
+              Vector2f.set(cornerPos + diff, playerPos)
+            }
           }
         }
       }
@@ -70,9 +72,11 @@ object Physics {
               pos + new Vector2f(-halfLength, 0)
             }
             val diff = (playerPos - cornerPos)
-            diff.normalize()
-            diff *= playerRadius
-            Vector2f.set(cornerPos + diff, playerPos)
+            if (diff.length() < playerRadius) {
+              diff.normalize()
+              diff *= playerRadius
+              Vector2f.set(cornerPos + diff, playerPos)
+            }
           }
         }
       }
@@ -91,9 +95,11 @@ object Physics {
               pos + new Vector2f(0, -halfLength)
             }
             val diff = (playerPos - cornerPos)
-            diff.normalize()
-            diff *= playerRadius
-            Vector2f.set(cornerPos + diff, playerPos)
+            if (diff.length() < playerRadius) {
+              diff.normalize()
+              diff *= playerRadius
+              Vector2f.set(cornerPos + diff, playerPos)
+            }
           }
         }
       }
@@ -112,9 +118,11 @@ object Physics {
               pos + new Vector2f(0, -halfLength)
             }
             val diff = (playerPos - cornerPos)
-            diff.normalize()
-            diff *= playerRadius
-            Vector2f.set(cornerPos + diff, playerPos)
+            if (diff.length() < playerRadius) {
+              diff.normalize()
+              diff *= playerRadius
+              Vector2f.set(cornerPos + diff, playerPos)
+            }
           }
         }
       }
