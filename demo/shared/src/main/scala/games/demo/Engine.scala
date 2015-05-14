@@ -134,6 +134,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         this.map = map
         Rendering.Wall.setup(shaders("wall"), wallMesh, map)
         Rendering.Standard.setup(shaders("simple3d"))
+
+        Physics.Wall.setup(map)
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
@@ -280,6 +282,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     playing.position += (playerRotation * movement)
 
     //#### Simulation
+    Physics.Wall.playerCollision(playing.position)
 
     //#### Network
     for (conn <- connection) {

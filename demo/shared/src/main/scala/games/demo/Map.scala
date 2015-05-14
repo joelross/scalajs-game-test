@@ -8,8 +8,8 @@ import scala.collection.immutable
 import scala.collection.mutable
 
 object Map {
-  val roomSize: Float = 2f
-  val roomHalfSize: Float = roomSize / 2
+  final val roomSize: Float = 2f
+  final val roomHalfSize: Float = roomSize / 2
 
   def load(resourceMap: Resource)(implicit ec: ExecutionContext): Future[Map] = {
     val mapFileFuture: Future[String] = Utils.getTextDataFromResource(resourceMap)
@@ -65,6 +65,18 @@ case class Room(x: Int, y: Int) {
 
 case class Map(rooms: Array[Array[Option[Room]]], starts: immutable.Map[Int, Room], width: Int, height: Int) {
   def roomAt(x: Int, y: Int): Option[Room] = if (x >= 0 && x < width && y >= 0 && y < height) rooms(x)(y) else None
+  def roomAt(pos: Vector2f): Option[Room] = {
+    val (x, y) = coordinates(pos)
+    roomAt(x, y)
+  }
+
+  def coordinates(pos: Vector2f): (Int, Int) = (Math.floor(pos.x / Map.roomSize).toInt, Math.floor(pos.y / Map.roomSize).toInt)
+
+  val definedRooms = for (
+    x <- 0 until width;
+    y <- 0 until height;
+    room <- rooms(x)(y)
+  ) yield room
 
   val (floors, lWalls, rWalls, tWalls, bWalls) = {
     val floors: mutable.ArrayBuffer[Vector2f] = mutable.ArrayBuffer()
@@ -74,9 +86,7 @@ case class Map(rooms: Array[Array[Option[Room]]], starts: immutable.Map[Int, Roo
     val bWalls: mutable.ArrayBuffer[Vector2f] = mutable.ArrayBuffer() // Bottom walls
 
     for (
-      x <- 0 until width;
-      y <- 0 until height;
-      room <- rooms(x)(y)
+      room <- definedRooms
     ) {
       floors += new Vector2f(Map.roomSize * room.x + Map.roomHalfSize, Map.roomSize * room.y + Map.roomHalfSize)
       if (!roomAt(room.x - 1, room.y).isDefined) lWalls += new Vector2f(Map.roomSize * room.x, Map.roomSize * room.y + Map.roomHalfSize)

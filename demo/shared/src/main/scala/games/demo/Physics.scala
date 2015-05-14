@@ -1,15 +1,9 @@
 package games.demo
 
-import games.math.{ Vector3f, Matrix3f }
+import games.math._
 
 object Physics {
-  val maxAngleY: Float = 30f
-  val maxRotationXSpeed: Float = 100f
-  val maxRotationYSpeed: Float = 100f
-  val shipAngleAtMaxRotationXSpeed: Float = 45f
-
-  val bulletVelocity: Float = 10f
-  val bulletRotation: Float = 360f
+  final val playerRadius = 0.5f
 
   /**
    * Sets an angle in degrees in the interval ]180, 180]
@@ -32,4 +26,54 @@ object Physics {
   }
 
   def interpol(curIn: Float, minIn: Float, maxIn: Float, startValue: Float, endValue: Float): Float = startValue + (curIn - minIn) * (endValue - startValue) / (maxIn - minIn)
+
+  object Wall {
+    var map: Map = _
+
+    def setup(map: Map): Unit = {
+      this.map = map
+    }
+
+    def playerCollision(playerPos: Vector2f): Unit = {
+      for (wall <- map.tWalls) {
+        if (Math.abs(wall.y - playerPos.y) < playerRadius && Math.abs(wall.x - playerPos.x) < (playerRadius + Map.roomHalfSize)) { // AABB test
+          if (Math.abs(wall.x - playerPos.x) < Map.roomHalfSize) { // front contact
+            playerPos.y = wall.y + playerRadius
+          } else { // contact on the corner
+            // What to do? There may be another wall to continue this one
+          }
+        }
+      }
+
+      for (wall <- map.bWalls) {
+        if (Math.abs(wall.y - playerPos.y) < playerRadius && Math.abs(wall.x - playerPos.x) < (playerRadius + Map.roomHalfSize)) { // AABB test
+          if (Math.abs(wall.x - playerPos.x) < Map.roomHalfSize) { // front contact
+            playerPos.y = wall.y - playerRadius
+          } else { // contact on the corner
+            // What to do? There may be another wall to continue this one
+          }
+        }
+      }
+
+      for (wall <- map.lWalls) {
+        if (Math.abs(wall.x - playerPos.x) < playerRadius && Math.abs(wall.y - playerPos.y) < (playerRadius + Map.roomHalfSize)) { // AABB test
+          if (Math.abs(wall.y - playerPos.y) < Map.roomHalfSize) { // front contact
+            playerPos.x = wall.x + playerRadius
+          } else { // contact on the corner
+            // What to do? There may be another wall to continue this one
+          }
+        }
+      }
+
+      for (wall <- map.rWalls) {
+        if (Math.abs(wall.x - playerPos.x) < playerRadius && Math.abs(wall.y - playerPos.y) < (playerRadius + Map.roomHalfSize)) { // AABB test
+          if (Math.abs(wall.y - playerPos.y) < Map.roomHalfSize) { // front contact
+            playerPos.x = wall.x - playerRadius
+          } else { // contact on the corner
+            // What to do? There may be another wall to continue this one
+          }
+        }
+      }
+    }
+  }
 }
