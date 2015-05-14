@@ -38,7 +38,7 @@ object Physics {
       for (wall <- map.ctWalls) {
         val pos = wall.position
         val length = wall.length
-        val halfLength = length / 2
+        val halfLength = wall.halfLength
         if (Math.abs(pos.y - playerPos.y) < playerRadius && Math.abs(pos.x - playerPos.x) < (playerRadius + halfLength)) { // AABB test
           if (Math.abs(pos.x - playerPos.x) < halfLength) { // front contact
             playerPos.y = pos.y + playerRadius
@@ -61,7 +61,7 @@ object Physics {
       for (wall <- map.cbWalls) {
         val pos = wall.position
         val length = wall.length
-        val halfLength = length / 2
+        val halfLength = wall.halfLength
         if (Math.abs(pos.y - playerPos.y) < playerRadius && Math.abs(pos.x - playerPos.x) < (playerRadius + halfLength)) { // AABB test
           if (Math.abs(pos.x - playerPos.x) < halfLength) { // front contact
             playerPos.y = pos.y - playerRadius
@@ -84,7 +84,7 @@ object Physics {
       for (wall <- map.clWalls) {
         val pos = wall.position
         val length = wall.length
-        val halfLength = length / 2
+        val halfLength = wall.halfLength
         if (Math.abs(pos.x - playerPos.x) < playerRadius && Math.abs(pos.y - playerPos.y) < (playerRadius + halfLength)) { // AABB test
           if (Math.abs(pos.y - playerPos.y) < halfLength) { // front contact
             playerPos.x = pos.x + playerRadius
@@ -107,7 +107,7 @@ object Physics {
       for (wall <- map.crWalls) {
         val pos = wall.position
         val length = wall.length
-        val halfLength = length / 2
+        val halfLength = wall.halfLength
         if (Math.abs(pos.x - playerPos.x) < playerRadius && Math.abs(pos.y - playerPos.y) < (playerRadius + halfLength)) { // AABB test
           if (Math.abs(pos.y - playerPos.y) < halfLength) { // front contact
             playerPos.x = pos.x - playerRadius

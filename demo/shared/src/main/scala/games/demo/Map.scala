@@ -65,7 +65,9 @@ case class Room(x: Int, y: Int) {
   lazy val center = new Vector2f(Map.roomSize * x + Map.roomHalfSize, Map.roomSize * y + Map.roomHalfSize)
 }
 
-case class ContinuousWall(position: Vector2f, length: Float)
+case class ContinuousWall(position: Vector2f, length: Float) {
+  val halfLength = length / 2
+}
 
 class Map(val rooms: Array[Array[Option[Room]]], val starts: immutable.Map[Int, Room], val width: Int, val height: Int) {
   def roomAt(x: Int, y: Int): Option[Room] = if (x >= 0 && x < width && y >= 0 && y < height) rooms(x)(y) else None
