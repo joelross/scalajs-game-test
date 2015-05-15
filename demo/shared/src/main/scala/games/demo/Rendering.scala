@@ -252,6 +252,14 @@ object Rendering {
     Matrix4f.setPerspective3D(fovy, width.toFloat / height.toFloat, near, far, projection)
   }
 
+  object Player {
+    var mesh: OpenGLMesh = _
+
+    def setup(mesh: OpenGLMesh)(implicit gl: GLES2): Unit = {
+      this.mesh = mesh
+    }
+  }
+
   object Wall {
     var program: Token.Program = _
 

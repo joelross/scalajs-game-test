@@ -35,8 +35,8 @@ abstract class EngineInterface {
 }
 
 sealed abstract class PlayerState
-object Away extends PlayerState
-class Playing(var position: Vector2f, var orientation: Float) extends PlayerState
+object Absent extends PlayerState
+class Playing(var position: Vector2f, var velocity: Vector2f, var orientation: Float) extends PlayerState
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   final val updateIntervalMs = 50 // Resend position at 20Hz
@@ -62,7 +62,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var map: Map = _
 
   private var localPlayerId: Int = 0
-  private var currentState: PlayerState = Away
 
   private var lastTimeUpdateFromServer: Option[Long] = None
   private var lastTimeUpdateToServer: Option[Long] = None
@@ -70,6 +69,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var lastTimeProjectileShot: Option[Long] = None
 
   private var centerVAngle: Option[Float] = None
+
+  private var localPlayerState: PlayerState = Absent
+  private var externalPlayersState: immutable.Map[Int, PlayerState] = immutable.Map()
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
@@ -137,6 +139,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         this.map = map
         Rendering.Wall.setup(shaders("wall"), wallMesh, map)
         Rendering.Standard.setup(shaders("simple3d"))
+        Rendering.Player.setup(models("ship"))
 
         Physics.Wall.setup(map)
     }(loopExecutionContext)
@@ -165,7 +168,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 if (this.connection.isEmpty) {
                   this.connection = Some(conn)
                   this.localPlayerId = playerId
-                  this.currentState = new Playing(this.map.starts(localPlayerId).center.copy(), 0f)
+                  val startingPosition = this.map.starts(localPlayerId).center.copy()
+                  val startingOrientation = 0f
+                  this.localPlayerState = new Playing(startingPosition, new Vector2f, startingOrientation)
                   itf.printLine("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
                 }
@@ -178,10 +183,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 assert(locals.size == 1)
                 val local = locals.head
 
-                // TODO process players externals
-                /*for (serverUpdate <- externals) {
-                  Console.println(serverUpdate)
-                }*/
+                this.externalPlayersState = externals.map { player =>
+                  val id = player.id
+                  val state = player.move.map { moveData =>
+                    new Playing(conv(moveData.space.position), conv(moveData.velocity), moveData.space.orientation)
+                  }.getOrElse(Absent)
+                  (id, state)
+                }.toMap
 
                 newEvents.foreach {
                   case ProjectileCreation(projId, position, orientation) =>
@@ -230,7 +238,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val height = gl.display.height
 
     //#### Update from inputs
-    val playing = this.currentState.asInstanceOf[Playing]
+    val playing = this.localPlayerState.asInstanceOf[Playing]
 
     val delta = mouse.deltaPosition
 
@@ -279,17 +287,26 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
 
     playing.orientation += (delta.x.toFloat / width.toFloat) * -200f
-    val playerRotation = Matrix2f.rotate2D(-playing.orientation)
     val velocity = new Vector2f
     if (keyboard.isKeyDown(Key.W)) velocity += new Vector2f(0, 1) * -4f
     if (keyboard.isKeyDown(Key.S)) velocity += new Vector2f(0, 1) * 2f
     if (keyboard.isKeyDown(Key.D)) velocity += new Vector2f(1, 0) * 3f
     if (keyboard.isKeyDown(Key.A)) velocity += new Vector2f(1, 0) * -3f
-    val absoluteVelocity = playerRotation * velocity
-    playing.position += absoluteVelocity * elapsedSinceLastFrame
+    playing.velocity = velocity
 
     //#### Simulation
+    playing.position += (Matrix2f.rotate2D(-playing.orientation) * playing.velocity) * elapsedSinceLastFrame
     Physics.Wall.playerCollision(playing.position)
+
+    for (
+      (playerId, state) <- externalPlayersState
+    ) state match {
+      case playerPlaying: Playing =>
+        playerPlaying.position += (Matrix2f.rotate2D(-playerPlaying.orientation) * playerPlaying.velocity) * elapsedSinceLastFrame
+        Physics.Wall.playerCollision(playerPlaying.position)
+
+      case _ =>
+    }
 
     //#### Network
     for (conn <- connection) {
@@ -322,6 +339,18 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     Rendering.Wall.init()
     Rendering.Wall.render(cameraTransformInv)
     Rendering.Wall.close()
+
+    Rendering.Standard.init()
+    for (
+      (playerId, state) <- externalPlayersState
+    ) state match {
+      case playerPlaying: Playing =>
+        val transform = Matrix4f.translate3D(new Vector3f(playerPlaying.position.x, Map.roomHalfSize, playerPlaying.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(playerPlaying.orientation, Vector3f.Up)
+        Rendering.Standard.render(playerId, Rendering.Player.mesh, transform, cameraTransformInv)
+
+      case _ =>
+    }
+    Rendering.Standard.close()
 
     //#### Ending
     continueCond = continueCond && itf.update()
