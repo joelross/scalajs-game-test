@@ -1,4 +1,4 @@
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.2") /* For the demoJS project */
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.3") /* For the demoJS project */
 
 addSbtPlugin("com.github.philcali" % "sbt-lwjgl-plugin" % "3.1.5") /* For the demoJVM project */
 

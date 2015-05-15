@@ -39,7 +39,8 @@ object Away extends PlayerState
 class Playing(var position: Vector2f, var orientation: Float) extends PlayerState
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
-  val updateIntervalMs = 50 // Resend position at 20Hz
+  final val updateIntervalMs = 50 // Resend position at 20Hz
+  final val configFile = "/games/demo/config"
 
   def context: games.opengl.GLES2 = gl
 
@@ -111,7 +112,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     audioContext.volume = 0.25f // Lower the initial global volume
 
     // Load main config file
-    val configFuture = Misc.loadConfigFile(Resource("/games/demo/config"))
+    val configFuture = Misc.loadConfigFile(Resource(configFile))
 
     // Loading data
     val dataFuture = configFuture.flatMap { config =>
