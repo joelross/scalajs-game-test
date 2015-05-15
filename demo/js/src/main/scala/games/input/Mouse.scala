@@ -75,18 +75,21 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     val ev = e.asInstanceOf[js.Dynamic]
 
     // Get relative position
-    val movX = JsUtils.getOptional[Int](ev, "movementX", "webkitMovementX", "mozMovementX")
-    val movY = JsUtils.getOptional[Int](ev, "movementY", "webkitMovementY", "mozMovementY")
+    val movX = JsUtils.getOptional[Double](ev, "movementX", "webkitMovementX", "mozMovementX")
+    val movY = JsUtils.getOptional[Double](ev, "movementY", "webkitMovementY", "mozMovementY")
 
-    dx = movX.getOrElse(0)
-    dy = movY.getOrElse(0)
+    val mx = movX.getOrElse(0.0).toInt
+    val my = movY.getOrElse(0.0).toInt
+
+    dx += mx
+    dy += my
 
     // Get position on element
-    val offX = ev.offsetX.asInstanceOf[js.UndefOr[Int]]
-    val offY = ev.offsetY.asInstanceOf[js.UndefOr[Int]]
+    val offX = ev.offsetX.asInstanceOf[js.UndefOr[Double]]
+    val offY = ev.offsetY.asInstanceOf[js.UndefOr[Double]]
 
     val (posX, posY) = if (offX.isDefined && offY.isDefined) { // For WebKit browsers
-      (offX.get, offY.get)
+      (offX.get.toInt, offY.get.toInt)
     } else { // For... the others
       val (offsetX, offsetY) = JsUtils.offsetOfElement(element)
       ((e.pageX - offsetX).toInt, (e.pageY - offsetY).toInt)

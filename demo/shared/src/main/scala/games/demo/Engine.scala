@@ -278,7 +278,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       processTouch()
     }
 
-    playing.orientation += delta.x.toFloat / width.toFloat * -100f
+    playing.orientation += (delta.x.toFloat / width.toFloat) * -200f
     val playerRotation = Matrix2f.rotate2D(-playing.orientation)
     val velocity = new Vector2f
     if (keyboard.isKeyDown(Key.W)) velocity += new Vector2f(0, 1) * -4f
