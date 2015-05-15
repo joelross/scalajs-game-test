@@ -90,7 +90,7 @@ object GlobalLogic {
 class Room(val id: Int) extends Actor {
   println("Creating room " + id)
 
-  val maxPlayers = 4
+  val maxPlayers = 2
 
   val players: mutable.Set[Player] = mutable.Set()
 

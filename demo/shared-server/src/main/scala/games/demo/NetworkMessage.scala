@@ -4,7 +4,7 @@ case class Vector2(x: Float, y: Float)
 case class Vector3(x: Float, y: Float, z: Float)
 
 case class SpaceData(position: Vector2, orientation: Float)
-case class MoveData(space: SpaceData, velocity: Float)
+case class MoveData(space: SpaceData, velocity: Vector2)
 
 case class ProjectileIdentifier(playerId: Int, projectileId: Int)
 

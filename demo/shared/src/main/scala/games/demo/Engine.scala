@@ -73,6 +73,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
+  private def conv(v: Vector2): Vector2f = new Vector2f(v.x, v.y)
+  private def conv(v: Vector2f): Vector2 = Vector2(v.x, v.y)
 
   def sendMsg(msg: ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
@@ -177,6 +179,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 val local = locals.head
 
                 // TODO process players externals
+                /*for (serverUpdate <- externals) {
+                  Console.println(serverUpdate)
+                }*/
 
                 newEvents.foreach {
                   case ProjectileCreation(projId, position, orientation) =>
@@ -275,19 +280,29 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     playing.orientation += delta.x.toFloat / width.toFloat * -100f
     val playerRotation = Matrix2f.rotate2D(-playing.orientation)
-    val movement = new Vector2f
-    if (keyboard.isKeyDown(Key.W)) movement += new Vector2f(0, 1) * (-4f * elapsedSinceLastFrame)
-    if (keyboard.isKeyDown(Key.S)) movement += new Vector2f(0, 1) * (2f * elapsedSinceLastFrame)
-    if (keyboard.isKeyDown(Key.D)) movement += new Vector2f(1, 0) * (3f * elapsedSinceLastFrame)
-    if (keyboard.isKeyDown(Key.A)) movement += new Vector2f(1, 0) * (-3f * elapsedSinceLastFrame)
-    playing.position += (playerRotation * movement)
+    val velocity = new Vector2f
+    if (keyboard.isKeyDown(Key.W)) velocity += new Vector2f(0, 1) * -4f
+    if (keyboard.isKeyDown(Key.S)) velocity += new Vector2f(0, 1) * 2f
+    if (keyboard.isKeyDown(Key.D)) velocity += new Vector2f(1, 0) * 3f
+    if (keyboard.isKeyDown(Key.A)) velocity += new Vector2f(1, 0) * -3f
+    val absoluteVelocity = playerRotation * velocity
+    playing.position += absoluteVelocity * elapsedSinceLastFrame
 
     //#### Simulation
     Physics.Wall.playerCollision(playing.position)
 
     //#### Network
     for (conn <- connection) {
-      // TODO
+      val uPosition = conv(playing.position)
+      val uVelocity = conv(velocity)
+      val uOrientation = playing.orientation
+
+      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
+        val update = ClientPositionUpdate(MoveData(SpaceData(uPosition, uOrientation), uVelocity))
+        sendMsg(update)
+
+        lastTimeUpdateToServer = Some(now)
+      }
     }
 
     //#### Rendering
