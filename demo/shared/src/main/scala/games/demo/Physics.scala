@@ -65,33 +65,33 @@ object Physics {
           val dy = y2 - y1
 
           val r = playerRadius
-          val dr_square = (dx * dx + dy * dy)
+          val dr_square = dx * dx + dy * dy
           val d = x1 * y2 - x2 * y1
 
           val disc = r * r * dr_square - d * d
 
           if (disc >= 0f) {
-            val disc_sqrt = Math.sqrt(r * r * dr_square - d * d).toFloat
-            val cx1 = (d * dy + Math.signum(dy) * dx * disc_sqrt) / dr_square
-            val cy1 = (-d * dx + Math.abs(dy) * disc_sqrt) / dr_square
-            // val c1 = new Vector2f(cx1 + player.position.x, cy1 + player.position.y)
+            val disc_sqrt = Math.sqrt(disc).toFloat
 
-            val cx2 = (d * dy - Math.signum(dy) * dx * disc_sqrt) / dr_square
-            val cy2 = (-d * dx - Math.abs(dy) * disc_sqrt) / dr_square
-            // val c2 = new Vector2f(cx2 + player.position.x, cy2 + player.position.y)
+            val partx = Math.signum(dy) * dx * disc_sqrt
+            val party = Math.abs(dy) * disc_sqrt
 
-            // val l1 = (c1 - startPoint).length()
-            // val l2 = (c2 - startPoint).length()
+            val cx1 = (d * dy + partx) / dr_square
+            val cy1 = (-d * dx + party) / dr_square
+
+            val cx2 = (d * dy - partx) / dr_square
+            val cy2 = (-d * dx - party) / dr_square
+
             val p1 = (cx1 + player.position.x) - startPoint.x
             val q1 = (cy1 + player.position.y) - startPoint.y
 
             val p2 = (cx2 + player.position.x) - startPoint.x
             val q2 = (cy2 + player.position.y) - startPoint.y
 
-            val l1 = Math.sqrt(p1 * p1 + q1 * q1).toFloat
-            val l2 = Math.sqrt(p2 * p2 + q2 * q2).toFloat
+            val l1_square = p1 * p1 + q1 * q1
+            val l2_square = p2 * p2 + q2 * q2
 
-            val l = Math.min(l1, l2)
+            val l = Math.sqrt(Math.min(l1_square, l2_square)).toFloat
 
             if (l < distance) Some(playerId)
             else None
