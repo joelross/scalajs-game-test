@@ -28,11 +28,11 @@ object Map {
         for (char <- line) {
 
           char match {
-            case 'x' => rooms += Room(x, y)
+            case 'x' => rooms += new Room(x, y)
 
             case v if Character.isDigit(v) =>
               val number = v - '0'
-              val room = Room(x, y)
+              val room = new Room(x, y)
               rooms += room
               starts += (number -> room)
 
@@ -61,11 +61,11 @@ object Map {
   }
 }
 
-case class Room(x: Int, y: Int) {
+class Room(val x: Int, val y: Int) {
   lazy val center = new Vector2f(Map.roomSize * x + Map.roomHalfSize, Map.roomSize * y + Map.roomHalfSize)
 }
 
-case class ContinuousWall(position: Vector2f, length: Float) {
+class ContinuousWall(val position: Vector2f, val length: Float) {
   val halfLength = length / 2
 }
 
@@ -123,13 +123,13 @@ class Map(val rooms: Array[Array[Option[Room]]], val starts: immutable.Map[Int, 
         val length = (end - start + 1) * Map.roomSize
         val cenX = start * Map.roomSize + (end - start + 1) * Map.roomHalfSize
         val cenY = Map.roomSize * y
-        tWalls += ContinuousWall(new Vector2f(cenX, cenY), length)
+        tWalls += new ContinuousWall(new Vector2f(cenX, cenY), length)
       }
       def flushB(start: Int, end: Int): Unit = {
         val length = (end - start + 1) * Map.roomSize
         val cenX = start * Map.roomSize + (end - start + 1) * Map.roomHalfSize
         val cenY = Map.roomSize * (y + 1)
-        bWalls += ContinuousWall(new Vector2f(cenX, cenY), length)
+        bWalls += new ContinuousWall(new Vector2f(cenX, cenY), length)
       }
 
       for (x <- 0 until width) {
@@ -170,13 +170,13 @@ class Map(val rooms: Array[Array[Option[Room]]], val starts: immutable.Map[Int, 
         val length = (end - start + 1) * Map.roomSize
         val cenY = start * Map.roomSize + (end - start + 1) * Map.roomHalfSize
         val cenX = Map.roomSize * x
-        lWalls += ContinuousWall(new Vector2f(cenX, cenY), length)
+        lWalls += new ContinuousWall(new Vector2f(cenX, cenY), length)
       }
       def flushR(start: Int, end: Int): Unit = {
         val length = (end - start + 1) * Map.roomSize
         val cenY = start * Map.roomSize + (end - start + 1) * Map.roomHalfSize
         val cenX = Map.roomSize * (x + 1)
-        rWalls += ContinuousWall(new Vector2f(cenX, cenY), length)
+        rWalls += new ContinuousWall(new Vector2f(cenX, cenY), length)
       }
 
       for (y <- 0 until height) {
