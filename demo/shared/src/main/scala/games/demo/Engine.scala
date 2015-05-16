@@ -206,7 +206,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
                   case ProjectileDestruction(ProjectileIdentifier(playerId, projId), playerHitId) =>
                     this.projectiles = projectiles.filterNot { case (curPlayerId, curProj) => playerId == curPlayerId && projId == curProj.id }
-                    Console.println("Player hit: " + playerHitId)
                 }
             }
           }(loopExecutionContext)
@@ -322,8 +321,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Projectiles
     this.projectiles = this.projectiles.filter { projWithId =>
       val (shooterId, projectile) = projWithId
-      val ret = Physics.projectileStep(projWithId, otherActivePlayers, elapsedSinceLastFrame)
+      val ret = Physics.projectileStep(projWithId, activePlayers, elapsedSinceLastFrame)
       if (ret > 0 && shooterId == this.localPlayerId) for (conn <- connection) {
+        Console.println("You hit player " + ret)
         val hit = ProjectileHit(projectile.id, ret)
         sendMsg(hit)
       }

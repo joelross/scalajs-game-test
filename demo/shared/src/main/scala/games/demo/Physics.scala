@@ -42,18 +42,61 @@ object Physics {
 
     // Move the projectile
     val direction = Matrix2f.rotate2D(-projectile.orientation) * new Vector2f(0, -1)
-    val diff = direction * (projectileVelocity * elapsedSinceLastFrame)
+    val distance = projectileVelocity * elapsedSinceLastFrame
+    val diff = direction * distance
 
-    val startingPoint = projectile.position
+    val startPoint = projectile.position
     val endPoint = projectile.position + diff
 
     projectile.position = endPoint
 
-    // TODO Find the closest collision
-    players.find { case (playerId, player) => (projectile.position - player.position).length < playerRadius && shooterId != playerId } match {
-      case Some((playerId, player)) => playerId
-      case None                     => -1
+    val res = players.flatMap {
+      case (playerId, player) =>
+        if (shooterId != playerId) {
+          val x1 = startPoint.x - player.position.x
+          val y1 = startPoint.y - player.position.y
+          val x2 = endPoint.x - player.position.x
+          val y2 = endPoint.y - player.position.y
+
+          val dx = x2 - x1
+          val dy = y2 - y1
+
+          val r = playerRadius
+          val dr_square = (dx * dx + dy * dy)
+          val d = x1 * y2 - x2 * y1
+
+          val disc = r * r * dr_square - d * d
+
+          if (disc >= 0f) {
+            val disc_sqrt = Math.sqrt(r * r * dr_square - d * d).toFloat
+            val cx1 = (d * dy + Math.signum(dy) * dx * disc_sqrt) / dr_square
+            val cy1 = (-d * dx + Math.abs(dy) * disc_sqrt) / dr_square
+            // val c1 = new Vector2f(cx1 + player.position.x, cy1 + player.position.y)
+
+            val cx2 = (d * dy - Math.signum(dy) * dx * disc_sqrt) / dr_square
+            val cy2 = (-d * dx - Math.abs(dy) * disc_sqrt) / dr_square
+            // val c2 = new Vector2f(cx2 + player.position.x, cy2 + player.position.y)
+
+            // val l1 = (c1 - startPoint).length()
+            // val l2 = (c2 - startPoint).length()
+            val p1 = (cx1 + player.position.x) - startPoint.x
+            val q1 = (cy1 + player.position.y) - startPoint.y
+
+            val p2 = (cx2 + player.position.x) - startPoint.x
+            val q2 = (cy2 + player.position.y) - startPoint.y
+
+            val l1 = Math.sqrt(p1 * p1 + q1 * q1).toFloat
+            val l2 = Math.sqrt(p2 * p2 + q2 * q2).toFloat
+
+            val l = Math.min(l1, l2)
+
+            if (l < distance) Some(playerId)
+            else None
+          } else None
+        } else None
     }
+
+    if (!res.isEmpty) res.head else -1
   }
 
   def playerStep(player: Playing, elapsedSinceLastFrame: Float): Unit = {
