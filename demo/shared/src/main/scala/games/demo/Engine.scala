@@ -303,18 +303,19 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     if (keyboard.isKeyDown(Key.A)) velocity += new Vector2f(1, 0) * -3f
     playing.velocity = velocity
 
+    val allPlayers = (externalPlayersState + (this.localPlayerId -> this.localPlayerState))
+    val activePlayers = allPlayers.flatMap {
+      case (playerId, state: Playing) => Some(playerId, state)
+      case _                          => None
+    }
+
     //#### Simulation
 
-    val allPlayers = (externalPlayersState + (this.localPlayerId -> this.localPlayerState))
-
     for (
-      (playerId, state) <- allPlayers
-    ) state match {
-      case playerPlaying: Playing =>
-        playerPlaying.position += (Matrix2f.rotate2D(-playerPlaying.orientation) * playerPlaying.velocity) * elapsedSinceLastFrame
-        Physics.Wall.playerCollision(playerPlaying.position)
-
-      case _ =>
+      (playerId, playing) <- activePlayers
+    ) {
+      playing.position += (Matrix2f.rotate2D(-playing.orientation) * playing.velocity) * elapsedSinceLastFrame
+      Physics.Wall.playerCollision(playing.position)
     }
 
     //#### Network
@@ -360,13 +361,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     Rendering.Standard.init()
     for (
-      (playerId, state) <- externalPlayersState
-    ) state match {
-      case playerPlaying: Playing =>
-        val transform = Matrix4f.translate3D(new Vector3f(playerPlaying.position.x, Map.roomHalfSize, playerPlaying.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(playerPlaying.orientation, Vector3f.Up)
-        Rendering.Standard.render(playerId, Rendering.Player.mesh, transform, cameraTransformInv)
-
-      case _ =>
+      (playerId, playing) <- activePlayers
+    ) {
+      val transform = Matrix4f.translate3D(new Vector3f(playing.position.x, Map.roomHalfSize, playing.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(playing.orientation, Vector3f.Up)
+      Rendering.Standard.render(playerId, Rendering.Player.mesh, transform, cameraTransformInv)
     }
 
     for ((playerId, projectile) <- this.projectiles) {
