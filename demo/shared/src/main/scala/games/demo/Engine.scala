@@ -38,8 +38,11 @@ sealed abstract class PlayerState
 object Absent extends PlayerState
 class Playing(var position: Vector2f, var velocity: Vector2f, var orientation: Float) extends PlayerState
 
+class Projectile(val id: Int, var position: Vector2f, val orientation: Float)
+
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   final val updateIntervalMs = 50 // Resend position at 20Hz
+  final val shotIntervalMs = 500 // 2 shots per second
   final val configFile = "/games/demo/config"
 
   def context: games.opengl.GLES2 = gl
@@ -72,6 +75,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var localPlayerState: PlayerState = Absent
   private var externalPlayersState: immutable.Map[Int, PlayerState] = immutable.Map()
+
+  private var nextProjectileId = 0
+  private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
 
   private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
   private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
@@ -140,6 +146,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         Rendering.Wall.setup(shaders("wall"), wallMesh, map)
         Rendering.Standard.setup(shaders("simple3d"))
         Rendering.Player.setup(models("ship"))
+        Rendering.Bullet.setup(models("bullet"))
 
         Physics.Wall.setup(map)
     }(loopExecutionContext)
@@ -175,6 +182,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                   helloPacketReceived.success((): Unit)
                 }
 
+              case SetPosition(spaceData) => // TODO
+
               case ServerUpdate(players, newEvents) =>
                 lastTimeUpdateFromServer = Some(now)
 
@@ -192,13 +201,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 }.toMap
 
                 newEvents.foreach {
-                  case ProjectileCreation(projId, position, orientation) =>
-                  // TODO
-                  case ProjectileDestruction(projId) =>
-                  // TODO
-                  case PlayerHit(playerId) =>
-                  // TODO
-                  case _ =>
+                  case ProjectileCreation(ProjectileIdentifier(playerId, projId), position, orientation) =>
+                    this.projectiles += (playerId -> new Projectile(projId, conv(position), orientation))
+
+                  case ProjectileDestruction(ProjectileIdentifier(playerId, projId)) =>
+                    this.projectiles = projectiles.filterNot { case (curPlayerId, curProj) => playerId == curPlayerId && projId == curProj.id }
                 }
             }
           }(loopExecutionContext)
@@ -242,6 +249,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     val delta = mouse.deltaPosition
 
+    var bulletShot = false
+
     def processKeyboard() {
       val optKeyEvent = keyboard.nextEvent()
       for (keyEvent <- optKeyEvent) {
@@ -261,7 +270,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val optMouseEvent = mouse.nextEvent()
       for (mouseEvent <- optMouseEvent) {
         mouseEvent match {
-          case ButtonEvent(Button.Left, true) =>
+          case ButtonEvent(Button.Left, true) => bulletShot = true
           case _                              =>
         }
 
@@ -295,11 +304,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     playing.velocity = velocity
 
     //#### Simulation
-    playing.position += (Matrix2f.rotate2D(-playing.orientation) * playing.velocity) * elapsedSinceLastFrame
-    Physics.Wall.playerCollision(playing.position)
+
+    val allPlayers = (externalPlayersState + (this.localPlayerId -> this.localPlayerState))
 
     for (
-      (playerId, state) <- externalPlayersState
+      (playerId, state) <- allPlayers
     ) state match {
       case playerPlaying: Playing =>
         playerPlaying.position += (Matrix2f.rotate2D(-playerPlaying.orientation) * playerPlaying.velocity) * elapsedSinceLastFrame
@@ -313,6 +322,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val uPosition = conv(playing.position)
       val uVelocity = conv(velocity)
       val uOrientation = playing.orientation
+
+      if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get > shotIntervalMs)) {
+        this.projectiles += (this.localPlayerId -> new Projectile(this.nextProjectileId, playing.position.copy(), playing.orientation))
+        val shot = ProjectileShot(this.nextProjectileId, uPosition, uOrientation)
+        sendMsg(shot)
+
+        lastTimeProjectileShot = Some(now)
+        this.nextProjectileId += 1
+      }
 
       if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
         val update = ClientPositionUpdate(MoveData(SpaceData(uPosition, uOrientation), uVelocity))
@@ -349,6 +367,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         Rendering.Standard.render(playerId, Rendering.Player.mesh, transform, cameraTransformInv)
 
       case _ =>
+    }
+
+    for ((playerId, projectile) <- this.projectiles) {
+      val transform = Matrix4f.translate3D(new Vector3f(projectile.position.x, Map.roomHalfSize, projectile.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(projectile.orientation, Vector3f.Up)
+      Rendering.Standard.render(playerId, Rendering.Bullet.mesh, transform, cameraTransformInv)
     }
     Rendering.Standard.close()
 

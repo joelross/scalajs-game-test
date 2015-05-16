@@ -12,7 +12,6 @@ case class ServerUpdatePlayerData(id: Int, latency: Int, move: Option[MoveData])
 sealed trait Event
 case class ProjectileCreation(id: ProjectileIdentifier, position: Vector2, orientation: Float) extends Event
 case class ProjectileDestruction(id: ProjectileIdentifier) extends Event
-case class PlayerHit(id: Int) extends Event
 
 sealed trait NetworkMessage
 sealed trait ClientMessage extends NetworkMessage
@@ -20,7 +19,7 @@ sealed trait ServerMessage extends NetworkMessage
 // Server -> Client
 case object Ping extends ServerMessage
 case class Hello(playerId: Int) extends ServerMessage
-case class SetPosition(space: SpaceData)
+case class SetPosition(space: SpaceData) extends ServerMessage
 case class ServerUpdate(players: Seq[ServerUpdatePlayerData], newEvents: Seq[Event]) extends ServerMessage
 // Server <- Client
 case object Pong extends ClientMessage

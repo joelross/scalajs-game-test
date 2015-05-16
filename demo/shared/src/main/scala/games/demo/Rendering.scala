@@ -260,6 +260,14 @@ object Rendering {
     }
   }
 
+  object Bullet {
+    var mesh: OpenGLMesh = _
+
+    def setup(mesh: OpenGLMesh)(implicit gl: GLES2): Unit = {
+      this.mesh = mesh
+    }
+  }
+
   object Wall {
     var program: Token.Program = _
 
