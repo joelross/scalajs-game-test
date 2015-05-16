@@ -36,7 +36,9 @@ object Physics {
     this.map = map
   }
 
-  // -1 = no collision, 0 = wall, > 0 player id hit 
+  /*
+   * -1 = no collision, 0 = wall, > 0 player id hit
+   */
   def projectileStep(proj: (Int, Projectile), players: immutable.Map[Int, Playing], elapsedSinceLastFrame: Float): Int = {
     val (shooterId, projectile) = proj
 
@@ -50,6 +52,7 @@ object Physics {
 
     projectile.position = endPoint
 
+    // Collision detection
     val res = players.flatMap {
       case (playerId, player) =>
         if (shooterId != playerId) {
