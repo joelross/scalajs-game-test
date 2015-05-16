@@ -156,19 +156,19 @@ class Room(val id: Int) extends Actor {
         playerResponse.data
       }).toSeq
 
-      val bulletShotsData = (for (playerResponse <- all; projShot <- playerResponse.projShots) yield {
+      val projectileShotsData = (for (playerResponse <- all; projShot <- playerResponse.projShots) yield {
         val projId = demo.ProjectileIdentifier(playerResponse.data.id, projShot.id)
         val projCreation = demo.ProjectileCreation(projId, projShot.position, projShot.orientation)
         projCreation.asInstanceOf[demo.Event]
       }).toSeq
 
-      val bulletHitsData = (for (playerResponse <- all; projHit <- playerResponse.projHits) yield {
+      val projectileHitsData = (for (playerResponse <- all; projHit <- playerResponse.projHits) yield {
         val projId = demo.ProjectileIdentifier(playerResponse.data.id, projHit.id)
-        val projDestruction = demo.ProjectileDestruction(projId)
+        val projDestruction = demo.ProjectileDestruction(projId, projHit.playerHitId)
         projDestruction.asInstanceOf[demo.Event]
       }).toSeq
 
-      val events = immutable.Seq() ++ bulletShotsData ++ bulletHitsData
+      val events = immutable.Seq() ++ projectileShotsData ++ projectileHitsData
       val updateMsg = demo.ServerUpdate(playersMsgData, events)
       players.foreach { player =>
         player.sendToClient(updateMsg)
@@ -186,8 +186,8 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
   var latency: Option[Int] = None
 
   var updateData: Option[demo.ClientPositionUpdate] = None
-  val bulletShotsData: mutable.Queue[demo.ProjectileShot] = mutable.Queue()
-  val bulletHitsData: mutable.Queue[demo.ProjectileHit] = mutable.Queue()
+  val projectileShotsData: mutable.Queue[demo.ProjectileShot] = mutable.Queue()
+  val projectileHitsData: mutable.Queue[demo.ProjectileHit] = mutable.Queue()
 
   def sendToClient(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
@@ -204,9 +204,9 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
       sendToClient(demo.Ping)
 
     case AskData =>
-      actor.sender ! DataResponse(immutable.Seq() ++ bulletShotsData, immutable.Seq() ++ bulletHitsData, demo.ServerUpdatePlayerData(this.id, this.latency.getOrElse(0), updateData.map { data => data.move }))
-      bulletShotsData.clear()
-      bulletHitsData.clear()
+      actor.sender ! DataResponse(immutable.Seq() ++ projectileShotsData, immutable.Seq() ++ projectileHitsData, demo.ServerUpdatePlayerData(this.id, this.latency.getOrElse(0), updateData.map { data => data.move }))
+      projectileShotsData.clear()
+      projectileHitsData.clear()
   }
 
   def handleClientMessage(msg: demo.ClientMessage): Unit = msg match {
@@ -218,8 +218,8 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
         lastPingTime = None
       }
     case x: demo.ClientPositionUpdate => updateData = Some(x)
-    case x: demo.ProjectileShot       => bulletShotsData += x
-    case x: demo.ProjectileHit        => bulletHitsData += x
+    case x: demo.ProjectileShot       => projectileShotsData += x
+    case x: demo.ProjectileHit        => projectileHitsData += x
   }
 }
 

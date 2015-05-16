@@ -143,12 +143,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
         this.map = map
-        Rendering.Wall.setup(shaders("wall"), wallMesh, map)
         Rendering.Standard.setup(shaders("simple3d"))
+        Rendering.Wall.setup(shaders("wall"), wallMesh, map)
         Rendering.Player.setup(models("ship"))
         Rendering.Bullet.setup(models("bullet"))
 
-        Physics.Wall.setup(map)
+        Physics.setupMap(map)
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
@@ -202,10 +202,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
                 newEvents.foreach {
                   case ProjectileCreation(ProjectileIdentifier(playerId, projId), position, orientation) =>
-                    this.projectiles += (playerId -> new Projectile(projId, conv(position), orientation))
+                    if (playerId != this.localPlayerId) this.projectiles += (playerId -> new Projectile(projId, conv(position), orientation))
 
-                  case ProjectileDestruction(ProjectileIdentifier(playerId, projId)) =>
+                  case ProjectileDestruction(ProjectileIdentifier(playerId, projId), playerHitId) =>
                     this.projectiles = projectiles.filterNot { case (curPlayerId, curProj) => playerId == curPlayerId && projId == curProj.id }
+                    Console.println("Player hit: " + playerHitId)
                 }
             }
           }(loopExecutionContext)
@@ -295,27 +296,38 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       processTouch()
     }
 
-    playing.orientation += (delta.x.toFloat / width.toFloat) * -200f
     val velocity = new Vector2f
     if (keyboard.isKeyDown(Key.W)) velocity += new Vector2f(0, 1) * -4f
     if (keyboard.isKeyDown(Key.S)) velocity += new Vector2f(0, 1) * 2f
     if (keyboard.isKeyDown(Key.D)) velocity += new Vector2f(1, 0) * 3f
     if (keyboard.isKeyDown(Key.A)) velocity += new Vector2f(1, 0) * -3f
     playing.velocity = velocity
+    playing.orientation += (delta.x.toFloat / width.toFloat) * -200f
 
-    val allPlayers = (externalPlayersState + (this.localPlayerId -> this.localPlayerState))
-    val activePlayers = allPlayers.flatMap {
+    val otherActivePlayers = externalPlayersState.flatMap {
       case (playerId, state: Playing) => Some(playerId, state)
       case _                          => None
     }
+    val activePlayers = (otherActivePlayers + (this.localPlayerId -> playing))
 
     //#### Simulation
 
+    // Players
     for (
       (playerId, playing) <- activePlayers
     ) {
-      playing.position += (Matrix2f.rotate2D(-playing.orientation) * playing.velocity) * elapsedSinceLastFrame
-      Physics.Wall.playerCollision(playing.position)
+      Physics.playerStep(playing, elapsedSinceLastFrame)
+    }
+
+    // Projectiles
+    this.projectiles = this.projectiles.filter { projWithId =>
+      val (shooterId, projectile) = projWithId
+      val ret = Physics.projectileStep(projWithId, otherActivePlayers, elapsedSinceLastFrame)
+      if (ret > 0 && shooterId == this.localPlayerId) for (conn <- connection) {
+        val hit = ProjectileHit(projectile.id, ret)
+        sendMsg(hit)
+      }
+      ret < 0
     }
 
     //#### Network
@@ -329,7 +341,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val shot = ProjectileShot(this.nextProjectileId, uPosition, uOrientation)
         sendMsg(shot)
 
-        lastTimeProjectileShot = Some(now)
+        this.lastTimeProjectileShot = Some(now)
         this.nextProjectileId += 1
       }
 
@@ -337,7 +349,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val update = ClientPositionUpdate(MoveData(SpaceData(uPosition, uOrientation), uVelocity))
         sendMsg(update)
 
-        lastTimeUpdateToServer = Some(now)
+        this.lastTimeUpdateToServer = Some(now)
       }
     }
 
@@ -360,13 +372,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     Rendering.Wall.close()
 
     Rendering.Standard.init()
+    // Render players
     for (
-      (playerId, playing) <- activePlayers
+      (playerId, playing) <- activePlayers if (playerId != localPlayerId)
     ) {
       val transform = Matrix4f.translate3D(new Vector3f(playing.position.x, Map.roomHalfSize, playing.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(playing.orientation, Vector3f.Up)
       Rendering.Standard.render(playerId, Rendering.Player.mesh, transform, cameraTransformInv)
     }
 
+    // Render projectiles
     for ((playerId, projectile) <- this.projectiles) {
       val transform = Matrix4f.translate3D(new Vector3f(projectile.position.x, Map.roomHalfSize, projectile.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(projectile.orientation, Vector3f.Up)
       Rendering.Standard.render(playerId, Rendering.Bullet.mesh, transform, cameraTransformInv)
