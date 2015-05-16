@@ -41,9 +41,15 @@ object Physics {
     val (shooterId, projectile) = proj
 
     // Move the projectile
-    projectile.position += (Matrix2f.rotate2D(-projectile.orientation) * (new Vector2f(0, -1) * projectileVelocity)) * elapsedSinceLastFrame
+    val direction = Matrix2f.rotate2D(-projectile.orientation) * new Vector2f(0, -1)
+    val diff = direction * (projectileVelocity * elapsedSinceLastFrame)
 
-    // Collision with other players
+    val startingPoint = projectile.position
+    val endPoint = projectile.position + diff
+
+    projectile.position = endPoint
+
+    // TODO Find the closest collision
     players.find { case (playerId, player) => (projectile.position - player.position).length < playerRadius && shooterId != playerId } match {
       case Some((playerId, player)) => playerId
       case None                     => -1
