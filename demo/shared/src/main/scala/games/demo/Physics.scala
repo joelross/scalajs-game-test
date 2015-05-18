@@ -45,17 +45,16 @@ object Physics {
     // Move the projectile
     val direction = Matrix2f.rotate2D(-projectile.orientation) * new Vector2f(0, -1)
     val distance = projectileVelocity * elapsedSinceLastFrame
-    val diff = direction * distance
 
     val startPoint = projectile.position
-    val endPoint = projectile.position + diff
-
-    projectile.position = endPoint
+    projectile.position = projectile.position + direction * distance // new position in case of no collision
 
     // Collision detection
     val res = players.flatMap {
       case (playerId, player) =>
         if (shooterId != playerId) {
+          // From http://mathworld.wolfram.com/Circle-LineIntersection.html
+
           val x1 = startPoint.x - player.position.x
           val y1 = startPoint.y - player.position.y
 
@@ -66,6 +65,7 @@ object Physics {
           val y2 = y1 + dy
 
           val r = playerRadius
+          // dr is always 1 (dx and dy are part of a unit vector)
           val d = x1 * y2 - x2 * y1
 
           val disc = r * r - d * d
@@ -76,25 +76,27 @@ object Physics {
             val partx = Math.signum(dy) * dx * disc_sqrt
             val party = Math.abs(dy) * disc_sqrt
 
+            // First contact point
             val cx1 = (d * dy + partx)
             val cy1 = (-d * dx + party)
 
+            // Second contact point
             val cx2 = (d * dy - partx)
             val cy2 = (-d * dx - party)
 
-            val p1 = (cx1 + player.position.x) - startPoint.x
-            val q1 = (cy1 + player.position.y) - startPoint.y
+            // Use dot product to compute distance from initial point
+            val l1 = (cx1 - x1) * dx + (cy1 - y1) * dy
+            val l2 = (cx2 - x1) * dx + (cy2 - y1) * dy
 
-            val p2 = (cx2 + player.position.x) - startPoint.x
-            val q2 = (cy2 + player.position.y) - startPoint.y
+            // Check which one(s) is(are) really reached during this step
+            val l1_valid = (l1 >= 0f && l1 <= distance)
+            val l2_valid = (l2 >= 0f && l2 <= distance)
 
-            val l1_square = p1 * p1 + q1 * q1
-            val l2_square = p2 * p2 + q2 * q2
-
-            val l = Math.sqrt(Math.min(l1_square, l2_square)).toFloat
-
-            if (l < distance) Some(playerId)
-            else None
+            if (l1_valid || l2_valid) {
+              val collision_distance = if (l1_valid && l2_valid) Math.min(l1, l2) else if (l1_valid) l1 else l2
+              projectile.position = startPoint + direction * collision_distance
+              Some(playerId)
+            } else None
           } else None
         } else None
     }
