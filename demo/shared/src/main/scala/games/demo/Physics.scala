@@ -58,46 +58,54 @@ object Physics {
           val x1 = startPoint.x - player.position.x
           val y1 = startPoint.y - player.position.y
 
-          val dx = direction.x
-          val dy = direction.y
-
-          val x2 = x1 + dx
-          val y2 = y1 + dy
-
           val r = playerRadius
-          // dr is always 1 (dx and dy are part of a unit vector)
-          val d = x1 * y2 - x2 * y1
+          val r_square = r * r
 
-          val disc = r * r - d * d
+          if ((x1 * x1 + y1 * y1) <= r_square) { // Already in
+            projectile.position = startPoint
+            Some(playerId)
+          } else {
 
-          if (disc >= 0f) {
-            val disc_sqrt = Math.sqrt(disc).toFloat
+            val dx = direction.x
+            val dy = direction.y
 
-            val partx = Math.signum(dy) * dx * disc_sqrt
-            val party = Math.abs(dy) * disc_sqrt
+            val x2 = x1 + dx
+            val y2 = y1 + dy
 
-            // First contact point
-            val cx1 = (d * dy + partx)
-            val cy1 = (-d * dx + party)
+            // dr is always 1 (dx and dy are part of a unit vector)
+            val d = x1 * y2 - x2 * y1
 
-            // Second contact point
-            val cx2 = (d * dy - partx)
-            val cy2 = (-d * dx - party)
+            val disc = r_square - d * d
 
-            // Use dot product to compute distance from initial point
-            val l1 = (cx1 - x1) * dx + (cy1 - y1) * dy
-            val l2 = (cx2 - x1) * dx + (cy2 - y1) * dy
+            if (disc >= 0f) {
+              val disc_sqrt = Math.sqrt(disc).toFloat
 
-            // Check which one(s) is(are) really reached during this step
-            val l1_valid = (l1 >= 0f && l1 <= distance)
-            val l2_valid = (l2 >= 0f && l2 <= distance)
+              val partx = Math.signum(dy) * dx * disc_sqrt
+              val party = Math.abs(dy) * disc_sqrt
 
-            if (l1_valid || l2_valid) {
-              val collision_distance = if (l1_valid && l2_valid) Math.min(l1, l2) else if (l1_valid) l1 else l2
-              projectile.position = startPoint + direction * collision_distance
-              Some(playerId)
+              // First contact point
+              val cx1 = (d * dy + partx)
+              val cy1 = (-d * dx + party)
+
+              // Second contact point
+              val cx2 = (d * dy - partx)
+              val cy2 = (-d * dx - party)
+
+              // Use dot product to compute distance from initial point
+              val l1 = (cx1 - x1) * dx + (cy1 - y1) * dy
+              val l2 = (cx2 - x1) * dx + (cy2 - y1) * dy
+
+              // Check which one(s) is(are) really reached during this step
+              val l1_valid = (l1 >= 0f && l1 <= distance)
+              val l2_valid = (l2 >= 0f && l2 <= distance)
+
+              if (l1_valid || l2_valid) {
+                val collision_distance = if (l1_valid && l2_valid) Math.min(l1, l2) else if (l1_valid) l1 else l2
+                projectile.position = startPoint + direction * collision_distance
+                Some(playerId)
+              } else None
             } else None
-          } else None
+          }
         } else None
     }
 
