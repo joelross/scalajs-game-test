@@ -50,7 +50,7 @@ object Physics {
     projectile.position = projectile.position + direction * distance // new position in case of no collision
 
     // Collision detection
-    val res = players.flatMap {
+    val res = players.toSeq.flatMap {
       case (playerId, player) =>
         if (shooterId != playerId) {
           // From http://mathworld.wolfram.com/Circle-LineIntersection.html
@@ -63,9 +63,8 @@ object Physics {
 
           if ((x1 * x1 + y1 * y1) <= r_square) { // Already in
             projectile.position = startPoint
-            Some(playerId)
+            Some((playerId, 0f))
           } else {
-
             val dx = direction.x
             val dy = direction.y
 
@@ -78,9 +77,12 @@ object Physics {
             val disc = r_square - d * d
 
             if (disc >= 0f) {
+              // I know Math.signum looks the same, but the page says that we need sgn(0) to return 1 (and I didn't bother to check if it's really necessary)
+              def sgn(in: Float): Float = if (in < 0f) -1f else 1f
+
               val disc_sqrt = Math.sqrt(disc).toFloat
 
-              val partx = Math.signum(dy) * dx * disc_sqrt
+              val partx = sgn(dy) * dx * disc_sqrt
               val party = Math.abs(dy) * disc_sqrt
 
               // First contact point
@@ -102,14 +104,21 @@ object Physics {
               if (l1_valid || l2_valid) {
                 val collision_distance = if (l1_valid && l2_valid) Math.min(l1, l2) else if (l1_valid) l1 else l2
                 projectile.position = startPoint + direction * collision_distance
-                Some(playerId)
+                Some((playerId, collision_distance))
               } else None
             } else None
           }
         } else None
     }
 
-    if (!res.isEmpty) res.head else -1
+    res.reduce { (a1, a2) =>
+      val (p1, d1) = a1
+      val (p2, d2) = a2
+      if (d1 < d2) a1
+      else a2
+    }
+
+    if (!res.isEmpty) res.head._1 else -1
   }
 
   def playerStep(player: Playing, elapsedSinceLastFrame: Float): Unit = {
