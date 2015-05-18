@@ -322,8 +322,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.projectiles = this.projectiles.filter { projWithId =>
       val (shooterId, projectile) = projWithId
       val ret = Physics.projectileStep(projWithId, activePlayers, elapsedSinceLastFrame)
+      if (ret >= 0 && shooterId == this.localPlayerId) Console.println("You hit " + ret)
       if (ret > 0 && shooterId == this.localPlayerId) for (conn <- connection) {
-        Console.println("You hit player " + ret)
         val hit = ProjectileHit(projectile.id, ret)
         sendMsg(hit)
       }

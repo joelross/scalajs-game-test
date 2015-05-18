@@ -9,7 +9,7 @@ object Physics {
   final val projectileVelocity = 10f
 
   /**
-   * Sets an angle in degrees in the interval ]180, 180]
+   * Sets an angle in degrees in the interval ]-180, 180]
    */
   def angleCentered(angle: Float): Float = {
     var ret = angle
@@ -36,9 +36,6 @@ object Physics {
     this.map = map
   }
 
-  /*
-   * -1 = no collision, 0 = wall, > 0 player id hit
-   */
   def projectileStep(proj: (Int, Projectile), players: immutable.Map[Int, Playing], elapsedSinceLastFrame: Float): Int = {
     val (shooterId, projectile) = proj
 
@@ -49,9 +46,11 @@ object Physics {
     val startPoint = projectile.position
 
     // Collision detection
-    val res = players.toSeq.flatMap { p =>
+
+    // players
+    val playerRes = players.toSeq.flatMap { p =>
       val (playerId, player) = p
-      if (shooterId != playerId) {
+      if (shooterId != playerId) { // No self-hit...
         // From http://mathworld.wolfram.com/Circle-LineIntersection.html
 
         val x1 = startPoint.x - player.position.x
@@ -108,6 +107,64 @@ object Physics {
       } else None
     }
 
+    // Map
+    val hWalls = map.ctWalls ++ map.cbWalls
+    val vWalls = map.crWalls ++ map.clWalls
+
+    val hRes = hWalls.flatMap { hWall =>
+      val dx = direction.x
+      val dy = direction.y
+
+      val wx = hWall.position.x
+      val wy = hWall.position.y
+
+      val x4 = startPoint.x
+      val y4 = startPoint.y
+
+      val x3 = x4 + dx
+      val y3 = x4 + dy
+
+      if (dy == 0f) None // Parallel to the wall, no contact
+      else {
+        val x = (wy * dx - x3 * y4 + x4 * y3) / dy
+        val y = wy
+
+        val l = (x - x4) * dx + (y - y4) * dy
+        val l_valid = (l >= 0f && l <= distance)
+
+        if (l_valid) Some((0, l))
+        else None
+      }
+    }
+
+    val vRes = hWalls.flatMap { vWall =>
+      val dx = direction.x
+      val dy = direction.y
+
+      val wx = vWall.position.x
+      val wy = vWall.position.y
+
+      val x4 = startPoint.x
+      val y4 = startPoint.y
+
+      val x3 = x4 + dx
+      val y3 = x4 + dy
+
+      if (dx == 0f) None // Parallel to the wall, no contact
+      else {
+        val x = (wx * dy - y3 * x4 + y4 * x3) / dx
+        val y = wx
+
+        val l = (x - x4) * dx + (y - y4) * dy
+        val l_valid = (l >= 0f && l <= distance)
+
+        if (l_valid) Some((0, l))
+        else None
+      }
+    }
+
+    val res = playerRes ++ hRes ++ vRes
+
     val (playerId, distance_travel) = if (res.isEmpty) (-1, distance)
     else res.reduce { (a1, a2) =>
       val (p1, d1) = a1
@@ -118,7 +175,7 @@ object Physics {
     }
 
     projectile.position = projectile.position + direction * distance_travel // new position
-    playerId
+    playerId // -1 no collision, 0 wall, > 0 player hit
   }
 
   def playerStep(player: Playing, elapsedSinceLastFrame: Float): Unit = {
