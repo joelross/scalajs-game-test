@@ -165,8 +165,8 @@ object Physics {
 
     val res = playerRes ++ hRes ++ vRes
 
-    val (playerId, distance_travel) = if (res.isEmpty) (-1, distance)
-    else res.reduce { (a1, a2) =>
+    val (playerId, distance_travel) = if (res.isEmpty) (-1, distance) // No collision
+    else res.reduce { (a1, a2) => // Collision(s) detected, take the closest one
       val (p1, d1) = a1
       val (p2, d2) = a2
 
