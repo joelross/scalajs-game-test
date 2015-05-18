@@ -58,17 +58,17 @@ object Physics {
         if (shooterId != playerId) {
           val x1 = startPoint.x - player.position.x
           val y1 = startPoint.y - player.position.y
-          val x2 = endPoint.x - player.position.x
-          val y2 = endPoint.y - player.position.y
 
-          val dx = x2 - x1
-          val dy = y2 - y1
+          val dx = direction.x
+          val dy = direction.y
+
+          val x2 = x1 + dx
+          val y2 = y1 + dy
 
           val r = playerRadius
-          val dr_square = dx * dx + dy * dy
           val d = x1 * y2 - x2 * y1
 
-          val disc = r * r * dr_square - d * d
+          val disc = r * r - d * d
 
           if (disc >= 0f) {
             val disc_sqrt = Math.sqrt(disc).toFloat
@@ -76,11 +76,11 @@ object Physics {
             val partx = Math.signum(dy) * dx * disc_sqrt
             val party = Math.abs(dy) * disc_sqrt
 
-            val cx1 = (d * dy + partx) / dr_square
-            val cy1 = (-d * dx + party) / dr_square
+            val cx1 = (d * dy + partx)
+            val cy1 = (-d * dx + party)
 
-            val cx2 = (d * dy - partx) / dr_square
-            val cy2 = (-d * dx - party) / dr_square
+            val cx2 = (d * dy - partx)
+            val cy2 = (-d * dx - party)
 
             val p1 = (cx1 + player.position.x) - startPoint.x
             val q1 = (cy1 + player.position.y) - startPoint.y
