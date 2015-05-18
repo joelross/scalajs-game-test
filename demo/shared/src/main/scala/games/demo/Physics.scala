@@ -122,7 +122,7 @@ object Physics {
       val y4 = startPoint.y
 
       val x3 = x4 + dx
-      val y3 = x4 + dy
+      val y3 = y4 + dy
 
       if (dy == 0f) None // Parallel to the wall, no contact
       else {
@@ -130,14 +130,14 @@ object Physics {
         val y = wy
 
         val l = (x - x4) * dx + (y - y4) * dy
-        val l_valid = (l >= 0f && l <= distance)
+        val l_valid = (l >= 0f && l <= distance) && Math.abs(wx - x) < hWall.halfLength
 
         if (l_valid) Some((0, l))
         else None
       }
     }
 
-    val vRes = hWalls.flatMap { vWall =>
+    val vRes = vWalls.flatMap { vWall =>
       val dx = direction.x
       val dy = direction.y
 
@@ -148,15 +148,15 @@ object Physics {
       val y4 = startPoint.y
 
       val x3 = x4 + dx
-      val y3 = x4 + dy
+      val y3 = y4 + dy
 
       if (dx == 0f) None // Parallel to the wall, no contact
       else {
-        val x = (wx * dy - y3 * x4 + y4 * x3) / dx
-        val y = wx
+        val y = (wx * dy - y3 * x4 + y4 * x3) / dx
+        val x = wx
 
         val l = (x - x4) * dx + (y - y4) * dy
-        val l_valid = (l >= 0f && l <= distance)
+        val l_valid = (l >= 0f && l <= distance) && Math.abs(wy - y) < vWall.halfLength
 
         if (l_valid) Some((0, l))
         else None
