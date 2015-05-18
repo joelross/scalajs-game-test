@@ -47,7 +47,6 @@ object Physics {
     val distance = projectileVelocity * elapsedSinceLastFrame
 
     val startPoint = projectile.position
-    projectile.position = projectile.position + direction * distance // new position in case of no collision
 
     // Collision detection
     val res = players.toSeq.flatMap {
@@ -62,7 +61,6 @@ object Physics {
           val r_square = r * r
 
           if ((x1 * x1 + y1 * y1) <= r_square) { // Already in
-            projectile.position = startPoint
             Some((playerId, 0f))
           } else {
             val dx = direction.x
@@ -103,7 +101,6 @@ object Physics {
 
               if (l1_valid || l2_valid) {
                 val collision_distance = if (l1_valid && l2_valid) Math.min(l1, l2) else if (l1_valid) l1 else l2
-                projectile.position = startPoint + direction * collision_distance
                 Some((playerId, collision_distance))
               } else None
             } else None
@@ -111,14 +108,17 @@ object Physics {
         } else None
     }
 
-    res.reduce { (a1, a2) =>
+    val (playerId, distance_travel) = if (res.isEmpty) (-1, distance)
+    else res.reduce { (a1, a2) =>
       val (p1, d1) = a1
       val (p2, d2) = a2
+
       if (d1 < d2) a1
       else a2
     }
 
-    if (!res.isEmpty) res.head._1 else -1
+    projectile.position = projectile.position + direction * distance_travel // new position
+    playerId
   }
 
   def playerStep(player: Playing, elapsedSinceLastFrame: Float): Unit = {
