@@ -49,63 +49,63 @@ object Physics {
     val startPoint = projectile.position
 
     // Collision detection
-    val res = players.toSeq.flatMap {
-      case (playerId, player) =>
-        if (shooterId != playerId) {
-          // From http://mathworld.wolfram.com/Circle-LineIntersection.html
+    val res = players.toSeq.flatMap { p =>
+      val (playerId, player) = p
+      if (shooterId != playerId) {
+        // From http://mathworld.wolfram.com/Circle-LineIntersection.html
 
-          val x1 = startPoint.x - player.position.x
-          val y1 = startPoint.y - player.position.y
+        val x1 = startPoint.x - player.position.x
+        val y1 = startPoint.y - player.position.y
 
-          val r = playerRadius
-          val r_square = r * r
+        val r = playerRadius
+        val r_square = r * r
 
-          if ((x1 * x1 + y1 * y1) <= r_square) { // Already in
-            Some((playerId, 0f))
-          } else {
-            val dx = direction.x
-            val dy = direction.y
+        if ((x1 * x1 + y1 * y1) <= r_square) { // Already in contact
+          Some((playerId, 0f))
+        } else {
+          val dx = direction.x
+          val dy = direction.y
 
-            val x2 = x1 + dx
-            val y2 = y1 + dy
+          val x2 = x1 + dx
+          val y2 = y1 + dy
 
-            // dr is always 1 (dx and dy are part of a unit vector)
-            val d = x1 * y2 - x2 * y1
+          // dr is always 1 (dx and dy are part of a unit vector)
+          val d = x1 * y2 - x2 * y1
 
-            val disc = r_square - d * d
+          val disc = r_square - d * d
 
-            if (disc >= 0f) {
-              // I know Math.signum looks the same, but the page says that we need sgn(0) to return 1 (and I didn't bother to check if it's really necessary)
-              def sgn(in: Float): Float = if (in < 0f) -1f else 1f
+          if (disc >= 0f) {
+            // I know Math.signum looks the same, but we need sgn(0) to return 1 in this case
+            def sgn(in: Float): Float = if (in < 0f) -1f else 1f
 
-              val disc_sqrt = Math.sqrt(disc).toFloat
+            val disc_sqrt = Math.sqrt(disc).toFloat
 
-              val partx = sgn(dy) * dx * disc_sqrt
-              val party = Math.abs(dy) * disc_sqrt
+            val partx = sgn(dy) * dx * disc_sqrt
+            val party = Math.abs(dy) * disc_sqrt
 
-              // First contact point
-              val cx1 = (d * dy + partx)
-              val cy1 = (-d * dx + party)
+            // First contact point
+            val cx1 = (d * dy + partx)
+            val cy1 = (-d * dx + party)
 
-              // Second contact point
-              val cx2 = (d * dy - partx)
-              val cy2 = (-d * dx - party)
+            // Second contact point
+            val cx2 = (d * dy - partx)
+            val cy2 = (-d * dx - party)
 
-              // Use dot product to compute distance from initial point
-              val l1 = (cx1 - x1) * dx + (cy1 - y1) * dy
-              val l2 = (cx2 - x1) * dx + (cy2 - y1) * dy
+            // Use dot product to compute distance from initial point
+            val l1 = (cx1 - x1) * dx + (cy1 - y1) * dy
+            val l2 = (cx2 - x1) * dx + (cy2 - y1) * dy
 
-              // Check which one(s) is(are) really reached during this step
-              val l1_valid = (l1 >= 0f && l1 <= distance)
-              val l2_valid = (l2 >= 0f && l2 <= distance)
+            // Check which one(s) is(are) really reached during this step
+            val l1_valid = (l1 >= 0f && l1 <= distance)
+            val l2_valid = (l2 >= 0f && l2 <= distance)
 
-              if (l1_valid || l2_valid) {
-                val collision_distance = if (l1_valid && l2_valid) Math.min(l1, l2) else if (l1_valid) l1 else l2
-                Some((playerId, collision_distance))
-              } else None
+            if (l1_valid || l2_valid) {
+              val collision_distance = if (l1_valid && l2_valid) Math.min(l1, l2) else if (l1_valid) l1 else l2
+              Some((playerId, collision_distance))
             } else None
-          }
-        } else None
+          } else None
+        }
+      } else None
     }
 
     val (playerId, distance_travel) = if (res.isEmpty) (-1, distance)
