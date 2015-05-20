@@ -80,8 +80,10 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
       canvas.height = canvasPrevDim._2
     } else {
       // Necessary for the size of the canvas (Chrome) and its resolution (Firefox)
-      canvas.width = screen.width
-      canvas.height = screen.height
+      val screenWidth = screen.width
+      val screenHeight = screen.height
+      canvas.width = screenWidth
+      canvas.height = screenHeight
 
       if (JsUtils.orientationLockOnFullscreen) {
         games.input.AccelerometerJS.lockOrientation(games.input.AccelerometerJS.currentOrientation())
