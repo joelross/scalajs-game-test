@@ -36,7 +36,7 @@ abstract class EngineInterface {
 
 sealed abstract class State
 object Absent extends State
-class Playing(var position: Vector2f, var velocity: Vector2f, var orientation: Float, var health: Float) extends State
+class Present(var position: Vector2f, var velocity: Vector2f, var orientation: Float, var health: Float) extends State
 
 class Projectile(val id: Int, var position: Vector2f, val orientation: Float)
 
@@ -82,9 +82,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var nextProjectileId = 0
   private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
 
-  def ifPlaying(action: Playing => Unit): Unit = this.localPlayerState match {
-    case x: Playing => action(x)
-    case _          => // nothing to do
+  def ifPresent[T](action: Present => T): Option[T] = this.localPlayerState match {
+    case x: Present => Some(action(x))
+    case _          => None // nothing to do
   }
 
   def sendMsg(msg: network.ClientMessage): Unit = connection match {
@@ -180,7 +180,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                   this.localPlayerId = playerId
                   val startingPosition = this.map.starts(localPlayerId).center.copy()
                   val startingOrientation = Data.initOrientation(localPlayerId)
-                  this.localPlayerState = new Playing(startingPosition, new Vector2f, startingOrientation, initialHealth)
+                  this.localPlayerState = new Present(startingPosition, new Vector2f, startingOrientation, initialHealth)
                   this.lastTimeSpawn = Some(now)
                   itf.printLine("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
@@ -208,19 +208,19 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                     if (playerHitId == this.localPlayerId) {
 
                       if (this.lastTimeSpawn.isDefined && (now - this.lastTimeSpawn.get) > invulnerabilityTimeMs) {
-                        ifPlaying { playing =>
-                          playing.health -= 25f
-                          if (playing.health <= 0f) { // Reset the player
+                        ifPresent { present =>
+                          present.health -= 25f
+                          if (present.health <= 0f) { // Reset the player
                             val startingPosition = this.map.starts(localPlayerId).center.copy()
                             val startingOrientation = Data.initOrientation(localPlayerId)
 
-                            playing.health = this.initialHealth
-                            playing.position = startingPosition
-                            playing.orientation = startingOrientation
+                            present.health = this.initialHealth
+                            present.position = startingPosition
+                            present.orientation = startingOrientation
                             this.lastTimeSpawn = Some(now)
                             Console.println("You were hit by player " + playerId + " (you are dead)")
                           } else {
-                            Console.println("You were hit by player " + playerId + " (you have health of " + playing.health + " left)")
+                            Console.println("You were hit by player " + playerId + " (you have health of " + present.health + " left)")
                           }
                         }
                       } else {
@@ -265,9 +265,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     val width = gl.display.width
     val height = gl.display.height
-
-    //#### Update from inputs
-    val playing = this.localPlayerState.asInstanceOf[Playing]
 
     val delta = mouse.deltaPosition
 
@@ -322,22 +319,24 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     if (keyboard.isKeyDown(Key.S)) velocity += new Vector2f(0, 1) * 2f
     if (keyboard.isKeyDown(Key.D)) velocity += new Vector2f(1, 0) * 3f
     if (keyboard.isKeyDown(Key.A)) velocity += new Vector2f(1, 0) * -3f
-    playing.velocity = velocity
-    playing.orientation += (delta.x.toFloat / width.toFloat) * -200f
+    ifPresent { present =>
+      present.velocity = velocity
+      present.orientation += (delta.x.toFloat / width.toFloat) * -200f
+    }
 
     val otherActivePlayers = externalPlayersState.flatMap {
-      case (playerId, state: Playing) => Some(playerId, state)
+      case (playerId, state: Present) => Some(playerId, state)
       case _                          => None
     }
-    val activePlayers = (otherActivePlayers + (this.localPlayerId -> playing))
+    val activePlayers = otherActivePlayers ++ ifPresent { present => (this.localPlayerId, present) }
 
     //#### Simulation
 
     // Players
     for (
-      (playerId, playing) <- activePlayers
+      (playerId, playerPresent) <- activePlayers
     ) {
-      Physics.playerStep(playing, elapsedSinceLastFrame)
+      Physics.playerStep(playerPresent, elapsedSinceLastFrame)
     }
 
     // Projectiles
@@ -353,17 +352,19 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     //#### Network
     for (conn <- connection) {
-      val uPosition = Misc.conv(playing.position)
-      val uVelocity = Misc.conv(playing.velocity)
-      val uOrientation = playing.orientation
+      ifPresent { present =>
+        val uPosition = Misc.conv(present.position)
+        val uVelocity = Misc.conv(present.velocity)
+        val uOrientation = present.orientation
 
-      if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get > shotIntervalMs)) {
-        this.projectiles += (this.localPlayerId -> new Projectile(this.nextProjectileId, playing.position.copy(), playing.orientation))
-        val shot = network.ClientProjectileShot(this.nextProjectileId, uPosition, uOrientation)
-        sendMsg(shot)
+        if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get > shotIntervalMs)) {
+          this.projectiles += (this.localPlayerId -> new Projectile(this.nextProjectileId, present.position.copy(), present.orientation))
+          val shot = network.ClientProjectileShot(this.nextProjectileId, uPosition, uOrientation)
+          sendMsg(shot)
 
-        this.lastTimeProjectileShot = Some(now)
-        this.nextProjectileId += 1
+          this.lastTimeProjectileShot = Some(now)
+          this.nextProjectileId += 1
+        }
       }
 
       if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
@@ -385,7 +386,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
     // Camera data
-    val cameraTransform = Matrix4f.translate3D(new Vector3f(playing.position.x, Map.roomHalfSize, playing.position.y)) * Matrix4f.rotate3D(playing.orientation, Vector3f.Up)
+    val (camPosition, camOrientation) = ifPresent { present =>
+      (present.position, present.orientation)
+    }.getOrElse {
+      val startingPosition = this.map.starts(localPlayerId).center.copy()
+      val startingOrientation = Data.initOrientation(localPlayerId)
+      (startingPosition, startingOrientation)
+    }
+    val cameraTransform = Matrix4f.translate3D(new Vector3f(camPosition.x, Map.roomHalfSize, camPosition.y)) * Matrix4f.rotate3D(camOrientation, Vector3f.Up)
     val cameraTransformInv = cameraTransform.invertedCopy()
 
     Rendering.Wall.init()
@@ -395,9 +403,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     Rendering.Standard.init()
     // Render players
     for (
-      (playerId, playing) <- activePlayers if (playerId != localPlayerId)
+      (playerId, playerPresent) <- activePlayers if (playerId != localPlayerId)
     ) {
-      val transform = Matrix4f.translate3D(new Vector3f(playing.position.x, Map.roomHalfSize, playing.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(playing.orientation, Vector3f.Up)
+      val transform = Matrix4f.translate3D(new Vector3f(playerPresent.position.x, Map.roomHalfSize, playerPresent.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(playerPresent.orientation, Vector3f.Up)
       Rendering.Standard.render(playerId, Rendering.Player.mesh, transform, cameraTransformInv)
     }
 

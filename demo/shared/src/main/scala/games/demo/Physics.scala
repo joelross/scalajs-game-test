@@ -36,7 +36,7 @@ object Physics {
     this.map = map
   }
 
-  def projectileStep(proj: (Int, Projectile), players: immutable.Map[Int, Playing], elapsedSinceLastFrame: Float): Int = {
+  def projectileStep(proj: (Int, Projectile), players: immutable.Map[Int, Present], elapsedSinceLastFrame: Float): Int = {
     val (shooterId, projectile) = proj
 
     // Move the projectile
@@ -178,7 +178,7 @@ object Physics {
     playerId // -1 no collision, 0 wall, > 0 player hit
   }
 
-  def playerStep(player: Playing, elapsedSinceLastFrame: Float): Unit = {
+  def playerStep(player: Present, elapsedSinceLastFrame: Float): Unit = {
     // Move the player
     player.position += (Matrix2f.rotate2D(-player.orientation) * player.velocity) * elapsedSinceLastFrame
 
