@@ -28,11 +28,11 @@ object Misc {
   def conv(v: network.Vector2): Vector2f = new Vector2f(v.x, v.y)
   def conv(v: Vector2f): network.Vector2 = network.Vector2(v.x, v.y)
   def conv(v: network.State): State = v match {
-    case network.Absent                                      => Absent
-    case network.Playing(uPosition, uVelocity, uOrientation) => new Playing(conv(uPosition), conv(uVelocity), uOrientation)
+    case network.Absent => Absent
+    case network.Playing(uPosition, uVelocity, uOrientation, uHealth) => new Playing(conv(uPosition), conv(uVelocity), uOrientation, uHealth)
   }
   def conv(v: State): network.State = v match {
     case Absent     => network.Absent
-    case x: Playing => network.Playing(conv(x.position), conv(x.velocity), x.orientation)
+    case x: Playing => network.Playing(conv(x.position), conv(x.velocity), x.orientation, x.health)
   }
 }

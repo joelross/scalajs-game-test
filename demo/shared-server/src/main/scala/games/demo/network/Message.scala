@@ -7,13 +7,13 @@ case class ProjectileIdentifier(playerId: Int, projectileId: Int)
 
 sealed trait State
 case object Absent extends State
-case class Playing(position: Vector2, velocity: Vector2, orientation: Float) extends State
+case class Playing(position: Vector2, velocity: Vector2, orientation: Float, health: Float) extends State
 
 case class PlayerData(id: Int, latency: Int, state: State)
 
 sealed trait Event
-case class ProjectileCreation(id: ProjectileIdentifier, position: Vector2, orientation: Float) extends Event
-case class ProjectileDestruction(id: ProjectileIdentifier, playerHit: Int) extends Event
+case class ProjectileShot(id: ProjectileIdentifier, position: Vector2, orientation: Float) extends Event
+case class ProjectileHit(id: ProjectileIdentifier, playerHit: Int) extends Event
 
 sealed trait NetworkMessage
 sealed trait ClientMessage extends NetworkMessage

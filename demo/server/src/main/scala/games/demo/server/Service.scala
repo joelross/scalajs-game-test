@@ -147,16 +147,17 @@ class Room(val id: Int) extends Actor {
 
       val projectileShotsData = (for (playerResponse <- playersResponse; projShot <- playerResponse.projShots) yield {
         val projId = network.ProjectileIdentifier(playerResponse.data.id, projShot.id)
-        network.ProjectileCreation(projId, projShot.position, projShot.orientation)
+        network.ProjectileShot(projId, projShot.position, projShot.orientation)
       }).toSeq
 
       val projectileHitsData = (for (playerResponse <- playersResponse; projHit <- playerResponse.projHits) yield {
         val projId = network.ProjectileIdentifier(playerResponse.data.id, projHit.id)
-        network.ProjectileDestruction(projId, projHit.playerHitId)
+        network.ProjectileHit(projId, projHit.playerHitId)
       }).toSeq
 
       val events = immutable.Seq() ++ projectileShotsData ++ projectileHitsData
       val updateMsg = network.ServerUpdate(playersMsgData, events)
+
       players.foreach { player =>
         player.sendToClient(updateMsg)
       }

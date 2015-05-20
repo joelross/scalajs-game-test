@@ -36,14 +36,16 @@ abstract class EngineInterface {
 
 sealed abstract class State
 object Absent extends State
-class Playing(var position: Vector2f, var velocity: Vector2f, var orientation: Float) extends State
+class Playing(var position: Vector2f, var velocity: Vector2f, var orientation: Float, var health: Float) extends State
 
 class Projectile(val id: Int, var position: Vector2f, val orientation: Float)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
-  final val updateIntervalMs = 50 // Resend position at 20Hz
-  final val shotIntervalMs = 500 // 2 shots per second
-  final val configFile = "/games/demo/config"
+  final val updateIntervalMs: Int = 50 // Resend position at 20Hz
+  final val shotIntervalMs: Int = 500 // 2 shots per second
+  final val invulnerabilityTimeMs: Int = 5000 // 5 seconds of invulnerability when spawning
+  final val configFile: String = "/games/demo/config"
+  final val initialHealth: Float = 100
 
   def context: games.opengl.GLES2 = gl
 
@@ -70,6 +72,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var lastTimeUpdateToServer: Option[Long] = None
 
   private var lastTimeProjectileShot: Option[Long] = None
+  private var lastTimeSpawn: Option[Long] = None
 
   private var centerVAngle: Option[Float] = None
 
@@ -78,6 +81,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var nextProjectileId = 0
   private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
+
+  def ifPlaying(action: Playing => Unit): Unit = this.localPlayerState match {
+    case x: Playing => action(x)
+    case _          => // nothing to do
+  }
 
   def sendMsg(msg: network.ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
@@ -172,7 +180,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                   this.localPlayerId = playerId
                   val startingPosition = this.map.starts(localPlayerId).center.copy()
                   val startingOrientation = Data.initOrientation(localPlayerId)
-                  this.localPlayerState = new Playing(startingPosition, new Vector2f, startingOrientation)
+                  this.localPlayerState = new Playing(startingPosition, new Vector2f, startingOrientation, initialHealth)
+                  this.lastTimeSpawn = Some(now)
                   itf.printLine("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
                 }
@@ -192,10 +201,32 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 }.toMap
 
                 newEvents.foreach {
-                  case network.ProjectileCreation(network.ProjectileIdentifier(playerId, projId), position, orientation) =>
+                  case network.ProjectileShot(network.ProjectileIdentifier(playerId, projId), position, orientation) =>
                     if (playerId != this.localPlayerId) this.projectiles += (playerId -> new Projectile(projId, Misc.conv(position), orientation))
 
-                  case network.ProjectileDestruction(network.ProjectileIdentifier(playerId, projId), playerHitId) =>
+                  case network.ProjectileHit(network.ProjectileIdentifier(playerId, projId), playerHitId) =>
+                    if (playerHitId == this.localPlayerId) {
+
+                      if (this.lastTimeSpawn.isDefined && (now - this.lastTimeSpawn.get) > invulnerabilityTimeMs) {
+                        ifPlaying { playing =>
+                          playing.health -= 25f
+                          if (playing.health <= 0f) { // Reset the player
+                            val startingPosition = this.map.starts(localPlayerId).center.copy()
+                            val startingOrientation = Data.initOrientation(localPlayerId)
+
+                            playing.health = this.initialHealth
+                            playing.position = startingPosition
+                            playing.orientation = startingOrientation
+                            this.lastTimeSpawn = Some(now)
+                            Console.println("You were hit by player " + playerId + " (you are dead)")
+                          } else {
+                            Console.println("You were hit by player " + playerId + " (you have health of " + playing.health + " left)")
+                          }
+                        }
+                      } else {
+                        Console.println("You were hit by player " + playerId + " (but you are invulnerable for now)")
+                      }
+                    }
                     this.projectiles = projectiles.filterNot { case (curPlayerId, curProj) => playerId == curPlayerId && projId == curProj.id }
                 }
             }
@@ -313,10 +344,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.projectiles = this.projectiles.filter { projWithId =>
       val (shooterId, projectile) = projWithId
       val ret = Physics.projectileStep(projWithId, activePlayers, elapsedSinceLastFrame)
-      if (ret >= 0 && shooterId == this.localPlayerId) {
-        if (ret == 0) Console.println("You hit the wall")
-        if (ret > 0) Console.println("You hit player " + ret)
-      }
       if (ret > 0 && shooterId == this.localPlayerId) for (conn <- connection) {
         val hit = network.ClientProjectileHit(projectile.id, ret)
         sendMsg(hit)
