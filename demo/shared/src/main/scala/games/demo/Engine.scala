@@ -34,9 +34,9 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-sealed abstract class PlayerState
-object Absent extends PlayerState
-class Playing(var position: Vector2f, var velocity: Vector2f, var orientation: Float) extends PlayerState
+sealed abstract class State
+object Absent extends State
+class Playing(var position: Vector2f, var velocity: Vector2f, var orientation: Float) extends State
 
 class Projectile(val id: Int, var position: Vector2f, val orientation: Float)
 
@@ -73,18 +73,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var centerVAngle: Option[Float] = None
 
-  private var localPlayerState: PlayerState = Absent
-  private var externalPlayersState: immutable.Map[Int, PlayerState] = immutable.Map()
+  private var localPlayerState: State = Absent
+  private var externalPlayersState: immutable.Map[Int, State] = immutable.Map()
 
   private var nextProjectileId = 0
   private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
 
-  private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
-  private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
-  private def conv(v: Vector2): Vector2f = new Vector2f(v.x, v.y)
-  private def conv(v: Vector2f): Vector2 = Vector2(v.x, v.y)
-
-  def sendMsg(msg: ClientMessage): Unit = connection match {
+  def sendMsg(msg: network.ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
     case Some(conn) =>
       val data = upickle.write(msg)
@@ -164,14 +159,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         // Wait for the Hello packet to register the connection
         conn.handlerPromise.success { msg =>
           val now = System.currentTimeMillis()
-          val serverMsg = upickle.read[ServerMessage](msg)
+          val serverMsg = upickle.read[network.ServerMessage](msg)
 
           Future { // To avoid concurrency issue, process the following in the loop thread
             serverMsg match {
-              case Ping => // answer that ASAP
-                sendMsg(Pong)
+              case network.Ping => // answer that ASAP
+                sendMsg(network.Pong)
 
-              case Hello(playerId) =>
+              case network.Hello(playerId) =>
                 if (this.connection.isEmpty) {
                   this.connection = Some(conn)
                   this.localPlayerId = playerId
@@ -182,9 +177,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                   helloPacketReceived.success((): Unit)
                 }
 
-              case SetPosition(spaceData) => // TODO
-
-              case ServerUpdate(players, newEvents) =>
+              case network.ServerUpdate(players, newEvents) =>
                 lastTimeUpdateFromServer = Some(now)
 
                 val (locals, externals) = players.partition(_.id == localPlayerId)
@@ -194,17 +187,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
                 this.externalPlayersState = externals.map { player =>
                   val id = player.id
-                  val state = player.move.map { moveData =>
-                    new Playing(conv(moveData.space.position), conv(moveData.velocity), moveData.space.orientation)
-                  }.getOrElse(Absent)
+                  val state = Misc.conv(player.state)
                   (id, state)
                 }.toMap
 
                 newEvents.foreach {
-                  case ProjectileCreation(ProjectileIdentifier(playerId, projId), position, orientation) =>
-                    if (playerId != this.localPlayerId) this.projectiles += (playerId -> new Projectile(projId, conv(position), orientation))
+                  case network.ProjectileCreation(network.ProjectileIdentifier(playerId, projId), position, orientation) =>
+                    if (playerId != this.localPlayerId) this.projectiles += (playerId -> new Projectile(projId, Misc.conv(position), orientation))
 
-                  case ProjectileDestruction(ProjectileIdentifier(playerId, projId), playerHitId) =>
+                  case network.ProjectileDestruction(network.ProjectileIdentifier(playerId, projId), playerHitId) =>
                     this.projectiles = projectiles.filterNot { case (curPlayerId, curProj) => playerId == curPlayerId && projId == curProj.id }
                 }
             }
@@ -327,7 +318,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         if (ret > 0) Console.println("You hit player " + ret)
       }
       if (ret > 0 && shooterId == this.localPlayerId) for (conn <- connection) {
-        val hit = ProjectileHit(projectile.id, ret)
+        val hit = network.ProjectileHit(projectile.id, ret)
         sendMsg(hit)
       }
       ret < 0
@@ -335,13 +326,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     //#### Network
     for (conn <- connection) {
-      val uPosition = conv(playing.position)
-      val uVelocity = conv(playing.velocity)
+      val uPosition = Misc.conv(playing.position)
+      val uVelocity = Misc.conv(playing.velocity)
       val uOrientation = playing.orientation
 
       if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get > shotIntervalMs)) {
         this.projectiles += (this.localPlayerId -> new Projectile(this.nextProjectileId, playing.position.copy(), playing.orientation))
-        val shot = ProjectileShot(this.nextProjectileId, uPosition, uOrientation)
+        val shot = network.ProjectileShot(this.nextProjectileId, uPosition, uOrientation)
         sendMsg(shot)
 
         this.lastTimeProjectileShot = Some(now)
@@ -349,7 +340,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
 
       if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
-        val update = ClientPositionUpdate(MoveData(SpaceData(uPosition, uOrientation), uVelocity))
+        val update = network.ClientPositionUpdate(Misc.conv(this.localPlayerState))
         sendMsg(update)
 
         this.lastTimeUpdateToServer = Some(now)

@@ -2,6 +2,7 @@ package games.demo
 
 import scala.concurrent.{ Future, ExecutionContext }
 import games.{ Utils, Resource }
+import games.math._
 
 import scala.collection.immutable
 
@@ -20,5 +21,18 @@ object Misc {
         (key, value)
       }.toMap
     }
+  }
+
+  def conv(v: network.Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
+  def conv(v: Vector3f): network.Vector3 = network.Vector3(v.x, v.y, v.z)
+  def conv(v: network.Vector2): Vector2f = new Vector2f(v.x, v.y)
+  def conv(v: Vector2f): network.Vector2 = network.Vector2(v.x, v.y)
+  def conv(v: network.State): State = v match {
+    case network.Absent                                      => Absent
+    case network.Playing(uPosition, uVelocity, uOrientation) => new Playing(conv(uPosition), conv(uVelocity), uOrientation)
+  }
+  def conv(v: State): network.State = v match {
+    case Absent     => network.Absent
+    case x: Playing => network.Playing(conv(x.position), conv(x.velocity), x.orientation)
   }
 }
