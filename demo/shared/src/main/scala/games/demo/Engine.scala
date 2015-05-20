@@ -279,7 +279,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     var bulletShot = false
 
-    val velocity = new Vector2f
+    val currentVelocity = new Vector2f
+    var changeOrientation = 0f
 
     def processKeyboard() {
       val optKeyEvent = keyboard.nextEvent()
@@ -353,9 +354,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           val screenSizeFactorForMaxSpeed: Float = 12
 
-          velocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / width * maxLateralSpeed
-          if (currentPosition.y < originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxForwardSpeed
-          if (currentPosition.y > originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxBackwardSpeed
+          currentVelocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / width * maxLateralSpeed
+          if (currentPosition.y < originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxForwardSpeed
+          if (currentPosition.y > originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxBackwardSpeed
 
         case None => this.moveTouch -= identifier
       }
@@ -366,9 +367,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           val previousPosition = position
           val currentPosition = touch.position
 
-          ifPresent { present =>
-            present.orientation += ((currentPosition.x - previousPosition.x).toFloat / width.toFloat) * -300f
-          }
+          changeOrientation += ((currentPosition.x - previousPosition.x).toFloat / width.toFloat) * -300f
 
           this.orientationTouch += identifier -> (currentPosition, pressTime)
 
@@ -376,18 +375,20 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
 
-    if (keyboard.isKeyDown(Key.W)) velocity.y += -maxForwardSpeed
-    if (keyboard.isKeyDown(Key.S)) velocity.y += maxBackwardSpeed
-    if (keyboard.isKeyDown(Key.D)) velocity.x += maxLateralSpeed
-    if (keyboard.isKeyDown(Key.A)) velocity.x += -maxLateralSpeed
+    if (keyboard.isKeyDown(Key.W)) currentVelocity.y += -maxForwardSpeed
+    if (keyboard.isKeyDown(Key.S)) currentVelocity.y += maxBackwardSpeed
+    if (keyboard.isKeyDown(Key.D)) currentVelocity.x += maxLateralSpeed
+    if (keyboard.isKeyDown(Key.A)) currentVelocity.x += -maxLateralSpeed
 
-    if (Math.abs(velocity.x) > maxLateralSpeed) velocity.x = Math.signum(velocity.x) * maxLateralSpeed
-    if (velocity.y < -maxForwardSpeed) velocity.y = -maxForwardSpeed
-    if (velocity.y > maxBackwardSpeed) velocity.y = maxBackwardSpeed
+    changeOrientation += (delta.x.toFloat / width.toFloat) * -200f
+
+    if (Math.abs(currentVelocity.x) > maxLateralSpeed) currentVelocity.x = Math.signum(currentVelocity.x) * maxLateralSpeed
+    if (currentVelocity.y < -maxForwardSpeed) currentVelocity.y = -maxForwardSpeed
+    if (currentVelocity.y > maxBackwardSpeed) currentVelocity.y = maxBackwardSpeed
 
     ifPresent { present =>
-      present.velocity = velocity
-      present.orientation += (delta.x.toFloat / width.toFloat) * -200f
+      present.velocity = currentVelocity
+      present.orientation += changeOrientation
     }
 
     val otherActivePlayers = externalPlayersState.flatMap {
