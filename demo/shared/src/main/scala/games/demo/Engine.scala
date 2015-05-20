@@ -346,36 +346,33 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
       processTouch()
 
-      for ((identifier, position) <- this.moveTouch) {
-        touchpad.touches.find { _.identifier == identifier } match {
-          case Some(touch) =>
-            val originalPosition = position
-            val currentPosition = touch.position
+      for ((identifier, position) <- this.moveTouch) touchpad.touches.find { _.identifier == identifier } match {
+        case Some(touch) =>
+          val originalPosition = position
+          val currentPosition = touch.position
 
-            val screenSizeFactorForMaxSpeed: Float = 12
+          val screenSizeFactorForMaxSpeed: Float = 12
 
-            velocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / width * maxLateralSpeed
-            if (currentPosition.y < originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxForwardSpeed
-            if (currentPosition.y > originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxBackwardSpeed
+          velocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / width * maxLateralSpeed
+          if (currentPosition.y < originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxForwardSpeed
+          if (currentPosition.y > originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxBackwardSpeed
 
-          case None => this.moveTouch -= identifier
-        }
+        case None => this.moveTouch -= identifier
       }
 
-      for ((identifier, position) <- this.moveTouch) {
-        touchpad.touches.find { _.identifier == identifier } match {
-          case Some(touch) =>
-            val originalPosition = position
-            val currentPosition = touch.position
+      for ((identifier, value) <- this.orientationTouch) touchpad.touches.find { _.identifier == identifier } match {
+        case Some(touch) =>
+          val (position, pressTime) = value
+          val previousPosition = position
+          val currentPosition = touch.position
 
-            val screenSizeFactorForMaxSpeed: Float = 16
+          ifPresent { present =>
+            present.orientation += ((currentPosition.x - previousPosition.x).toFloat / width.toFloat) * -300f
+          }
 
-            velocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / width * maxLateralSpeed
-            if (currentPosition.y < originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxForwardSpeed
-            if (currentPosition.y > originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxBackwardSpeed
+          this.orientationTouch += identifier -> (currentPosition, pressTime)
 
-          case None => this.moveTouch -= identifier
-        }
+        case None => this.orientationTouch -= identifier
       }
     }
 
