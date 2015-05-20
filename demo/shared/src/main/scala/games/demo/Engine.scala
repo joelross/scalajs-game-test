@@ -47,6 +47,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   final val configFile: String = "/games/demo/config"
   final val initialHealth: Float = 100
 
+  final val maxForwardSpeed: Float = 4f
+  final val maxBackwardSpeed: Float = 2f
+  final val maxLateralSpeed: Float = 3f
+
   def context: games.opengl.GLES2 = gl
 
   private var continueCond = true
@@ -81,6 +85,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var nextProjectileId = 0
   private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
+
+  private val moveTouch: mutable.Map[Int, input.Position] = mutable.Map()
+  private val orientationTouch: mutable.Map[Int, (input.Position, Long)] = mutable.Map()
 
   def ifPresent[T](action: Present => T): Option[T] = this.localPlayerState match {
     case x: Present => Some(action(x))
@@ -270,6 +277,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     var bulletShot = false
 
+    val velocity = new Vector2f
+
     def processKeyboard() {
       val optKeyEvent = keyboard.nextEvent()
       for (keyEvent <- optKeyEvent) {
@@ -303,22 +312,59 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val optTouchEvent = touchpad.nextEvent()
         for (touchEvent <- optTouchEvent) {
           touchEvent match {
-            case TouchStart(data) =>
-            case TouchEnd(data)   =>
-            case _                =>
+            case TouchStart(touch) =>
+              if (touch.position.y < height / 4) { // Config
+                if (touch.position.x < width / 2) {
+                  gl.display.fullscreen = !gl.display.fullscreen
+                } else {
+                  // TODO
+                }
+              } else { // Control
+                if (touch.position.x < width / 2) { // Move
+                  this.moveTouch += (touch.identifier -> touch.position)
+                } else { // Orientation
+                  this.orientationTouch += (touch.identifier -> (touch.position, now))
+                }
+              }
+
+            case TouchEnd(touch) =>
+              this.moveTouch -= touch.identifier
+              this.orientationTouch -= touch.identifier
+
+            case _ =>
           }
 
           processTouch() // process next event
         }
       }
       processTouch()
+
+      for ((identifier, position) <- this.moveTouch) {
+        touchpad.touches.find { _.identifier == identifier } match {
+          case Some(touch) =>
+            val originalPosition = position
+            val currentPosition = touch.position
+
+            val screenSizeFactorForMaxSpeed: Float = 16
+
+            velocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / width * maxLateralSpeed
+            if (currentPosition.y < originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxForwardSpeed
+            if (currentPosition.y > originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxBackwardSpeed
+
+          case None => this.moveTouch -= identifier
+        }
+      }
     }
 
-    val velocity = new Vector2f
-    if (keyboard.isKeyDown(Key.W)) velocity += new Vector2f(0, 1) * -4f
-    if (keyboard.isKeyDown(Key.S)) velocity += new Vector2f(0, 1) * 2f
-    if (keyboard.isKeyDown(Key.D)) velocity += new Vector2f(1, 0) * 3f
-    if (keyboard.isKeyDown(Key.A)) velocity += new Vector2f(1, 0) * -3f
+    if (keyboard.isKeyDown(Key.W)) velocity.y += -maxForwardSpeed
+    if (keyboard.isKeyDown(Key.S)) velocity.y += maxBackwardSpeed
+    if (keyboard.isKeyDown(Key.D)) velocity.x += maxLateralSpeed
+    if (keyboard.isKeyDown(Key.A)) velocity.x += -maxLateralSpeed
+
+    if (Math.abs(velocity.x) > maxLateralSpeed) velocity.x = Math.signum(velocity.x) * maxLateralSpeed
+    if (velocity.y < -maxForwardSpeed) velocity.y = -maxForwardSpeed
+    if (velocity.y > maxBackwardSpeed) velocity.y = maxBackwardSpeed
+
     ifPresent { present =>
       present.velocity = velocity
       present.orientation += (delta.x.toFloat / width.toFloat) * -200f
