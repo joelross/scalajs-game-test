@@ -273,8 +273,10 @@ object Rendering {
 
     var verticesBuffer: Token.Buffer = _
     var normalsBuffer: Token.Buffer = _
-    var indicesBuffer: Token.Buffer = _
-    var renderCount: Int = _
+    var indicesBufferBySubmesh: Array[Token.Buffer] = _
+    var renderCountBySubmesh: Array[Int] = _
+
+    var submeshCount: Int = _
 
     var positionAttrLoc: Int = _
     var normalAttrLoc: Int = _
@@ -297,20 +299,24 @@ object Rendering {
 
       assert(vertices.length == normals.length) // sanity check
 
+      this.submeshCount = mesh.submeshes.length
+
       val entityCount = (map.lWalls.length + map.rWalls.length + map.tWalls.length + map.bWalls.length)
-      val entityTrisCount = mesh.submeshes.map(_.tris.length).sum
+      val entityTrisCountBySubmesh = mesh.submeshes.map(_.tris.length)
 
       val globalVerticesCount = entityCount * vertices.length
       val globalNormalsCount = entityCount * normals.length
-      val globalTrisCount = entityCount * entityTrisCount
+      val globalTrisCountBySubmesh = entityTrisCountBySubmesh.map { trisCount => entityCount * trisCount }
 
-      this.renderCount = globalTrisCount * 3
+      this.renderCountBySubmesh = globalTrisCountBySubmesh.map { trisCount => trisCount * 3 }
 
-      assert(this.renderCount <= Short.MaxValue) // Sanity check, make sure the indexing will be within short limits (could use "<= 0xFFFF" as the short are unsigned in latter opengl)
+      this.renderCountBySubmesh.foreach { renderCount =>
+        assert(renderCount <= Short.MaxValue) // Sanity check, make sure the indexing will be within short limits (could use "<= 0xFFFF" as the short are unsigned in latter opengl)
+      }
 
       val globalVerticesData = GLES2.createFloatBuffer(globalVerticesCount * 3) // 3 floats (x, y, z) per vertex
       val globalNormalsData = GLES2.createFloatBuffer(globalNormalsCount * 3) // 3 floats (x, y, z) per normal
-      val globalIndicesData = GLES2.createShortBuffer(globalTrisCount * 3) // 3 indices (vertices) per triangle
+      val globalIndicesDataBySubmesh = globalTrisCountBySubmesh.map { trisCount => GLES2.createShortBuffer(trisCount * 3) } // 3 indices (vertices) per triangle
 
       var indicesOffset = 0
 
@@ -331,7 +337,10 @@ object Rendering {
             val transformedNormal = (normalTransform * normal).normalizedCopy()
             transformedNormal.store(globalNormalsData)
           }
-          for (submesh <- mesh.submeshes) {
+          for (i <- 0 until this.submeshCount) {
+            val submesh = mesh.submeshes(i)
+            val globalIndicesData = globalIndicesDataBySubmesh(i)
+
             val tris = submesh.tris
 
             for ((i0, i1, i2) <- tris) {
@@ -351,15 +360,17 @@ object Rendering {
 
       assert(globalVerticesData.remaining() == 0) // sanity check
       assert(globalNormalsData.remaining() == 0) // sanity check
-      assert(globalIndicesData.remaining() == 0) // sanity check
+      globalIndicesDataBySubmesh.foreach { globalIndicesData =>
+        assert(globalIndicesData.remaining() == 0) // sanity check
+      }
 
       globalVerticesData.flip()
       globalNormalsData.flip()
-      globalIndicesData.flip()
+      globalIndicesDataBySubmesh.foreach { indicesData => indicesData.flip() }
 
       val globalVerticesBuffer = gl.createBuffer()
       val globalNormalsBuffer = gl.createBuffer()
-      val globalIndicesBuffer = gl.createBuffer()
+      val globalIndicesBufferBySubmesh = mesh.submeshes.map { _ => gl.createBuffer() }
 
       gl.bindBuffer(GLES2.ARRAY_BUFFER, globalVerticesBuffer)
       gl.bufferData(GLES2.ARRAY_BUFFER, globalVerticesData, GLES2.STATIC_DRAW)
@@ -367,12 +378,17 @@ object Rendering {
       gl.bindBuffer(GLES2.ARRAY_BUFFER, globalNormalsBuffer)
       gl.bufferData(GLES2.ARRAY_BUFFER, globalNormalsData, GLES2.STATIC_DRAW)
 
-      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, globalIndicesBuffer)
-      gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, globalIndicesData, GLES2.STATIC_DRAW)
+      for (i <- 0 until this.submeshCount) {
+        val globalIndicesBuffer = globalIndicesBufferBySubmesh(i)
+        val globalIndicesData = globalIndicesDataBySubmesh(i)
+
+        gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, globalIndicesBuffer)
+        gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, globalIndicesData, GLES2.STATIC_DRAW)
+      }
 
       this.verticesBuffer = globalVerticesBuffer
       this.normalsBuffer = globalNormalsBuffer
-      this.indicesBuffer = globalIndicesBuffer
+      this.indicesBufferBySubmesh = globalIndicesBufferBySubmesh
 
       gl.checkError()
     }
@@ -403,8 +419,13 @@ object Rendering {
       gl.bindBuffer(GLES2.ARRAY_BUFFER, this.normalsBuffer)
       gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
 
-      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, this.indicesBuffer)
-      gl.drawElements(GLES2.TRIANGLES, this.renderCount, GLES2.UNSIGNED_SHORT, 0)
+      for (i <- 0 until this.submeshCount) {
+        val indicesBuffer = this.indicesBufferBySubmesh(i)
+        val renderCount = this.renderCountBySubmesh(i)
+
+        gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+        gl.drawElements(GLES2.TRIANGLES, renderCount, GLES2.UNSIGNED_SHORT, 0)
+      }
     }
   }
 
