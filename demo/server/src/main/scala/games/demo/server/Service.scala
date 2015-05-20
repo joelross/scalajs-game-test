@@ -42,10 +42,9 @@ case object RoomJoined extends LocalMessage // The room has accepted the player
 sealed trait ToPlayerMessage
 case object SendPing extends ToPlayerMessage // Request a ping sent to the client
 case object Disconnected extends ToPlayerMessage // Signal that the client has disconnected
-case object AskData extends ToPlayerMessage // request data of the player (expect responses)
 
 // Player response to GetData
-case class DataResponse(projShots: immutable.Seq[demo.ProjectileShot], projHits: immutable.Seq[demo.ProjectileHit], data: demo.ServerUpdatePlayerData) extends LocalMessage
+case class DataResponse(projShots: immutable.Seq[demo.ProjectileShot], projHits: immutable.Seq[demo.ProjectileHit], data: demo.ServerUpdatePlayerData)
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
@@ -142,27 +141,19 @@ class Room(val id: Int) extends Actor {
       players.foreach { player => player.actor.self ! SendPing }
 
     case UpdateReminder =>
-      implicit val timeout = Timeout(100.milliseconds)
+      val playersData = players.map { player => player.getData() }
 
-      val playersData = players.map { player =>
-        (player.actor.self ? AskData).mapTo[DataResponse]
-      }
-
-      val allFuture = Future.sequence(playersData)
-
-      val all = Await.result(allFuture, Duration.Inf)
-
-      val playersMsgData = (for (playerResponse <- all) yield {
+      val playersMsgData = (for (playerResponse <- playersData) yield {
         playerResponse.data
       }).toSeq
 
-      val projectileShotsData = (for (playerResponse <- all; projShot <- playerResponse.projShots) yield {
+      val projectileShotsData = (for (playerResponse <- playersData; projShot <- playerResponse.projShots) yield {
         val projId = demo.ProjectileIdentifier(playerResponse.data.id, projShot.id)
         val projCreation = demo.ProjectileCreation(projId, projShot.position, projShot.orientation)
         projCreation.asInstanceOf[demo.Event]
       }).toSeq
 
-      val projectileHitsData = (for (playerResponse <- all; projHit <- playerResponse.projHits) yield {
+      val projectileHitsData = (for (playerResponse <- playersData; projHit <- playerResponse.projHits) yield {
         val projId = demo.ProjectileIdentifier(playerResponse.data.id, projHit.id)
         val projDestruction = demo.ProjectileDestruction(projId, projHit.playerHitId)
         projDestruction.asInstanceOf[demo.Event]
@@ -183,15 +174,21 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
 
   private var lastPingTime: Option[Long] = None
 
-  var latency: Option[Int] = None
-
-  var updateData: Option[demo.ClientPositionUpdate] = None
-  val projectileShotsData: mutable.Queue[demo.ProjectileShot] = mutable.Queue()
-  val projectileHitsData: mutable.Queue[demo.ProjectileHit] = mutable.Queue()
+  private var latency: Option[Int] = None
+  private var updateData: Option[demo.ClientPositionUpdate] = None
+  private val projectileShotsData: mutable.Queue[demo.ProjectileShot] = mutable.Queue()
+  private val projectileHitsData: mutable.Queue[demo.ProjectileHit] = mutable.Queue()
 
   def sendToClient(msg: demo.ServerMessage): Unit = {
     val data = upickle.write(msg)
     actor.sendString(data)
+  }
+
+  def getData(): DataResponse = this.synchronized {
+    val ret = DataResponse(immutable.Seq() ++ projectileShotsData, immutable.Seq() ++ projectileHitsData, demo.ServerUpdatePlayerData(this.id, this.latency.getOrElse(0), this.updateData.map { data => data.move }))
+    projectileShotsData.clear()
+    projectileHitsData.clear()
+    ret
   }
 
   def handleLocalMessage(msg: ToPlayerMessage): Unit = msg match {
@@ -202,24 +199,18 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
     case SendPing =>
       lastPingTime = Some(System.currentTimeMillis())
       sendToClient(demo.Ping)
-
-    case AskData =>
-      actor.sender ! DataResponse(immutable.Seq() ++ projectileShotsData, immutable.Seq() ++ projectileHitsData, demo.ServerUpdatePlayerData(this.id, this.latency.getOrElse(0), updateData.map { data => data.move }))
-      projectileShotsData.clear()
-      projectileHitsData.clear()
   }
 
   def handleClientMessage(msg: demo.ClientMessage): Unit = msg match {
     case demo.Pong => // client's response
       for (time <- lastPingTime) {
         val elapsed = (System.currentTimeMillis() - time) / 2
-        //println("Latency of player " + id + " in room " + room.id + " is " + elapsed + " ms")
-        latency = Some(elapsed.toInt)
+        this.synchronized { latency = Some(elapsed.toInt) }
         lastPingTime = None
       }
-    case x: demo.ClientPositionUpdate => updateData = Some(x)
-    case x: demo.ProjectileShot       => projectileShotsData += x
-    case x: demo.ProjectileHit        => projectileHitsData += x
+    case x: demo.ClientPositionUpdate => this.synchronized { updateData = Some(x) }
+    case x: demo.ProjectileShot       => this.synchronized { projectileShotsData += x }
+    case x: demo.ProjectileHit        => this.synchronized { projectileHitsData += x }
   }
 }
 
