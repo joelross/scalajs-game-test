@@ -218,9 +218,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                             present.position = startingPosition
                             present.orientation = startingOrientation
                             this.lastTimeSpawn = Some(now)
-                            Console.println("You were hit by player " + playerId + " (you are dead)")
+                            Console.println("You were hit by player " + playerId + " (you are dead, respawning)")
                           } else {
-                            Console.println("You were hit by player " + playerId + " (you have health of " + present.health + " left)")
+                            Console.println("You were hit by player " + playerId + " (your health is at " + present.health + ")")
                           }
                         }
                       } else {
