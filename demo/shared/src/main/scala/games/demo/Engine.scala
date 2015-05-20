@@ -51,6 +51,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   final val maxBackwardSpeed: Float = 2f
   final val maxLateralSpeed: Float = 3f
 
+  final val maxTouchTimeToShootMS: Int = 100
+
   def context: games.opengl.GLES2 = gl
 
   private var continueCond = true
@@ -328,6 +330,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
               }
 
             case TouchEnd(touch) =>
+              for ((position, time) <- this.orientationTouch.get(touch.identifier)) {
+                if ((now - time) < maxTouchTimeToShootMS) {
+                  bulletShot = true
+                }
+              }
               this.moveTouch -= touch.identifier
               this.orientationTouch -= touch.identifier
 
@@ -338,6 +345,22 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         }
       }
       processTouch()
+
+      for ((identifier, position) <- this.moveTouch) {
+        touchpad.touches.find { _.identifier == identifier } match {
+          case Some(touch) =>
+            val originalPosition = position
+            val currentPosition = touch.position
+
+            val screenSizeFactorForMaxSpeed: Float = 12
+
+            velocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / width * maxLateralSpeed
+            if (currentPosition.y < originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxForwardSpeed
+            if (currentPosition.y > originalPosition.y) velocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxBackwardSpeed
+
+          case None => this.moveTouch -= identifier
+        }
+      }
 
       for ((identifier, position) <- this.moveTouch) {
         touchpad.touches.find { _.identifier == identifier } match {
