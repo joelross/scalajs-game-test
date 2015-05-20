@@ -19,11 +19,11 @@ sealed trait NetworkMessage
 sealed trait ClientMessage extends NetworkMessage
 sealed trait ServerMessage extends NetworkMessage
 // Server -> Client
-case object Ping extends ServerMessage
-case class Hello(playerId: Int) extends ServerMessage
+case object ServerPing extends ServerMessage
+case class ServerHello(playerId: Int) extends ServerMessage
 case class ServerUpdate(players: Seq[PlayerData], newEvents: Seq[Event]) extends ServerMessage
 // Server <- Client
-case object Pong extends ClientMessage
+case object ClientPong extends ClientMessage
 case class ClientPositionUpdate(state: State) extends ClientMessage
-case class ProjectileShot(id: Int, position: Vector2, orientation: Float) extends ClientMessage
-case class ProjectileHit(id: Int, playerHitId: Int) extends ClientMessage
+case class ClientProjectileShot(id: Int, position: Vector2, orientation: Float) extends ClientMessage
+case class ClientProjectileHit(id: Int, playerHitId: Int) extends ClientMessage

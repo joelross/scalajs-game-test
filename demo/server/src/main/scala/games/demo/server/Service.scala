@@ -44,7 +44,7 @@ case object SendPing extends ToPlayerMessage // Request a ping sent to the clien
 case object Disconnected extends ToPlayerMessage // Signal that the client has disconnected
 
 // Player response to GetData
-case class DataResponse(projShots: immutable.Seq[network.ProjectileShot], projHits: immutable.Seq[network.ProjectileHit], data: network.PlayerData)
+case class PlayerDataResponse(projShots: immutable.Seq[network.ClientProjectileShot], projHits: immutable.Seq[network.ClientProjectileHit], data: network.PlayerData)
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
@@ -166,22 +166,22 @@ class Room(val id: Int) extends Actor {
 class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
   // Init
   actor.playerLogic = Some(this)
-  sendToClient(network.Hello(id))
+  sendToClient(network.ServerHello(id))
 
   private var lastPingTime: Option[Long] = None
 
   private var latency: Int = 0
   private var state: network.State = network.Absent
-  private val projectileShotsData: mutable.Queue[network.ProjectileShot] = mutable.Queue()
-  private val projectileHitsData: mutable.Queue[network.ProjectileHit] = mutable.Queue()
+  private val projectileShotsData: mutable.Queue[network.ClientProjectileShot] = mutable.Queue()
+  private val projectileHitsData: mutable.Queue[network.ClientProjectileHit] = mutable.Queue()
 
   def sendToClient(msg: network.ServerMessage): Unit = {
     val data = upickle.write(msg)
     actor.sendString(data)
   }
 
-  def getData(): DataResponse = this.synchronized {
-    val ret = DataResponse(immutable.Seq() ++ projectileShotsData, immutable.Seq() ++ projectileHitsData, network.PlayerData(this.id, this.latency, this.state))
+  def getData(): PlayerDataResponse = this.synchronized {
+    val ret = PlayerDataResponse(immutable.Seq() ++ projectileShotsData, immutable.Seq() ++ projectileHitsData, network.PlayerData(this.id, this.latency, this.state))
     projectileShotsData.clear()
     projectileHitsData.clear()
     ret
@@ -194,19 +194,19 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
 
     case SendPing =>
       lastPingTime = Some(System.currentTimeMillis())
-      sendToClient(network.Ping)
+      sendToClient(network.ServerPing)
   }
 
   def handleClientMessage(msg: network.ClientMessage): Unit = msg match {
-    case network.Pong => // client's response
+    case network.ClientPong => // client's response
       for (time <- lastPingTime) {
         val elapsed = (System.currentTimeMillis() - time) / 2
         this.synchronized { latency = elapsed.toInt }
         lastPingTime = None
       }
     case x: network.ClientPositionUpdate => this.synchronized { this.state = x.state }
-    case x: network.ProjectileShot       => this.synchronized { this.projectileShotsData += x }
-    case x: network.ProjectileHit        => this.synchronized { this.projectileHitsData += x }
+    case x: network.ClientProjectileShot => this.synchronized { this.projectileShotsData += x }
+    case x: network.ClientProjectileHit  => this.synchronized { this.projectileHitsData += x }
   }
 }
 

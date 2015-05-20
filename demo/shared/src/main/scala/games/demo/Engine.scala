@@ -163,10 +163,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           Future { // To avoid concurrency issue, process the following in the loop thread
             serverMsg match {
-              case network.Ping => // answer that ASAP
-                sendMsg(network.Pong)
+              case network.ServerPing => // answer that ASAP
+                sendMsg(network.ClientPong)
 
-              case network.Hello(playerId) =>
+              case network.ServerHello(playerId) =>
                 if (this.connection.isEmpty) {
                   this.connection = Some(conn)
                   this.localPlayerId = playerId
@@ -318,7 +318,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         if (ret > 0) Console.println("You hit player " + ret)
       }
       if (ret > 0 && shooterId == this.localPlayerId) for (conn <- connection) {
-        val hit = network.ProjectileHit(projectile.id, ret)
+        val hit = network.ClientProjectileHit(projectile.id, ret)
         sendMsg(hit)
       }
       ret < 0
@@ -332,7 +332,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
       if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get > shotIntervalMs)) {
         this.projectiles += (this.localPlayerId -> new Projectile(this.nextProjectileId, playing.position.copy(), playing.orientation))
-        val shot = network.ProjectileShot(this.nextProjectileId, uPosition, uOrientation)
+        val shot = network.ClientProjectileShot(this.nextProjectileId, uPosition, uOrientation)
         sendMsg(shot)
 
         this.lastTimeProjectileShot = Some(now)
