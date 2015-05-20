@@ -145,7 +145,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         this.map = map
         Rendering.Standard.setup(shaders("simple3d"))
         Rendering.Wall.setup(shaders("wall"), wallMesh, map)
-        Rendering.Player.setup(models("ship"))
+        Rendering.Player.setup(models("character"))
         Rendering.Bullet.setup(models("bullet"))
 
         Physics.setupMap(map)
