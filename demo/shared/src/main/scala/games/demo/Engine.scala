@@ -176,7 +176,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                   this.connection = Some(conn)
                   this.localPlayerId = playerId
                   val startingPosition = this.map.starts(localPlayerId).center.copy()
-                  val startingOrientation = 0f
+                  val startingOrientation = Data.initOrientation(localPlayerId)
                   this.localPlayerState = new Playing(startingPosition, new Vector2f, startingOrientation)
                   itf.printLine("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
