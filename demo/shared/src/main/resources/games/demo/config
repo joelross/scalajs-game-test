@@ -1,4 +1,4 @@
-server=ws://192.168.1.201:8080/
+server=ws://localhost:8080/
 models=/games/demo/models
 shaders=/games/demo/shaders
 map=/games/demo/maps/map1
