@@ -336,7 +336,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     //#### Network
     for (conn <- connection) {
       val uPosition = conv(playing.position)
-      val uVelocity = conv(velocity)
+      val uVelocity = conv(playing.velocity)
       val uOrientation = playing.orientation
 
       if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get > shotIntervalMs)) {
