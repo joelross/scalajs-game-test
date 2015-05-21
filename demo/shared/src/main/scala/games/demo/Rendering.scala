@@ -496,8 +496,8 @@ object Rendering {
   object Hud {
     var program: Token.Program = _
 
-    var verticesBuffer: Token.Buffer = _
-    var indicesBuffer: Token.Buffer = _
+    var sightVerticesBuffer: Token.Buffer = _
+    var sightIndicesBuffer: Token.Buffer = _
 
     var positionAttrLoc: Int = _
 
@@ -506,14 +506,10 @@ object Rendering {
     var scaleXUniLoc: Token.UniformLocation = _
     var scaleYUniLoc: Token.UniformLocation = _
 
-    var color: Vector3f = _
-
-    var transforms: Array[Matrix3f] = _
+    var sightTransforms: Array[Matrix3f] = _
 
     def setup(program: Token.Program)(implicit gl: GLES2): Unit = {
       this.program = program
-
-      color = new Vector3f(0f, 0f, 0f) // black
 
       positionAttrLoc = gl.getAttribLocation(program, "position")
 
@@ -522,36 +518,36 @@ object Rendering {
       scaleXUniLoc = gl.getUniformLocation(program, "scaleX")
       scaleYUniLoc = gl.getUniformLocation(program, "scaleY")
 
-      val verticesData = GLES2.createFloatBuffer(3 * 2) // 3 vertices, 2 coordinates each
-      verticesData.put(0f).put(0.1f)
-      verticesData.put(0.025f).put(0.2f)
-      verticesData.put(-0.025f).put(0.2f)
+      val sightVerticesData = GLES2.createFloatBuffer(3 * 2) // 3 vertices, 2 coordinates each
+      sightVerticesData.put(0f).put(0.1f)
+      sightVerticesData.put(0.025f).put(0.2f)
+      sightVerticesData.put(-0.025f).put(0.2f)
 
-      verticesData.flip()
+      sightVerticesData.flip()
 
-      this.verticesBuffer = gl.createBuffer()
+      this.sightVerticesBuffer = gl.createBuffer()
 
-      gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
-      gl.bufferData(GLES2.ARRAY_BUFFER, verticesData, GLES2.STATIC_DRAW)
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, sightVerticesBuffer)
+      gl.bufferData(GLES2.ARRAY_BUFFER, sightVerticesData, GLES2.STATIC_DRAW)
 
-      val indicesData = GLES2.createShortBuffer(3)
-      indicesData.put(0.toShort)
-      indicesData.put(1.toShort)
-      indicesData.put(2.toShort)
+      val sightIndicesData = GLES2.createShortBuffer(3)
+      sightIndicesData.put(0.toShort)
+      sightIndicesData.put(1.toShort)
+      sightIndicesData.put(2.toShort)
 
-      indicesData.flip()
+      sightIndicesData.flip()
 
-      this.indicesBuffer = gl.createBuffer()
+      this.sightIndicesBuffer = gl.createBuffer()
 
-      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
-      gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesData, GLES2.STATIC_DRAW)
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, sightIndicesBuffer)
+      gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, sightIndicesData, GLES2.STATIC_DRAW)
 
       gl.checkError()
 
-      this.transforms = new Array(3)
-      this.transforms(0) = Matrix3f.rotate2D(0f)
-      this.transforms(1) = Matrix3f.rotate2D(120f)
-      this.transforms(2) = Matrix3f.rotate2D(240f)
+      this.sightTransforms = new Array(3)
+      this.sightTransforms(0) = Matrix3f.rotate2D(0f)
+      this.sightTransforms(1) = Matrix3f.rotate2D(120f)
+      this.sightTransforms(2) = Matrix3f.rotate2D(240f)
     }
 
     def init()(implicit gl: GLES2): Unit = {
@@ -571,12 +567,12 @@ object Rendering {
       gl.uniform1f(scaleXUniLoc, screenRatio)
       gl.uniform1f(scaleYUniLoc, 1f)
 
-      gl.bindBuffer(GLES2.ARRAY_BUFFER, this.verticesBuffer)
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, this.sightVerticesBuffer)
       gl.vertexAttribPointer(positionAttrLoc, 2, GLES2.FLOAT, false, 0, 0)
 
-      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, this.indicesBuffer)
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, this.sightIndicesBuffer)
 
-      for (transform <- this.transforms) {
+      for (transform <- this.sightTransforms) {
         gl.uniformMatrix3f(transformUniLoc, transform)
         gl.drawElements(GLES2.TRIANGLES, 3, GLES2.UNSIGNED_SHORT, 0)
       }
