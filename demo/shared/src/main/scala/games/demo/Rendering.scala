@@ -502,6 +502,7 @@ object Rendering {
     var positionAttrLoc: Int = _
 
     var colorUniLoc: Token.UniformLocation = _
+    var transformUniLoc: Token.UniformLocation = _
     var scaleXUniLoc: Token.UniformLocation = _
     var scaleYUniLoc: Token.UniformLocation = _
 
@@ -515,6 +516,7 @@ object Rendering {
       positionAttrLoc = gl.getAttribLocation(program, "position")
 
       colorUniLoc = gl.getUniformLocation(program, "color")
+      transformUniLoc = gl.getUniformLocation(program, "transform")
       scaleXUniLoc = gl.getUniformLocation(program, "scaleX")
       scaleYUniLoc = gl.getUniformLocation(program, "scaleY")
 
@@ -574,7 +576,10 @@ object Rendering {
     }
 
     def render()(implicit gl: GLES2): Unit = {
+      val transform = new Matrix3f
+
       gl.uniform3f(colorUniLoc, color)
+      gl.uniformMatrix3f(transformUniLoc, transform)
       gl.uniform1f(scaleXUniLoc, 1f)
       gl.uniform1f(scaleYUniLoc, 1f)
 
