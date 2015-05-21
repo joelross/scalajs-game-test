@@ -575,13 +575,15 @@ object Rendering {
       gl.disableVertexAttribArray(positionAttrLoc)
     }
 
-    def render()(implicit gl: GLES2): Unit = {
+    def render(screenWidth: Int, screenHeight: Int)(implicit gl: GLES2): Unit = {
       val transform = new Matrix3f
+
+      val screenRatio = screenWidth.toFloat / screenHeight.toFloat
 
       gl.uniform3f(colorUniLoc, color)
       gl.uniformMatrix3f(transformUniLoc, transform)
       gl.uniform1f(scaleXUniLoc, 1f)
-      gl.uniform1f(scaleYUniLoc, 1f)
+      gl.uniform1f(scaleYUniLoc, screenRatio)
 
       gl.bindBuffer(GLES2.ARRAY_BUFFER, this.verticesBuffer)
       gl.vertexAttribPointer(positionAttrLoc, 2, GLES2.FLOAT, false, 0, 0)
