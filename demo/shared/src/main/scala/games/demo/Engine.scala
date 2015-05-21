@@ -83,6 +83,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var centerVAngle: Option[Float] = None
 
+  private var layout: KeyLayout = Qwerty
+
   private var localPlayerState: State = Absent
   private var externalPlayersState: immutable.Map[Int, State] = immutable.Map()
 
@@ -288,11 +290,20 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     def processKeyboard() {
       val optKeyEvent = keyboard.nextEvent()
       for (keyEvent <- optKeyEvent) {
-        if (keyEvent.down) keyEvent.key match {
-          case Key.Escape => continueCond = false
-          case Key.L      => mouse.locked = !mouse.locked
-          case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
-          case _          => // nothing to do
+        if (keyEvent.down) {
+          val key = keyEvent.key
+
+          if (key == layout.mouseLock) mouse.locked = !mouse.locked
+          else if (key == layout.fullscreen) gl.display.fullscreen = !gl.display.fullscreen
+          else if (key == layout.changeLayout) {
+            if (layout == Qwerty) {
+              itf.printLine("Changing keyboard layout for Azerty")
+              layout = Azerty
+            } else {
+              itf.printLine("Changing keyboard layout for Qwerty")
+              layout = Qwerty
+            }
+          } else if (key == layout.escape) continueCond = false
         }
 
         processKeyboard() // process next event
@@ -381,10 +392,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
 
-    if (keyboard.isKeyDown(Key.W)) currentVelocity.y += -maxForwardSpeed
-    if (keyboard.isKeyDown(Key.S)) currentVelocity.y += maxBackwardSpeed
-    if (keyboard.isKeyDown(Key.D)) currentVelocity.x += maxLateralSpeed
-    if (keyboard.isKeyDown(Key.A)) currentVelocity.x += -maxLateralSpeed
+    if (keyboard.isKeyDown(layout.forward)) currentVelocity.y += -maxForwardSpeed
+    if (keyboard.isKeyDown(layout.backward)) currentVelocity.y += maxBackwardSpeed
+    if (keyboard.isKeyDown(layout.right)) currentVelocity.x += maxLateralSpeed
+    if (keyboard.isKeyDown(layout.left)) currentVelocity.x += -maxLateralSpeed
 
     changeOrientation += (delta.x.toFloat / width.toFloat) * -200f
 

@@ -3,6 +3,7 @@ package games.demo
 import scala.concurrent.{ Future, ExecutionContext }
 import games.{ Utils, Resource }
 import games.math._
+import games.input.{ Key, Keyboard }
 
 import scala.collection.immutable
 
@@ -35,4 +36,46 @@ object Misc {
     case Absent     => network.Absent
     case x: Present => network.Present(conv(x.position), conv(x.velocity), x.orientation, x.health)
   }
+}
+
+sealed trait KeyLayout {
+  val forward: Key
+  val backward: Key
+  val left: Key
+  val right: Key
+
+  val mouseLock: Key
+  val fullscreen: Key
+
+  val escape: Key
+
+  val changeLayout: Key
+}
+
+object Qwerty extends KeyLayout {
+  final val forward: Key = Key.W
+  final val backward: Key = Key.S
+  final val left: Key = Key.A
+  final val right: Key = Key.D
+
+  final val mouseLock: Key = Key.L
+  final val fullscreen: Key = Key.F
+
+  final val escape: Key = Key.Escape
+
+  final val changeLayout: Key = Key.Tab
+}
+
+object Azerty extends KeyLayout {
+  final val forward: Key = Key.Z
+  final val backward: Key = Key.S
+  final val left: Key = Key.Q
+  final val right: Key = Key.D
+
+  final val mouseLock: Key = Key.L
+  final val fullscreen: Key = Key.F
+
+  final val escape: Key = Key.Escape
+
+  final val changeLayout: Key = Key.Tab
 }
