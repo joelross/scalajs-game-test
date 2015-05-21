@@ -275,11 +275,13 @@ object Rendering {
     var normalsBuffer: Token.Buffer = _
     var indicesBufferBySubmesh: Array[Token.Buffer] = _
     var renderCountBySubmesh: Array[Int] = _
+    var materialBySubmesh: Array[games.utils.SimpleOBJParser.Material] = _
 
     var submeshCount: Int = _
 
     var positionAttrLoc: Int = _
     var normalAttrLoc: Int = _
+    var diffuseColorUniLoc: Token.UniformLocation = _
     var projectionUniLoc: Token.UniformLocation = _
     var modelViewUniLoc: Token.UniformLocation = _
     var modelViewInvTrUniLoc: Token.UniformLocation = _
@@ -290,6 +292,7 @@ object Rendering {
       this.positionAttrLoc = gl.getAttribLocation(program, "position")
       this.normalAttrLoc = gl.getAttribLocation(program, "normal")
 
+      diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
       this.projectionUniLoc = gl.getUniformLocation(program, "projection")
       this.modelViewUniLoc = gl.getUniformLocation(program, "modelView")
       this.modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
@@ -309,6 +312,8 @@ object Rendering {
       val globalTrisCountBySubmesh = entityTrisCountBySubmesh.map { trisCount => entityCount * trisCount }
 
       this.renderCountBySubmesh = globalTrisCountBySubmesh.map { trisCount => trisCount * 3 }
+
+      this.materialBySubmesh = mesh.submeshes.map { submesh => submesh.material.get }
 
       this.renderCountBySubmesh.foreach { renderCount =>
         assert(renderCount <= Short.MaxValue) // Sanity check, make sure the indexing will be within short limits (could use "<= 0xFFFF" as the short are unsigned in latter opengl)
@@ -422,6 +427,10 @@ object Rendering {
       for (i <- 0 until this.submeshCount) {
         val indicesBuffer = this.indicesBufferBySubmesh(i)
         val renderCount = this.renderCountBySubmesh(i)
+        val material = this.materialBySubmesh(i)
+
+        val color = material.diffuseColor.get
+        gl.uniform3f(diffuseColorUniLoc, color)
 
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
         gl.drawElements(GLES2.TRIANGLES, renderCount, GLES2.UNSIGNED_SHORT, 0)
@@ -481,6 +490,25 @@ object Rendering {
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
         gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
       }
+    }
+  }
+
+  object Sight {
+    var program: Token.Program = _
+
+    var positionAttrLoc: Int = _
+    var normalAttrLoc: Int = _
+    var colorUniLoc: Token.UniformLocation = _
+    var projectionUniLoc: Token.UniformLocation = _
+    var modelViewUniLoc: Token.UniformLocation = _
+    var modelViewInvTrUniLoc: Token.UniformLocation = _
+
+    def setup(program: Token.Program)(implicit gl: GLES2): Unit = {
+      this.program = program
+
+      positionAttrLoc = gl.getAttribLocation(program, "position")
+
+      colorUniLoc = gl.getUniformLocation(program, "color")
     }
   }
 }

@@ -155,8 +155,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
         this.map = map
+        Rendering.Sight.setup(shaders("simple2d"))
         Rendering.Standard.setup(shaders("simple3d"))
-        Rendering.Wall.setup(shaders("wall"), wallMesh, map)
+        Rendering.Wall.setup(shaders("simple3d"), wallMesh, map)
         Rendering.Player.setup(models("character"))
         Rendering.Bullet.setup(models("bullet"))
 
