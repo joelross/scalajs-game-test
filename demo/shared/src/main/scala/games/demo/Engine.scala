@@ -190,8 +190,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 if (this.connection.isEmpty) {
                   this.connection = Some(conn)
                   this.localPlayerId = playerId
-                  val startingPosition = this.map.starts(localPlayerId).center.copy()
-                  val startingOrientation = Data.initOrientation(localPlayerId)
+                  val startingPosition = this.map.startPositions(localPlayerId).center.copy()
+                  val startingOrientation = this.map.startOrientations(localPlayerId)
                   this.localPlayerState = new Present(startingPosition, new Vector2f, startingOrientation, initialHealth)
                   this.lastTimeSpawn = Some(now)
                   itf.printLine("You are player " + playerId)
@@ -223,20 +223,20 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                         ifPresent { present =>
                           present.health -= damagePerShot
                           if (present.health <= 0f) { // Reset the player
-                            val startingPosition = this.map.starts(localPlayerId).center.copy()
-                            val startingOrientation = Data.initOrientation(localPlayerId)
+                            val startingPosition = this.map.startPositions(localPlayerId).center.copy()
+                            val startingOrientation = this.map.startOrientations(localPlayerId)
 
                             present.health = this.initialHealth
                             present.position = startingPosition
                             present.orientation = startingOrientation
                             this.lastTimeSpawn = Some(now)
-                            Console.println("You were hit by player " + playerId + " (you are dead, respawning)")
+                            //Console.println("You were hit by player " + playerId + " (you are dead, respawning)")
                           } else {
-                            Console.println("You were hit by player " + playerId + " (your health is at " + present.health + ")")
+                            //Console.println("You were hit by player " + playerId + " (your health is at " + present.health + ")")
                           }
                         }
                       } else {
-                        Console.println("You were hit by player " + playerId + " (but you are invulnerable for now)")
+                        //Console.println("You were hit by player " + playerId + " (but you are invulnerable for now)")
                       }
                     }
                     this.projectiles = projectiles.filterNot { case (curPlayerId, curProj) => playerId == curPlayerId && projId == curProj.id }
@@ -466,8 +466,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val (camPosition, camOrientation) = ifPresent { present =>
       (present.position, present.orientation)
     }.getOrElse {
-      val startingPosition = this.map.starts(localPlayerId).center.copy()
-      val startingOrientation = Data.initOrientation(localPlayerId)
+      val startingPosition = this.map.startPositions(localPlayerId).center.copy()
+      val startingOrientation = this.map.startOrientations(localPlayerId)
       (startingPosition, startingOrientation)
     }
     val cameraTransform = Matrix4f.translate3D(new Vector3f(camPosition.x, Map.roomHalfSize, camPosition.y)) * Matrix4f.rotate3D(camOrientation, Vector3f.Up)

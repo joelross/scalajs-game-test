@@ -10,6 +10,4 @@ object Data {
     2 -> new Vector3f(0, 0, 1), // Blue for player 2
     3 -> new Vector3f(0, 1, 0), // Green for player 3
     4 -> new Vector3f(1, 1, 0)) // Yellow for player 4
-
-  val initOrientation: immutable.Map[Int, Float] = immutable.Map(1 -> 180f, 2 -> 0f, 3 -> 270f, 4 -> 90f)
 }

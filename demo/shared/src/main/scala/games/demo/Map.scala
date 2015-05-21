@@ -20,28 +20,50 @@ object Map {
       val lines: Array[String] = Utils.lines(mapFile)
 
       val rooms: mutable.ArrayBuffer[Room] = mutable.ArrayBuffer()
-      val starts: mutable.Map[Int, Room] = mutable.Map()
+      val startPositions: mutable.Map[Int, Room] = mutable.Map()
+      val startOrientations: mutable.Map[Int, Float] = mutable.Map()
 
       var y: Int = 0
       for (line <- lines) {
-        var x: Int = 0
-        for (char <- line) {
+        if (line.startsWith("#")) {
+          val rest = line.substring(1)
+          val lineTokens = rest.trim().split(":", 2)
+          if (lineTokens.size == 2) {
 
-          char match {
-            case 'x' => rooms += new Room(x, y)
+            val key = lineTokens(0)
+            val value = lineTokens(1)
 
-            case v if Character.isDigit(v) =>
-              val number = v - '0'
-              val room = new Room(x, y)
-              rooms += room
-              starts += (number -> room)
+            key match {
+              case "player_orientation" =>
+                val orientationTokens = value.split("=", 2)
+                val playerId = orientationTokens(0).toInt
+                val orientation = orientationTokens(1).toFloat
+                startOrientations += (playerId -> orientation)
 
-            case _ =>
+              case _ => Console.err.println("Unknown config key '" + key + "' in map line: " + line)
+            }
           }
 
-          x += 1
+        } else {
+          var x: Int = 0
+          for (char <- line) {
+
+            char match {
+              case 'x' => rooms += new Room(x, y)
+
+              case v if Character.isDigit(v) =>
+                val number = v - '0'
+                val room = new Room(x, y)
+                rooms += room
+                startPositions += (number -> room)
+
+              case _ =>
+            }
+
+            x += 1
+          }
+          y += 1
         }
-        y += 1
       }
 
       val width = rooms.map(_.x).reduce(Math.max) + 1
@@ -56,7 +78,7 @@ object Map {
         array(x)(y) = rooms.find { r => r.x == x && r.y == y }
       }
 
-      new Map(array, starts.toMap, width, height)
+      new Map(array, startPositions.toMap, startOrientations.toMap, width, height)
     }
   }
 }
@@ -69,7 +91,7 @@ class ContinuousWall(val position: Vector2f, val length: Float) {
   val halfLength = length / 2
 }
 
-class Map(val rooms: Array[Array[Option[Room]]], val starts: immutable.Map[Int, Room], val width: Int, val height: Int) {
+class Map(val rooms: Array[Array[Option[Room]]], val startPositions: immutable.Map[Int, Room], val startOrientations: immutable.Map[Int, Float], val width: Int, val height: Int) {
   def roomAt(x: Int, y: Int): Option[Room] = if (x >= 0 && x < width && y >= 0 && y < height) rooms(x)(y) else None
   def roomAt(pos: Vector2f): Option[Room] = {
     val (x, y) = Map.coordinates(pos)
