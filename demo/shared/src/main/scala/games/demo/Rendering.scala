@@ -496,19 +496,93 @@ object Rendering {
   object Sight {
     var program: Token.Program = _
 
+    var verticesBuffer: Token.Buffer = _
+    var indicesBuffer: Token.Buffer = _
+
     var positionAttrLoc: Int = _
-    var normalAttrLoc: Int = _
+
     var colorUniLoc: Token.UniformLocation = _
-    var projectionUniLoc: Token.UniformLocation = _
-    var modelViewUniLoc: Token.UniformLocation = _
-    var modelViewInvTrUniLoc: Token.UniformLocation = _
+    var scaleXUniLoc: Token.UniformLocation = _
+    var scaleYUniLoc: Token.UniformLocation = _
+
+    var color: Vector3f = _
 
     def setup(program: Token.Program)(implicit gl: GLES2): Unit = {
       this.program = program
 
+      color = new Vector3f(0f, 0f, 0f) // black
+
       positionAttrLoc = gl.getAttribLocation(program, "position")
 
       colorUniLoc = gl.getUniformLocation(program, "color")
+      scaleXUniLoc = gl.getUniformLocation(program, "scaleX")
+      scaleYUniLoc = gl.getUniformLocation(program, "scaleY")
+
+      val verticesData = GLES2.createFloatBuffer(12 * 2) // 12 vertices, 2 coordinates each
+      verticesData.put(0f).put(0.1f)
+      verticesData.put(0.025f).put(0.2f)
+      verticesData.put(-0.025f).put(0.2f)
+      verticesData.put(0f).put(-0.1f)
+      verticesData.put(0.025f).put(-0.2f)
+      verticesData.put(-0.025f).put(-0.2f)
+      verticesData.put(0.1f).put(0f)
+      verticesData.put(0.2f).put(0.025f)
+      verticesData.put(0.2f).put(-0.025f)
+      verticesData.put(-0.1f).put(0f)
+      verticesData.put(-0.2f).put(0.025f)
+      verticesData.put(-0.2f).put(-0.025f)
+
+      verticesData.flip()
+
+      this.verticesBuffer = gl.createBuffer()
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, verticesBuffer)
+      gl.bufferData(GLES2.ARRAY_BUFFER, verticesData, GLES2.STATIC_DRAW)
+
+      val indicesData = GLES2.createShortBuffer(12)
+      indicesData.put(0.toShort)
+      indicesData.put(1.toShort)
+      indicesData.put(2.toShort)
+      indicesData.put(3.toShort)
+      indicesData.put(4.toShort)
+      indicesData.put(5.toShort)
+      indicesData.put(6.toShort)
+      indicesData.put(7.toShort)
+      indicesData.put(8.toShort)
+      indicesData.put(9.toShort)
+      indicesData.put(10.toShort)
+      indicesData.put(11.toShort)
+
+      indicesData.flip()
+
+      this.indicesBuffer = gl.createBuffer()
+
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+      gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, indicesData, GLES2.STATIC_DRAW)
+
+      gl.checkError()
+    }
+
+    def init()(implicit gl: GLES2): Unit = {
+      gl.useProgram(program)
+
+      gl.enableVertexAttribArray(positionAttrLoc)
+    }
+
+    def close()(implicit gl: GLES2): Unit = {
+      gl.disableVertexAttribArray(positionAttrLoc)
+    }
+
+    def render()(implicit gl: GLES2): Unit = {
+      gl.uniform3f(colorUniLoc, color)
+      gl.uniform1f(scaleXUniLoc, 1f)
+      gl.uniform1f(scaleYUniLoc, 1f)
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, this.verticesBuffer)
+      gl.vertexAttribPointer(positionAttrLoc, 2, GLES2.FLOAT, false, 0, 0)
+
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, this.indicesBuffer)
+      gl.drawElements(GLES2.TRIANGLES, 12, GLES2.UNSIGNED_SHORT, 0)
     }
   }
 }

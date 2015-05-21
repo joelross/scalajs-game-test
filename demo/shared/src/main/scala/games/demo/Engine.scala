@@ -493,6 +493,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.disable(GLES2.DEPTH_TEST)
     gl.disable(GLES2.CULL_FACE)
 
+    Rendering.Sight.init()
+    Rendering.Sight.render()
+    Rendering.Sight.close()
+
     //#### Ending
     continueCond = continueCond && itf.update()
   }
