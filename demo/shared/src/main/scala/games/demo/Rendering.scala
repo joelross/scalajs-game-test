@@ -326,7 +326,7 @@ object Rendering {
       var indicesOffset = 0
 
       def extractWalls(walls: Array[Vector2f], orientation: Float): Unit = {
-        val wallTransform = Matrix4f.scale3D(new Vector3f(1, 1, 1) * Map.roomSize) * Matrix4f.rotate3D(orientation, Vector3f.Up)
+        val wallTransform = Matrix4f.rotate3D(orientation, Vector3f.Up)
         for (wall <- walls) {
           val pos2d = wall
           val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
