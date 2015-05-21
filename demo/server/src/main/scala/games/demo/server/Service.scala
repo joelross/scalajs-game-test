@@ -10,6 +10,8 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 import spray.routing._
 import spray.http._
+import spray.http.CacheDirectives._
+import spray.http.HttpHeaders._
 import MediaTypes._
 import spray.can.websocket
 import spray.can.websocket.frame.{ Frame, TextFrame, BinaryFrame }
@@ -251,8 +253,10 @@ class ConnectionActor(val serverConnection: ActorRef) extends HttpServiceActor w
 
   def businessLogicNoUpgrade: Receive = {
     implicit val refFactory: ActorRefFactory = context
-    runRoute(myRoute)
+    runRoute(cachedRoute)
   }
+
+  def cachedRoute = respondWithHeader(`Cache-Control`(`public`, `no-cache`)) { myRoute }
 
   val myRoute =
     path("") {
