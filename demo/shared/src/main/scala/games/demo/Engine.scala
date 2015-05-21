@@ -362,8 +362,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           val screenSizeFactorForMaxSpeed: Float = 12
 
           currentVelocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / refSize * maxLateralSpeed
-          if (currentPosition.y < originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / refSize * maxForwardSpeed
-          if (currentPosition.y > originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / refSize * maxBackwardSpeed
+          if (currentPosition.y < originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat / refSize * screenSizeFactorForMaxSpeed * maxForwardSpeed
+          if (currentPosition.y > originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat / refSize * screenSizeFactorForMaxSpeed * maxBackwardSpeed
 
         case None => this.moveTouch -= identifier
       }
