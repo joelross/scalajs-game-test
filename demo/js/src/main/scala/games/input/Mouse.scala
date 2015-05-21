@@ -158,13 +158,11 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     if (JsUtils.autoToggling) this.locked = lockRequested // If the lock state has changed against the wish of the user, change back ASAP
     //js.Dynamic.global.console.log("onPointerLockChange", this.locked, e)
 
-    // Chrome seems to move the cursor when unlocking it (causing unwanted movement), let's ignore it if it happens during the next 20ms
-    if (!this.locked) {
-      this.ignoreNextRelativeMove = true
-      js.Dynamic.global.setTimeout(() => {
-        this.ignoreNextRelativeMove = false
-      }, 20)
-    }
+    // Chrome seems to move the cursor when changing lock state (causing unwanted movement), let's ignore it if it happens during the next 20ms
+    this.ignoreNextRelativeMove = true
+    js.Dynamic.global.setTimeout(() => {
+      this.ignoreNextRelativeMove = false
+    }, 20)
   }
   private val onPointerLockError: js.Function = (e: js.Dynamic) => {
     // nothing to do?
