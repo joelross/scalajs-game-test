@@ -3,7 +3,7 @@ package games.demo
 import scala.concurrent.{ Future, ExecutionContext }
 import games.{ Utils, Resource }
 import games.opengl.{ Token, GLES2 }
-import games.math.{ Vector2f, Vector3f, Vector4f, Matrix2f, Matrix3f, Matrix4f }
+import games.math._
 import games.utils.SimpleOBJParser
 
 import scala.collection.mutable
@@ -499,6 +499,12 @@ object Rendering {
     var sightVerticesBuffer: Token.Buffer = _
     var sightIndicesBuffer: Token.Buffer = _
 
+    var healthVerticesBuffer: Token.Buffer = _
+    var healthIndicesBuffer: Token.Buffer = _
+
+    var sightRenderCount: Int = _
+    var healthRenderCount: Int = _
+
     var positionAttrLoc: Int = _
 
     var colorUniLoc: Token.UniformLocation = _
@@ -518,36 +524,62 @@ object Rendering {
       scaleXUniLoc = gl.getUniformLocation(program, "scaleX")
       scaleYUniLoc = gl.getUniformLocation(program, "scaleY")
 
+      // Sight
+
       val sightVerticesData = GLES2.createFloatBuffer(3 * 2) // 3 vertices, 2 coordinates each
       sightVerticesData.put(0f).put(0.1f)
       sightVerticesData.put(0.025f).put(0.2f)
       sightVerticesData.put(-0.025f).put(0.2f)
-
       sightVerticesData.flip()
 
       this.sightVerticesBuffer = gl.createBuffer()
-
       gl.bindBuffer(GLES2.ARRAY_BUFFER, sightVerticesBuffer)
       gl.bufferData(GLES2.ARRAY_BUFFER, sightVerticesData, GLES2.STATIC_DRAW)
 
-      val sightIndicesData = GLES2.createShortBuffer(3)
+      this.sightRenderCount = 3
+      val sightIndicesData = GLES2.createShortBuffer(sightRenderCount)
       sightIndicesData.put(0.toShort)
       sightIndicesData.put(1.toShort)
       sightIndicesData.put(2.toShort)
-
       sightIndicesData.flip()
 
       this.sightIndicesBuffer = gl.createBuffer()
-
       gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, sightIndicesBuffer)
       gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, sightIndicesData, GLES2.STATIC_DRAW)
-
-      gl.checkError()
 
       this.sightTransforms = new Array(3)
       this.sightTransforms(0) = Matrix3f.rotate2D(0f)
       this.sightTransforms(1) = Matrix3f.rotate2D(120f)
       this.sightTransforms(2) = Matrix3f.rotate2D(240f)
+
+      // Health indicator
+
+      val healthVerticesData = GLES2.createFloatBuffer(4 * 2) // 4 vertices, 2 coordinates each
+      healthVerticesData.put(-1f).put(1f)
+      healthVerticesData.put(-1f).put(0.95f)
+      healthVerticesData.put(+1f).put(1f)
+      healthVerticesData.put(+1f).put(0.95f)
+      healthVerticesData.flip()
+
+      this.healthVerticesBuffer = gl.createBuffer()
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, healthVerticesBuffer)
+      gl.bufferData(GLES2.ARRAY_BUFFER, healthVerticesData, GLES2.STATIC_DRAW)
+
+      this.healthRenderCount = 6
+      val healthIndicesData = GLES2.createShortBuffer(healthRenderCount)
+      healthIndicesData.put(0.toShort)
+      healthIndicesData.put(1.toShort)
+      healthIndicesData.put(2.toShort)
+      healthIndicesData.put(1.toShort)
+      healthIndicesData.put(2.toShort)
+      healthIndicesData.put(3.toShort)
+      healthIndicesData.flip()
+
+      this.healthIndicesBuffer = gl.createBuffer()
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, healthIndicesBuffer)
+      gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, healthIndicesData, GLES2.STATIC_DRAW)
+
+      gl.checkError()
     }
 
     def init()(implicit gl: GLES2): Unit = {
@@ -562,10 +594,13 @@ object Rendering {
 
     def render(playerId: Int, screenWidth: Int, screenHeight: Int, health: Float)(implicit gl: GLES2): Unit = {
       val screenRatio = screenHeight.toFloat / screenWidth.toFloat
+      val screenRatioInv = screenWidth.toFloat / screenHeight.toFloat
 
-      gl.uniform3f(colorUniLoc, Data.colors(playerId))
+      // Sight
       gl.uniform1f(scaleXUniLoc, screenRatio)
       gl.uniform1f(scaleYUniLoc, 1f)
+
+      gl.uniform3f(colorUniLoc, Data.colors(playerId))
 
       gl.bindBuffer(GLES2.ARRAY_BUFFER, this.sightVerticesBuffer)
       gl.vertexAttribPointer(positionAttrLoc, 2, GLES2.FLOAT, false, 0, 0)
@@ -574,8 +609,27 @@ object Rendering {
 
       for (transform <- this.sightTransforms) {
         gl.uniformMatrix3f(transformUniLoc, transform)
-        gl.drawElements(GLES2.TRIANGLES, 3, GLES2.UNSIGNED_SHORT, 0)
+        gl.drawElements(GLES2.TRIANGLES, this.sightRenderCount, GLES2.UNSIGNED_SHORT, 0)
       }
+
+      // Health
+      gl.uniform1f(scaleXUniLoc, 1f)
+      gl.uniform1f(scaleYUniLoc, 1f)
+
+      val healthRatio = health / 100f
+
+      val healthColor = new Vector3f(1f - healthRatio, healthRatio, 0f)
+      val healthTransform = Matrix3f.scale3D(new Vector3f(healthRatio, 1f, 1f))
+
+      gl.uniform3f(colorUniLoc, healthColor)
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, this.healthVerticesBuffer)
+      gl.vertexAttribPointer(positionAttrLoc, 2, GLES2.FLOAT, false, 0, 0)
+
+      gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, this.healthIndicesBuffer)
+
+      gl.uniformMatrix3f(transformUniLoc, healthTransform)
+      gl.drawElements(GLES2.TRIANGLES, this.healthRenderCount, GLES2.UNSIGNED_SHORT, 0)
     }
   }
 }
