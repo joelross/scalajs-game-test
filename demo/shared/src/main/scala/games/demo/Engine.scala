@@ -43,7 +43,7 @@ class Projectile(val id: Int, var position: Vector2f, val orientation: Float)
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   final val updateIntervalMs: Int = 50 // Resend position at 20Hz
   final val shotIntervalMs: Int = 250 // 4 shots per second
-  final val invulnerabilityTimeMs: Int = 5000 // 5 seconds of invulnerability when spawning
+  final val invulnerabilityTimeMs: Int = 10000 // 10 seconds of invulnerability when spawning
   final val configFile: String = "/games/demo/config"
   final val initialHealth: Float = 100
   final val damagePerShot: Float = 12.5f // 8 shots to destroy
