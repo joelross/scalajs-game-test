@@ -435,7 +435,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
 
       if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
-        val update = network.ClientPositionUpdate(Misc.conv(this.localPlayerState))
+        val update = network.ClientUpdate(Misc.conv(this.localPlayerState))
         sendMsg(update)
 
         this.lastTimeUpdateToServer = Some(now)

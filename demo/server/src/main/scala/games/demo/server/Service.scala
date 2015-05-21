@@ -205,7 +205,7 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
         this.synchronized { latency = elapsed.toInt }
         lastPingTime = None
       }
-    case x: network.ClientPositionUpdate => this.synchronized { this.state = x.state }
+    case x: network.ClientUpdate         => this.synchronized { this.state = x.state }
     case x: network.ClientProjectileShot => this.synchronized { this.projectileShotsData += x }
     case x: network.ClientProjectileHit  => this.synchronized { this.projectileHitsData += x }
   }

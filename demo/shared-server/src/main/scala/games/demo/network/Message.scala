@@ -24,6 +24,6 @@ case class ServerHello(playerId: Int) extends ServerMessage
 case class ServerUpdate(players: Seq[PlayerData], newEvents: Seq[Event]) extends ServerMessage
 // Server <- Client
 case object ClientPong extends ClientMessage
-case class ClientPositionUpdate(state: State) extends ClientMessage
+case class ClientUpdate(state: State) extends ClientMessage
 case class ClientProjectileShot(id: Int, position: Vector2, orientation: Float) extends ClientMessage
 case class ClientProjectileHit(id: Int, playerHitId: Int) extends ClientMessage
