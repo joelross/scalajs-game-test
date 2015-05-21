@@ -90,7 +90,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
 
   private val moveTouch: mutable.Map[Int, input.Position] = mutable.Map()
-  private val orientationTouch: mutable.Map[Int, (input.Position, Long)] = mutable.Map()
+  private val orientationTouch: mutable.Map[Int, input.Position] = mutable.Map()
+  private val timeTouch: mutable.Map[Int, Long] = mutable.Map()
 
   def ifPresent[T](action: Present => T): Option[T] = this.localPlayerState match {
     case x: Present => Some(action(x))
@@ -328,18 +329,20 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 if (touch.position.x < width / 2) { // Move
                   this.moveTouch += (touch.identifier -> touch.position)
                 } else { // Orientation
-                  this.orientationTouch += (touch.identifier -> (touch.position, now))
+                  this.orientationTouch += (touch.identifier -> touch.position)
                 }
+                this.timeTouch += (touch.identifier -> now)
               }
 
             case TouchEnd(touch) =>
-              for ((position, time) <- this.orientationTouch.get(touch.identifier)) {
+              for (time <- this.timeTouch.get(touch.identifier)) {
                 if ((now - time) < maxTouchTimeToShootMS) {
                   bulletShot = true
                 }
               }
               this.moveTouch -= touch.identifier
               this.orientationTouch -= touch.identifier
+              this.timeTouch -= touch.identifier
 
             case _ =>
           }
@@ -365,15 +368,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         case None => this.moveTouch -= identifier
       }
 
-      for ((identifier, value) <- this.orientationTouch) touchpad.touches.find { _.identifier == identifier } match {
+      for ((identifier, position) <- this.orientationTouch) touchpad.touches.find { _.identifier == identifier } match {
         case Some(touch) =>
-          val (position, pressTime) = value
           val previousPosition = position
           val currentPosition = touch.position
 
           changeOrientation += ((currentPosition.x - previousPosition.x).toFloat / refSize) * -300f
 
-          this.orientationTouch += identifier -> (currentPosition, pressTime)
+          this.orientationTouch += identifier -> currentPosition
 
         case None => this.orientationTouch -= identifier
       }
