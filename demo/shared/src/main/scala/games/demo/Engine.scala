@@ -348,6 +348,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
       processTouch()
 
+      val refSize = Math.max(width, height).toFloat
+
       for ((identifier, position) <- this.moveTouch) touchpad.touches.find { _.identifier == identifier } match {
         case Some(touch) =>
           val originalPosition = position
@@ -355,9 +357,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           val screenSizeFactorForMaxSpeed: Float = 12
 
-          currentVelocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / width * maxLateralSpeed
-          if (currentPosition.y < originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxForwardSpeed
-          if (currentPosition.y > originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / height * maxBackwardSpeed
+          currentVelocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / refSize * maxLateralSpeed
+          if (currentPosition.y < originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / refSize * maxForwardSpeed
+          if (currentPosition.y > originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat * screenSizeFactorForMaxSpeed / refSize * maxBackwardSpeed
 
         case None => this.moveTouch -= identifier
       }
@@ -368,7 +370,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           val previousPosition = position
           val currentPosition = touch.position
 
-          changeOrientation += ((currentPosition.x - previousPosition.x).toFloat / width.toFloat) * -300f
+          changeOrientation += ((currentPosition.x - previousPosition.x).toFloat / refSize) * -300f
 
           this.orientationTouch += identifier -> (currentPosition, pressTime)
 
