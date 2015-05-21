@@ -329,7 +329,7 @@ object Rendering {
         val wallTransform = Matrix4f.rotate3D(orientation, Vector3f.Up)
         for (wall <- walls) {
           val pos2d = wall
-          val pos3d = new Vector3f(pos2d.x, Map.roomHalfSize, pos2d.y)
+          val pos3d = new Vector3f(pos2d.x, 0f, pos2d.y)
 
           val transform = Matrix4f.translate3D(pos3d) * wallTransform
           val normalTransform = transform.toCartesian().invertedCopy().transposedCopy()
