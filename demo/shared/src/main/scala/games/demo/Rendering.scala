@@ -493,7 +493,7 @@ object Rendering {
     }
   }
 
-  object Sight {
+  object Hud {
     var program: Token.Program = _
 
     var verticesBuffer: Token.Buffer = _
@@ -564,7 +564,7 @@ object Rendering {
       gl.disableVertexAttribArray(positionAttrLoc)
     }
 
-    def render(playerId: Int, screenWidth: Int, screenHeight: Int)(implicit gl: GLES2): Unit = {
+    def render(playerId: Int, screenWidth: Int, screenHeight: Int, health: Float)(implicit gl: GLES2): Unit = {
       val screenRatio = screenHeight.toFloat / screenWidth.toFloat
 
       gl.uniform3f(colorUniLoc, Data.colors(playerId))

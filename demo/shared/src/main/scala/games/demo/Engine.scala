@@ -155,7 +155,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
         this.map = map
-        Rendering.Sight.setup(shaders("simple2d"))
+        Rendering.Hud.setup(shaders("simple2d"))
         Rendering.Standard.setup(shaders("simple3d"))
         Rendering.Wall.setup(shaders("simple3d"), wallMesh, map)
         Rendering.Player.setup(models("character"))
@@ -493,9 +493,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.disable(GLES2.DEPTH_TEST)
     gl.disable(GLES2.CULL_FACE)
 
-    Rendering.Sight.init()
-    Rendering.Sight.render(this.localPlayerId, width, height)
-    Rendering.Sight.close()
+    Rendering.Hud.init()
+    Rendering.Hud.render(this.localPlayerId, width, height, ifPresent(_.health).getOrElse(0f))
+    Rendering.Hud.close()
 
     //#### Ending
     continueCond = continueCond && itf.update()
