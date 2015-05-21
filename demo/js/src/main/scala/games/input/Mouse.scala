@@ -40,6 +40,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   private val eventQueue: mutable.Queue[MouseEvent] = mutable.Queue()
   private val downButtons: mutable.Set[Button] = mutable.Set()
 
+  private var ignoreNextRelativeMove = false
   private var lockRequested = false
 
   private def buttonFromEvent(ev: dom.raw.MouseEvent): Button = {
@@ -81,8 +82,12 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     val mx = movX.getOrElse(0.0).toInt
     val my = movY.getOrElse(0.0).toInt
 
-    dx += mx
-    dy += my
+    if (this.ignoreNextRelativeMove) {
+      this.ignoreNextRelativeMove = false
+    } else {
+      dx += mx
+      dy += my
+    }
 
     // Get position on element
     val offX = ev.offsetX.asInstanceOf[js.UndefOr[Double]]
@@ -152,6 +157,14 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   private val onPointerLockChange: js.Function = (e: js.Dynamic) => {
     if (JsUtils.autoToggling) this.locked = lockRequested // If the lock state has changed against the wish of the user, change back ASAP
     //js.Dynamic.global.console.log("onPointerLockChange", this.locked, e)
+
+    // Chrome seems to move the cursor when unlocking it (causing unwanted movement), let's ignore it if it happens during the next 20ms
+    if (!this.locked) {
+      this.ignoreNextRelativeMove = true
+      js.Dynamic.global.setTimeout(() => {
+        this.ignoreNextRelativeMove = false
+      }, 20)
+    }
   }
   private val onPointerLockError: js.Function = (e: js.Dynamic) => {
     // nothing to do?

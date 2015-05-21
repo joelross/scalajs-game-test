@@ -250,10 +250,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }.flatMap { _ => helloPacketReceived.future }
 
-    gl.enable(GLES2.DEPTH_TEST)
+    // GLES2.DEPTH_TEST
     gl.depthFunc(GLES2.LESS)
 
-    gl.enable(GLES2.CULL_FACE)
+    // GLES2.CULL_FACE
     gl.cullFace(GLES2.BACK)
     gl.frontFace(GLES2.CCW)
 
@@ -452,6 +452,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Clear the buffers
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
+    // 3D rendering
+    gl.enable(GLES2.DEPTH_TEST)
+    gl.enable(GLES2.CULL_FACE)
+
     // Camera data
     val (camPosition, camOrientation) = ifPresent { present =>
       (present.position, present.orientation)
@@ -482,6 +486,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       Rendering.Standard.render(playerId, Rendering.Bullet.mesh, transform, cameraTransformInv)
     }
     Rendering.Standard.close()
+
+    // 2D rendering
+
+    gl.disable(GLES2.DEPTH_TEST)
+    gl.disable(GLES2.CULL_FACE)
 
     //#### Ending
     continueCond = continueCond && itf.update()
