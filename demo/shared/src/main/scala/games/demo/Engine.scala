@@ -494,7 +494,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.disable(GLES2.CULL_FACE)
 
     Rendering.Sight.init()
-    Rendering.Sight.render(width, height)
+    Rendering.Sight.render(this.localPlayerId, width, height)
     Rendering.Sight.close()
 
     //#### Ending
