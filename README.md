@@ -6,13 +6,19 @@ Library for graphics/audio/inputs for Scala.js
 
 ### Commands
 
-The controls are the well-known WASD:
+The mouse-keyboard controls are the well-known WASD:
 * Maintain **W** to go forward, **S** to go backward, **A** to move left, **D** to move right
 * Left mouse button to shoot and mouse movement to change the orientation
 * Press **Escape** to exit
 * Press **F** to toggle fullscreen
 * Press **L** to toggle pointer lock
 * Press **Tab** to alternate between Qwerty and Azerty key-mapping.
+
+The touchscreen controls are:
+* Left part of the screen to move
+* Right part of the screen to change the orientation
+* Tap the screen to shoot
+* Tap top-left of the screen to toggle fullscreen
 
 Players are dispatched in room of up to 4 players.
 
