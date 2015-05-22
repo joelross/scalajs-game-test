@@ -44,7 +44,7 @@ class Vector3f extends Vector {
     this
   }
 
-  def normalise(): Vector3f = {
+  def normalize(): Vector3f = {
     val l = length
     this /= l
     this
@@ -144,6 +144,12 @@ class Vector3f extends Vector {
     Vector3f.div(this, v, this)
   }
 
+  def toCartesian(): Vector2f = {
+    val ret = new Vector2f
+    Vector3f.setCartesian(this, ret)
+    ret
+  }
+
   def toHomogeneous(): Vector4f = {
     val ret = new Vector4f
     Vector3f.setHomogeneous(this, ret)
@@ -179,11 +185,16 @@ object Vector3f {
     dst.z = src.z
   }
 
+  def setCartesian(src: Vector3f, dst: Vector2f): Unit = {
+    dst.x = src.x
+    dst.y = src.y
+  }
+
   def setHomogeneous(src: Vector3f, dst: Vector4f): Unit = {
     dst.x = src.x
     dst.y = src.y
     dst.z = src.z
-    dst.z = 1f
+    dst.w = 1f
   }
 
   def negate(v1: Vector3f, dst: Vector3f): Unit = {

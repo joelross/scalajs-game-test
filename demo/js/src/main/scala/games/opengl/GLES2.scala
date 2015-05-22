@@ -80,8 +80,10 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
       canvas.height = canvasPrevDim._2
     } else {
       // Necessary for the size of the canvas (Chrome) and its resolution (Firefox)
-      canvas.width = screen.width
-      canvas.height = screen.height
+      val screenWidth = screen.width
+      val screenHeight = screen.height
+      canvas.width = screenWidth
+      canvas.height = screenHeight
 
       if (JsUtils.orientationLockOnFullscreen) {
         games.input.AccelerometerJS.lockOrientation(games.input.AccelerometerJS.currentOrientation())
@@ -199,6 +201,8 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
 }
 
 class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext) extends GLES2 {
+  require(webGL != null)
+
   def this(canvas: dom.html.Canvas) = {
     this((canvas.getContext("webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).orElse(canvas.getContext("experimental-webgl").asInstanceOf[js.UndefOr[dom.raw.WebGLRenderingContext]]).getOrElse(throw new RuntimeException("WebGL not supported by the browser")))
   }
@@ -558,7 +562,7 @@ class GLES2WebGL(webGL: dom.raw.WebGLRenderingContext) extends GLES2 {
   }
 
   final def getError(): Int = {
-    webGL.getError().toInt
+    webGL.getError().asInstanceOf[Double].toInt
   }
 
   final def getFramebufferAttachmentParameteri(target: Int, attachment: Int, pname: Int): Int = {

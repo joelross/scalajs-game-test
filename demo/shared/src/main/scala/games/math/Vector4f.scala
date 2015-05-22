@@ -49,7 +49,7 @@ class Vector4f extends Vector {
     this
   }
 
-  def normalise(): Vector4f = {
+  def normalize(): Vector4f = {
     val l = length
     this /= l
     this
@@ -171,9 +171,9 @@ object Vector4f {
   }
 
   def setCartesian(src: Vector4f, dst: Vector3f): Unit = {
-    dst.x = src.x / src.w
-    dst.y = src.y / src.w
-    dst.z = src.z / src.w
+    dst.x = src.x
+    dst.y = src.y
+    dst.z = src.z
   }
 
   def negate(v1: Vector4f, dst: Vector4f): Unit = {

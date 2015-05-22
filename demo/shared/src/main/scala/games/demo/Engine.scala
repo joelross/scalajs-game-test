@@ -6,8 +6,7 @@ import games.demo.Specifics.WebSocketClient
 
 import scala.concurrent.{ Promise, Future, ExecutionContext }
 import games._
-import games.math
-import games.math.{ Vector3f, Vector4f, Matrix3f, Matrix4f }
+import games.math._
 import games.opengl._
 import games.audio._
 import games.input._
@@ -35,21 +34,25 @@ abstract class EngineInterface {
   def close(): Unit
 }
 
-class ShipData(var position: Vector3f, var velocity: Float, var orientation: Vector3f, var rotation: Vector3f)
-class ExternalShipData(var id: Int, var data: ShipData, var latency: Int)
+sealed abstract class State
+object Absent extends State
+class Present(var position: Vector2f, var velocity: Vector2f, var orientation: Float, var health: Float) extends State
 
-class BulletData(var id: Int, var shooterId: Int, var position: Vector3f, var orientation: Vector3f)
+class Projectile(val id: Int, var position: Vector2f, val orientation: Float)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
-  val updateIntervalMs = 50 // Resend position at 20Hz
-  val shotIntervalMs = 500 // 2 shots per second max
-  val rotationMultiplier: Float = 50.0f
-  val hitDamage: Float = 25f
-  val terrainSize: Float = 50f
-  val initHealth: Float = 100f
-  val minSpeed: Float = 2f
-  val maxSpeed: Float = 6f
-  val maxDeviceAngle: Float = 90f
+  final val updateIntervalMs: Int = 50 // Resend position at 20Hz
+  final val shotIntervalMs: Int = 250 // 4 shots per second
+  final val invulnerabilityTimeMs: Int = 10000 // 10 seconds of invulnerability when spawning
+  final val configFile: String = "/games/demo/config"
+  final val initialHealth: Float = 100
+  final val damagePerShot: Float = 12.5f // 8 shots to destroy
+
+  final val maxForwardSpeed: Float = 4f
+  final val maxBackwardSpeed: Float = 2f
+  final val maxLateralSpeed: Float = 3f
+
+  final val maxTouchTimeToShootMS: Int = 100
 
   def context: games.opengl.GLES2 = gl
 
@@ -62,33 +65,42 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var touchpad: Option[Touchpad] = None
   private var accelerometer: Option[Accelerometer] = None
 
-  private var config: Map[String, String] = _
+  private var config: immutable.Map[String, String] = _
 
   private var connection: Option[ConnectionHandle] = None
-  private var localPlayerId: Int = 0
-  private var localPlayerHealth: Float = initHealth
 
   private var screenDim: (Int, Int) = _
 
-  private var initPosition: Vector3f = _
-  private var initOrientation: Vector3f = _
+  private var map: Map = _
 
-  private var localShipData: ShipData = new ShipData(new Vector3f, 0f, new Vector3f, new Vector3f)
-  private var extShipsData: Map[Int, ExternalShipData] = Map()
-
-  private var bulletsData: mutable.Map[Int, BulletData] = mutable.Map()
+  private var localPlayerId: Int = 0
 
   private var lastTimeUpdateFromServer: Option[Long] = None
   private var lastTimeUpdateToServer: Option[Long] = None
 
-  private var lastTimeBulletShot: Option[Long] = None
+  private var lastTimeProjectileShot: Option[Long] = None
+  private var lastTimeSpawn: Option[Long] = None
 
   private var centerVAngle: Option[Float] = None
 
-  private def conv(v: Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
-  private def conv(v: Vector3f): Vector3 = Vector3(v.x, v.y, v.z)
+  private var layout: KeyLayout = Qwerty
 
-  def sendMsg(msg: ClientMessage): Unit = connection match {
+  private var localPlayerState: State = Absent
+  private var externalPlayersState: immutable.Map[Int, State] = immutable.Map()
+
+  private var nextProjectileId = 0
+  private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
+
+  private var moveTouch: Option[(Int, input.Position)] = None
+  private var orientationTouch: Option[(Int, input.Position)] = None
+  private val timeTouches: mutable.Map[Int, Long] = mutable.Map()
+
+  def ifPresent[T](action: Present => T): Option[T] = this.localPlayerState match {
+    case x: Present => Some(action(x))
+    case _          => None // nothing to do
+  }
+
+  def sendMsg(msg: network.ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
     case Some(conn) =>
       val data = upickle.write(msg)
@@ -126,26 +138,34 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     audioContext.volume = 0.25f // Lower the initial global volume
 
     // Load main config file
-    val configFuture = Misc.loadConfigFile(Resource("/games/demo/config"))
+    val configFuture = Misc.loadConfigFile(Resource(configFile))
 
     // Loading data
     val dataFuture = configFuture.flatMap { config =>
       this.config = config
 
-      val modelsFuture = Rendering.loadAllModels("/games/demo/models", gl, loopExecutionContext)
-      val shadersFuture = Rendering.loadAllShaders("/games/demo/shaders", gl, loopExecutionContext)
+      val modelsFuture = Rendering.loadAllModels(config("models"), gl, loopExecutionContext)
+      val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
+      val shadersFuture = Rendering.loadAllShaders(config("shaders"), gl, loopExecutionContext)
+      val mapFuture = Map.load(Resource(config("map")))
 
-      Future.sequence(Seq(modelsFuture, shadersFuture))
+      Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture))
     }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: Map[String, OpenGLMesh], shaders: Map[String, Token.Program]) =>
+      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map) =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
+        itf.printLine("Map size: " + map.width + " by " + map.height)
 
-        Rendering.Ship.setup(shaders("simple3d"), models("ship"))
-        Rendering.Bullet.setup(shaders("simple3d"), models("bullet"))
-        Rendering.Health.setup(shaders("health"))
+        this.map = map
+        Rendering.Hud.setup(shaders("simple2d"))
+        Rendering.Standard.setup(shaders("simple3d"))
+        Rendering.Wall.setup(shaders("simple3d"), wallMesh, map)
+        Rendering.Player.setup(models("character"))
+        Rendering.Bullet.setup(models("bullet"))
+
+        Physics.setupMap(map)
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
@@ -161,26 +181,26 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         // Wait for the Hello packet to register the connection
         conn.handlerPromise.success { msg =>
           val now = System.currentTimeMillis()
-          val serverMsg = upickle.read[ServerMessage](msg)
+          val serverMsg = upickle.read[network.ServerMessage](msg)
 
           Future { // To avoid concurrency issue, process the following in the loop thread
             serverMsg match {
-              case Ping => // answer that ASAP
-                sendMsg(Pong)
+              case network.ServerPing => // answer that ASAP
+                sendMsg(network.ClientPong)
 
-              case Hello(playerId, initPosition, initOrientation) =>
+              case network.ServerHello(playerId) =>
                 if (this.connection.isEmpty) {
                   this.connection = Some(conn)
-                  localPlayerId = playerId
-                  localShipData.position = conv(initPosition)
-                  localShipData.orientation = conv(initOrientation)
-                  this.initPosition = localShipData.position.copy()
-                  this.initOrientation = localShipData.orientation.copy()
+                  this.localPlayerId = playerId
+                  val startingPosition = this.map.startPositions(localPlayerId).center.copy()
+                  val startingOrientation = this.map.startOrientations(localPlayerId)
+                  this.localPlayerState = new Present(startingPosition, new Vector2f, startingOrientation, initialHealth)
+                  this.lastTimeSpawn = Some(now)
                   itf.printLine("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
                 }
 
-              case ServerUpdate(players, newEvents) =>
+              case network.ServerUpdate(players, newEvents) =>
                 lastTimeUpdateFromServer = Some(now)
 
                 val (locals, externals) = players.partition(_.id == localPlayerId)
@@ -188,22 +208,40 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 assert(locals.size == 1)
                 val local = locals.head
 
-                extShipsData = externals.flatMap { serverUpdatePlayerData =>
-                  serverUpdatePlayerData.space.map { spaceData =>
-                    (serverUpdatePlayerData.id, new ExternalShipData(serverUpdatePlayerData.id, new ShipData(conv(spaceData.position), spaceData.velocity, conv(spaceData.orientation), conv(spaceData.rotation)), serverUpdatePlayerData.latency + local.latency))
-                  }
+                this.externalPlayersState = externals.map { player =>
+                  val id = player.id
+                  val state = Misc.conv(player.state)
+                  (id, state)
                 }.toMap
+
                 newEvents.foreach {
-                  case BulletCreation(shotId, shooterId, initialPosition, orientation) => bulletsData += (shotId -> new BulletData(shotId, shooterId, conv(initialPosition), conv(orientation)))
-                  case BulletDestruction(shotId, playerHitId) =>
-                    bulletsData.remove(shotId)
-                    if (playerHitId == localPlayerId) localPlayerHealth -= hitDamage
-                    if (localPlayerHealth <= 0f) { // Reset the player's ship
-                      localPlayerHealth = initHealth
-                      localShipData.position = this.initPosition.copy()
-                      localShipData.orientation = this.initOrientation.copy()
+                  case network.ProjectileShot(network.ProjectileIdentifier(playerId, projId), position, orientation) =>
+                    if (playerId != this.localPlayerId) this.projectiles += (playerId -> new Projectile(projId, Misc.conv(position), orientation))
+
+                  case network.ProjectileHit(network.ProjectileIdentifier(playerId, projId), playerHitId) =>
+                    if (playerHitId == this.localPlayerId) {
+
+                      if (this.lastTimeSpawn.isDefined && (now - this.lastTimeSpawn.get) > invulnerabilityTimeMs) {
+                        ifPresent { present =>
+                          present.health -= damagePerShot
+                          if (present.health <= 0f) { // Reset the player
+                            val startingPosition = this.map.startPositions(localPlayerId).center.copy()
+                            val startingOrientation = this.map.startOrientations(localPlayerId)
+
+                            present.health = this.initialHealth
+                            present.position = startingPosition
+                            present.orientation = startingOrientation
+                            this.lastTimeSpawn = Some(now)
+                            //Console.println("You were hit by player " + playerId + " (you are dead, respawning)")
+                          } else {
+                            //Console.println("You were hit by player " + playerId + " (your health is at " + present.health + ")")
+                          }
+                        }
+                      } else {
+                        //Console.println("You were hit by player " + playerId + " (but you are invulnerable for now)")
+                      }
                     }
-                  case _ =>
+                    this.projectiles = projectiles.filterNot { case (curPlayerId, curProj) => playerId == curPlayerId && projId == curProj.id }
                 }
             }
           }(loopExecutionContext)
@@ -217,8 +255,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }.flatMap { _ => helloPacketReceived.future }
 
-    gl.enable(GLES2.DEPTH_TEST)
+    // GLES2.DEPTH_TEST
     gl.depthFunc(GLES2.LESS)
+
+    // GLES2.CULL_FACE
+    gl.cullFace(GLES2.BACK)
+    gl.frontFace(GLES2.CCW)
+
+    gl.clearColor(0.75f, 0.75f, 0.75f, 1f) // Grey background
 
     val width = gl.display.width
     val height = gl.display.height
@@ -236,19 +280,30 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val width = gl.display.width
     val height = gl.display.height
 
+    val delta = mouse.deltaPosition
+
     var bulletShot = false
 
-    //#### Update from inputs
-    val delta = mouse.deltaPosition
+    val currentVelocity = new Vector2f
+    var changeOrientation = 0f
 
     def processKeyboard() {
       val optKeyEvent = keyboard.nextEvent()
       for (keyEvent <- optKeyEvent) {
-        if (keyEvent.down) keyEvent.key match {
-          case Key.Escape => continueCond = false
-          case Key.L      => mouse.locked = !mouse.locked
-          case Key.F      => gl.display.fullscreen = !gl.display.fullscreen
-          case _          => // nothing to do
+        if (keyEvent.down) {
+          val key = keyEvent.key
+
+          if (key == layout.mouseLock) mouse.locked = !mouse.locked
+          else if (key == layout.fullscreen) gl.display.fullscreen = !gl.display.fullscreen
+          else if (key == layout.changeLayout) {
+            if (layout == Qwerty) {
+              itf.printLine("Changing keyboard layout for Azerty")
+              layout = Azerty
+            } else {
+              itf.printLine("Changing keyboard layout for Qwerty")
+              layout = Qwerty
+            }
+          } else if (key == layout.escape) continueCond = false
         }
 
         processKeyboard() // process next event
@@ -274,130 +329,133 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val optTouchEvent = touchpad.nextEvent()
         for (touchEvent <- optTouchEvent) {
           touchEvent match {
-            case TouchStart(data) =>
-              if (data.position.y < height / 4) { // If tapped in the upper part of the screen
-                if (data.position.x < width / 2) {
+            case TouchStart(touch) =>
+              if (touch.position.y < height / 4) { // Config
+                if (touch.position.x < width / 2) {
                   gl.display.fullscreen = !gl.display.fullscreen
-                } else { // Reset vertical axis center
-                  centerVAngle = None // Will be set by the next accelerometer check
+                } else {
+                  // TODO
                 }
-              } else {
-                bulletShot = true
+              } else { // Control
+                if (touch.position.x < width / 2) { // Move
+                  if (this.moveTouch.isEmpty) this.moveTouch = Some(touch.identifier -> touch.position)
+                } else { // Orientation
+                  if (this.orientationTouch.isEmpty) this.orientationTouch = Some(touch.identifier -> touch.position)
+                }
+                this.timeTouches += (touch.identifier -> now)
               }
-            case TouchEnd(data) =>
-            case _              =>
+
+            case TouchEnd(touch) =>
+              for (time <- this.timeTouches.get(touch.identifier)) {
+                if ((now - time) < maxTouchTimeToShootMS) {
+                  bulletShot = true
+                }
+              }
+              for ((id, _) <- this.moveTouch) if (id == touch.identifier) this.moveTouch = None
+              for ((id, _) <- this.orientationTouch) if (id == touch.identifier) this.orientationTouch = None
+              this.timeTouches -= touch.identifier
+
+            case _ =>
           }
 
           processTouch() // process next event
         }
       }
       processTouch()
-    }
 
-    // Apply inputs to local ship
-    if (keyboard.isKeyDown(Key.W)) localShipData.velocity = maxSpeed
-    else if (keyboard.isKeyDown(Key.S)) localShipData.velocity = minSpeed
-    else localShipData.velocity = (maxSpeed + minSpeed) / 2
+      val refSize = Math.max(width, height).toFloat
 
-    val mouseRotationX = (delta.x.toFloat / width.toFloat) * -rotationMultiplier
-    val mouseRotationY = (delta.y.toFloat / height.toFloat) * -rotationMultiplier
-    val mouseRotationXSpeed = mouseRotationX / elapsedSinceLastFrame
-    val mouseRotationYSpeed = mouseRotationY / elapsedSinceLastFrame
+      for ((identifier, position) <- this.moveTouch) touchpad.touches.find { _.identifier == identifier } match {
+        case Some(touch) =>
+          val originalPosition = position
+          val currentPosition = touch.position
 
-    val accRotationSpeed = for (
-      acc <- accelerometer;
-      accVec <- acc.current()
-    ) yield {
-      val vAngle = Physics.angleCentered(Math.toDegrees(Math.atan2(-accVec.z, -accVec.y)).toFloat)
-      val hAngle = Physics.angleCentered(Math.toDegrees(Math.atan2(accVec.x, -accVec.y)).toFloat)
+          val screenSizeFactorForMaxSpeed: Float = 12
 
-      /*
-       * Holding the device straight up in front of you: vAngle = 0, hAngle = 0
-       * Tilting the device to the right: hAngle > 0
-       * Tilting the device to the left: hAngle < 0
-       * Tilting the device on his back: vAngle > 0
-       * Tilting the device on his screen: vAngle < 0
-       */
+          currentVelocity.x += (currentPosition.x - originalPosition.x).toFloat * screenSizeFactorForMaxSpeed / refSize * maxLateralSpeed
+          if (currentPosition.y < originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat / refSize * screenSizeFactorForMaxSpeed * maxForwardSpeed
+          if (currentPosition.y > originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat / refSize * screenSizeFactorForMaxSpeed * maxBackwardSpeed
 
-      if (centerVAngle.isEmpty) centerVAngle = Some(vAngle) // If there isn't any center for vAngle yet, use the current one
-      val refVAngle = centerVAngle.get
+        case None => this.moveTouch = None
+      }
 
-      val diffVAngle = Physics.angleCentered(vAngle - refVAngle)
+      for ((identifier, position) <- this.orientationTouch) touchpad.touches.find { _.identifier == identifier } match {
+        case Some(touch) =>
+          val previousPosition = position
+          val currentPosition = touch.position
 
-      (Physics.interpol(hAngle, +maxDeviceAngle, -maxDeviceAngle, -Physics.maxRotationXSpeed, +Physics.maxRotationXSpeed),
-        Physics.interpol(diffVAngle, +maxDeviceAngle, -maxDeviceAngle, -Physics.maxRotationYSpeed, +Physics.maxRotationYSpeed))
-    }
+          changeOrientation += ((currentPosition.x - previousPosition.x).toFloat / refSize) * -300f
 
-    val inputRotationXSpeed = mouseRotationXSpeed + accRotationSpeed.map(_._1).getOrElse(0f)
-    val inputRotationYSpeed = mouseRotationYSpeed + accRotationSpeed.map(_._2).getOrElse(0f)
+          this.orientationTouch = Some(identifier -> currentPosition)
 
-    localShipData.rotation.x = if (Math.abs(inputRotationXSpeed) > Physics.maxRotationXSpeed) Math.signum(inputRotationXSpeed) * Physics.maxRotationXSpeed else inputRotationXSpeed
-    localShipData.rotation.y = if (Math.abs(inputRotationYSpeed) > Physics.maxRotationYSpeed) Math.signum(inputRotationYSpeed) * Physics.maxRotationYSpeed else inputRotationYSpeed
-
-    //#### Simulation
-
-    // Ships
-    Physics.stepShip(elapsedSinceLastFrame, localShipData) // Local Player
-    for ((shipId, shipData) <- extShipsData) { // External players
-      Physics.stepShip(elapsedSinceLastFrame, shipData.data)
-    }
-
-    // Make sure the ship remains on the terrain
-    if (Math.abs(localShipData.position.x) > terrainSize) localShipData.position.x = Math.signum(localShipData.position.x) * terrainSize
-    if (Math.abs(localShipData.position.y) > terrainSize) localShipData.position.y = Math.signum(localShipData.position.y) * terrainSize
-    if (Math.abs(localShipData.position.z) > terrainSize) localShipData.position.z = Math.signum(localShipData.position.z) * terrainSize
-
-    // Bullets
-    for ((bulletId, bulletData) <- bulletsData) {
-      Physics.stepBullet(elapsedSinceLastFrame, bulletData)
-    }
-
-    // Remove bullets out of the terrain
-    bulletsData --= (bulletsData.filter {
-      case (bulletId, bulletData) =>
-        Math.abs(bulletData.position.x) > terrainSize ||
-          Math.abs(bulletData.position.y) > terrainSize ||
-          Math.abs(bulletData.position.z) > terrainSize
-    }).keys
-
-    val hits: mutable.Set[(Int, Int)] = mutable.Set()
-    // Check collisions for our owns bullets
-    bulletsData.filter { case (bulletId, bulletData) => bulletData.shooterId == localPlayerId }.foreach {
-      case (bulletId, bulletData) => extShipsData.foreach {
-        case (shipId, shipData) =>
-          if ((bulletData.position - shipData.data.position).length <= 1f) {
-            hits += ((bulletId, shipId))
-          }
+        case None => this.orientationTouch = None
       }
     }
 
-    // Remove bullets that reached a target
-    for ((bulletId, shipId) <- hits) {
-      bulletsData.remove(bulletId)
+    if (keyboard.isKeyDown(layout.forward)) currentVelocity.y += -maxForwardSpeed
+    if (keyboard.isKeyDown(layout.backward)) currentVelocity.y += maxBackwardSpeed
+    if (keyboard.isKeyDown(layout.right)) currentVelocity.x += maxLateralSpeed
+    if (keyboard.isKeyDown(layout.left)) currentVelocity.x += -maxLateralSpeed
+
+    changeOrientation += (delta.x.toFloat / width.toFloat) * -200f
+
+    if (Math.abs(currentVelocity.x) > maxLateralSpeed) currentVelocity.x = Math.signum(currentVelocity.x) * maxLateralSpeed
+    if (currentVelocity.y < -maxForwardSpeed) currentVelocity.y = -maxForwardSpeed
+    if (currentVelocity.y > maxBackwardSpeed) currentVelocity.y = maxBackwardSpeed
+
+    ifPresent { present =>
+      present.velocity = currentVelocity
+      present.orientation += changeOrientation
+    }
+
+    val otherActivePlayers = externalPlayersState.flatMap {
+      case (playerId, state: Present) => Some(playerId, state)
+      case _                          => None
+    }
+    val activePlayers = otherActivePlayers ++ ifPresent { present => (this.localPlayerId, present) }
+
+    //#### Simulation
+
+    // Players
+    for (
+      (playerId, playerPresent) <- activePlayers
+    ) {
+      Physics.playerStep(playerPresent, elapsedSinceLastFrame)
+    }
+
+    // Projectiles
+    this.projectiles = this.projectiles.filter { projWithId =>
+      val (shooterId, projectile) = projWithId
+      val ret = Physics.projectileStep(projWithId, activePlayers, elapsedSinceLastFrame)
+      if (ret > 0 && shooterId == this.localPlayerId) for (conn <- connection) {
+        val hit = network.ClientProjectileHit(projectile.id, ret)
+        sendMsg(hit)
+      }
+      ret < 0
     }
 
     //#### Network
     for (conn <- connection) {
-      val position = conv(localShipData.position)
-      val velocity = localShipData.velocity
-      val orientation = conv(localShipData.orientation)
-      val rotation = conv(localShipData.rotation)
+      ifPresent { present =>
+        val uPosition = Misc.conv(present.position)
+        val uVelocity = Misc.conv(present.velocity)
+        val uOrientation = present.orientation
 
-      for (hit <- hits) {
-        val (bulletId, shipId) = hit
-        sendMsg(BulletHit(bulletId, shipId))
-      }
+        if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get > shotIntervalMs)) {
+          this.projectiles += (this.localPlayerId -> new Projectile(this.nextProjectileId, present.position.copy(), present.orientation))
+          val shot = network.ClientProjectileShot(this.nextProjectileId, uPosition, uOrientation)
+          sendMsg(shot)
 
-      if (bulletShot && (lastTimeBulletShot.isEmpty || now - lastTimeBulletShot.get > shotIntervalMs)) {
-        sendMsg(BulletShot(position, orientation))
-
-        lastTimeBulletShot = Some(now)
+          this.lastTimeProjectileShot = Some(now)
+          this.nextProjectileId += 1
+        }
       }
 
       if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
-        sendMsg(ClientPositionUpdate(position, velocity, orientation, rotation))
+        val update = network.ClientUpdate(Misc.conv(this.localPlayerState))
+        sendMsg(update)
 
-        lastTimeUpdateToServer = Some(now)
+        this.lastTimeUpdateToServer = Some(now)
       }
     }
 
@@ -408,40 +466,52 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       Rendering.setProjection(width, height)
     }
 
-    // Camera data
-    val cameraOrientation = localShipData.orientation.copy()
-    cameraOrientation.z = 0
-
-    val cameraTransform = Matrix4f.translate3D(localShipData.position) * Physics.matrixForOrientation(cameraOrientation).toHomogeneous()
-    val cameraTransformInv = cameraTransform.invertedCopy()
-
     // Clear the buffers
-    val r = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 1.0f)
-    val gb = Physics.interpol(localPlayerHealth, 100f, 0f, 0.75f, 0.0f)
-    gl.clearColor(r, gb, gb, 1f) // Background color depending of player's current health
-
     gl.clear(GLES2.COLOR_BUFFER_BIT | GLES2.DEPTH_BUFFER_BIT)
 
-    // Ships
-    Rendering.Ship.init()
-    for ((extId, shipData) <- extShipsData) {
-      val transform = Matrix4f.translate3D(shipData.data.position) * Physics.matrixForOrientation(shipData.data.orientation).toHomogeneous()
-      Rendering.Ship.render(extId, transform, cameraTransformInv)
-    }
-    Rendering.Ship.close()
+    // 3D rendering
+    gl.enable(GLES2.DEPTH_TEST)
+    gl.enable(GLES2.CULL_FACE)
 
-    // Bullets
-    Rendering.Bullet.init()
-    for ((bulletId, bulletData) <- bulletsData) {
-      val transform = Matrix4f.translate3D(bulletData.position) * Physics.matrixForOrientation(bulletData.orientation).toHomogeneous()
-      Rendering.Bullet.render(bulletData.shooterId, transform, cameraTransformInv)
+    // Camera data
+    val (camPosition, camOrientation) = ifPresent { present =>
+      (present.position, present.orientation)
+    }.getOrElse {
+      val startingPosition = this.map.startPositions(localPlayerId).center.copy()
+      val startingOrientation = this.map.startOrientations(localPlayerId)
+      (startingPosition, startingOrientation)
     }
-    Rendering.Bullet.close()
+    val cameraTransform = Matrix4f.translate3D(new Vector3f(camPosition.x, Map.roomHalfSize, camPosition.y)) * Matrix4f.rotate3D(camOrientation, Vector3f.Up)
+    val cameraTransformInv = cameraTransform.invertedCopy()
 
-    //Hud: health
-    Rendering.Health.init()
-    Rendering.Health.render(localPlayerHealth)
-    Rendering.Health.close()
+    Rendering.Wall.init()
+    Rendering.Wall.render(cameraTransformInv)
+    Rendering.Wall.close()
+
+    Rendering.Standard.init()
+    // Render players
+    for (
+      (playerId, playerPresent) <- activePlayers if (playerId != localPlayerId)
+    ) {
+      val transform = Matrix4f.translate3D(new Vector3f(playerPresent.position.x, Map.roomHalfSize, playerPresent.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(playerPresent.orientation, Vector3f.Up)
+      Rendering.Standard.render(playerId, Rendering.Player.mesh, transform, cameraTransformInv)
+    }
+
+    // Render projectiles
+    for ((playerId, projectile) <- this.projectiles) {
+      val transform = Matrix4f.translate3D(new Vector3f(projectile.position.x, Map.roomHalfSize, projectile.position.y)) * Matrix4f.scale3D(new Vector3f(1, 1, 1) * 0.5f) * Matrix4f.rotate3D(projectile.orientation, Vector3f.Up)
+      Rendering.Standard.render(playerId, Rendering.Bullet.mesh, transform, cameraTransformInv)
+    }
+    Rendering.Standard.close()
+
+    // 2D rendering
+
+    gl.disable(GLES2.DEPTH_TEST)
+    gl.disable(GLES2.CULL_FACE)
+
+    Rendering.Hud.init()
+    Rendering.Hud.render(this.localPlayerId, width, height, ifPresent(_.health).getOrElse(0f))
+    Rendering.Hud.close()
 
     //#### Ending
     continueCond = continueCond && itf.update()

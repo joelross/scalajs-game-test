@@ -17,7 +17,7 @@ import scalajs.concurrent.JSExecutionContext.Implicits.queue
 object Launcher extends js.JSApp {
   def main(): Unit = {
     JsUtils.setResourcePath("/resources")
-    JsUtils.orientationLockOnFullscreen = true
+    JsUtils.orientationLockOnFullscreen = false
     if (WebAudioContext.canUseAurora) Console.println("Aurora.js available as fallback")
 
     val output = dom.document.getElementById("demo-output")

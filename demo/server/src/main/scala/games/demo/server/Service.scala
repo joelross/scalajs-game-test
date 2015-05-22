@@ -1,9 +1,7 @@
 package games.demo.server
 
-import games.demo
-
+import games.demo.network
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import scala.concurrent.{ Future, Promise, ExecutionContext }
 import akka.pattern.ask
 import akka.actor.ActorRef
@@ -12,6 +10,8 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 import spray.routing._
 import spray.http._
+import spray.http.CacheDirectives._
+import spray.http.HttpHeaders._
 import MediaTypes._
 import spray.can.websocket
 import spray.can.websocket.frame.{ Frame, TextFrame, BinaryFrame }
@@ -21,11 +21,11 @@ import spray.can.websocket.FrameCommand
 import akka.actor.ActorRefFactory
 import spray.can.Http
 import akka.actor.Props
-
 import scala.collection.mutable
 import scala.collection.immutable
-
 import scala.concurrent.duration._
+import java.util.concurrent.Semaphore
+import scala.concurrent.Await
 
 sealed trait LocalMessage
 
@@ -44,13 +44,14 @@ case object RoomJoined extends LocalMessage // The room has accepted the player
 sealed trait ToPlayerMessage
 case object SendPing extends ToPlayerMessage // Request a ping sent to the client
 case object Disconnected extends ToPlayerMessage // Signal that the client has disconnected
-case object AskData extends ToPlayerMessage // request data of the player (expect responses)
 
 // Player response to GetData
-case class DataResponse(bulletShots: immutable.Seq[demo.BulletShot], bulletHits: immutable.Seq[demo.BulletHit], data: demo.ServerUpdatePlayerData) extends LocalMessage
+case class PlayerDataResponse(projShots: immutable.Seq[network.ClientProjectileShot], projHits: immutable.Seq[network.ClientProjectileHit], data: network.PlayerData)
 
 object GlobalLogic {
   var players: Set[Player] = Set[Player]()
+
+  private val lock = new Semaphore(1)
 
   private var nextRoomId = 0
   private val system = akka.actor.ActorSystem("GlobalLogic")
@@ -63,17 +64,23 @@ object GlobalLogic {
     actor
   }
 
-  def registerPlayer(playerActor: ConnectionActor): Unit = this.synchronized {
+  def registerPlayer(playerActor: ConnectionActor): Unit = {
+    lock.acquire()
     implicit val timeout = Timeout(5.seconds)
 
     def tryRegister(): Unit = {
       val playerRegistered = currentRoom ? RegisterPlayer(playerActor)
       playerRegistered.onSuccess {
         case RoomJoined => // Ok, nothing to do
+          lock.release()
 
         case RoomFull => // Room rejected the player, create a new room and try again
           currentRoom = newRoom()
           tryRegister()
+      }
+      playerRegistered.onFailure {
+        case _ =>
+          lock.release()
       }
     }
 
@@ -81,22 +88,8 @@ object GlobalLogic {
   }
 }
 
-object Init {
-  val positions = Map(1 -> demo.Vector3(0, 0, 50), // Player 1 starts behind
-    2 -> demo.Vector3(0, 0, -50), // Player 2 starts in front
-    3 -> demo.Vector3(50, 0, 0), // Player 3 starts on the right
-    4 -> demo.Vector3(-50, 0, 0)) // Player 4 starts on the left
-
-  val orientations = Map(1 -> demo.Vector3(0, 0, 0),
-    2 -> demo.Vector3(180, 0, 0),
-    3 -> demo.Vector3(90, 0, 0),
-    4 -> demo.Vector3(270, 0, 0))
-}
-
 class Room(val id: Int) extends Actor {
   println("Creating room " + id)
-
-  private var bulletId = 1
 
   val maxPlayers = 4
 
@@ -150,31 +143,25 @@ class Room(val id: Int) extends Actor {
       players.foreach { player => player.actor.self ! SendPing }
 
     case UpdateReminder =>
-      implicit val timeout = Timeout(100.milliseconds)
+      val playersResponse = players.map { player => player.getData() }
 
-      val playersData = players.map { player =>
-        (player.actor.self ? AskData).asInstanceOf[Future[DataResponse]]
-      }
+      val playersMsgData = playersResponse.map { response => response.data }.toSeq
 
-      val allFuture = Future.sequence(playersData)
+      val projectileShotsData = (for (playerResponse <- playersResponse; projShot <- playerResponse.projShots) yield {
+        val projId = network.ProjectileIdentifier(playerResponse.data.id, projShot.id)
+        network.ProjectileShot(projId, projShot.position, projShot.orientation)
+      }).toSeq
 
-      for (all <- allFuture) {
-        val playersData = (for (playerResponse <- all) yield {
-          playerResponse.data
-        }).toSeq
-        val bulletShotsData = (for (playerResponse <- all; bulletShot <- playerResponse.bulletShots) yield {
-          val bulletCreation = demo.BulletCreation(bulletId, playerResponse.data.id, bulletShot.initialPosition, bulletShot.orientation)
-          bulletId += 1
-          bulletCreation.asInstanceOf[demo.Event]
-        }).toSeq
-        val bulletHitsData = (for (playerResponse <- all; bulletHit <- playerResponse.bulletHits) yield {
-          demo.BulletDestruction(bulletHit.bulletId, bulletHit.playerHitId).asInstanceOf[demo.Event]
-        }).toSeq
-        val events = immutable.Seq() ++ bulletShotsData ++ bulletHitsData
-        val updateMsg = demo.ServerUpdate(playersData, events)
-        players.foreach { player =>
-          player.sendToClient(updateMsg)
-        }
+      val projectileHitsData = (for (playerResponse <- playersResponse; projHit <- playerResponse.projHits) yield {
+        val projId = network.ProjectileIdentifier(playerResponse.data.id, projHit.id)
+        network.ProjectileHit(projId, projHit.playerHitId)
+      }).toSeq
+
+      val events = immutable.Seq() ++ projectileShotsData ++ projectileHitsData
+      val updateMsg = network.ServerUpdate(playersMsgData, events)
+
+      players.foreach { player =>
+        player.sendToClient(updateMsg)
       }
   }
 }
@@ -182,19 +169,25 @@ class Room(val id: Int) extends Actor {
 class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
   // Init
   actor.playerLogic = Some(this)
-  sendToClient(demo.Hello(id, Init.positions(id), Init.orientations(id)))
+  sendToClient(network.ServerHello(id))
 
   private var lastPingTime: Option[Long] = None
 
-  var latency: Option[Int] = None
+  private var latency: Int = 0
+  private var state: network.State = network.Absent
+  private val projectileShotsData: mutable.Queue[network.ClientProjectileShot] = mutable.Queue()
+  private val projectileHitsData: mutable.Queue[network.ClientProjectileHit] = mutable.Queue()
 
-  var positionData: Option[demo.ClientPositionUpdate] = None
-  val bulletShotsData: mutable.Queue[demo.BulletShot] = mutable.Queue()
-  val bulletHitsData: mutable.Queue[demo.BulletHit] = mutable.Queue()
-
-  def sendToClient(msg: demo.ServerMessage): Unit = {
+  def sendToClient(msg: network.ServerMessage): Unit = {
     val data = upickle.write(msg)
     actor.sendString(data)
+  }
+
+  def getData(): PlayerDataResponse = this.synchronized {
+    val ret = PlayerDataResponse(immutable.Seq() ++ projectileShotsData, immutable.Seq() ++ projectileHitsData, network.PlayerData(this.id, this.latency, this.state))
+    projectileShotsData.clear()
+    projectileHitsData.clear()
+    ret
   }
 
   def handleLocalMessage(msg: ToPlayerMessage): Unit = msg match {
@@ -204,25 +197,19 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
 
     case SendPing =>
       lastPingTime = Some(System.currentTimeMillis())
-      sendToClient(demo.Ping)
-
-    case AskData =>
-      actor.sender ! DataResponse(immutable.Seq() ++ bulletShotsData, immutable.Seq() ++ bulletHitsData, demo.ServerUpdatePlayerData(this.id, this.latency.getOrElse(0), positionData.map { data => demo.SpaceData(data.position, data.velocity, data.orientation, data.rotation) }))
-      bulletShotsData.clear()
-      bulletHitsData.clear()
+      sendToClient(network.ServerPing)
   }
 
-  def handleClientMessage(msg: demo.ClientMessage): Unit = msg match {
-    case demo.Pong => // client's response
+  def handleClientMessage(msg: network.ClientMessage): Unit = msg match {
+    case network.ClientPong => // client's response
       for (time <- lastPingTime) {
         val elapsed = (System.currentTimeMillis() - time) / 2
-        //println("Latency of player " + id + " in room " + room.id + " is " + elapsed + " ms")
-        latency = Some(elapsed.toInt)
+        this.synchronized { latency = elapsed.toInt }
         lastPingTime = None
       }
-    case x: demo.ClientPositionUpdate => positionData = Some(x)
-    case x: demo.BulletShot           => bulletShotsData += x
-    case x: demo.BulletHit            => bulletHitsData += x
+    case x: network.ClientUpdate         => this.synchronized { this.state = x.state }
+    case x: network.ClientProjectileShot => this.synchronized { this.projectileShotsData += x }
+    case x: network.ClientProjectileHit  => this.synchronized { this.projectileHitsData += x }
   }
 }
 
@@ -244,7 +231,7 @@ class ConnectionActor(val serverConnection: ActorRef) extends HttpServiceActor w
         val payload = tf.payload
         val text = payload.utf8String
         if (!text.isEmpty()) {
-          val clientMsg = upickle.read[demo.ClientMessage](text)
+          val clientMsg = upickle.read[network.ClientMessage](text)
           logic.handleClientMessage(clientMsg)
         }
       case None => println("Warning: connection not yet upgraded to player; can not process client message")
@@ -266,8 +253,10 @@ class ConnectionActor(val serverConnection: ActorRef) extends HttpServiceActor w
 
   def businessLogicNoUpgrade: Receive = {
     implicit val refFactory: ActorRefFactory = context
-    runRoute(myRoute)
+    runRoute(cachedRoute)
   }
+
+  def cachedRoute = respondWithHeader(`Cache-Control`(`public`, `no-cache`)) { myRoute }
 
   val myRoute =
     path("") {

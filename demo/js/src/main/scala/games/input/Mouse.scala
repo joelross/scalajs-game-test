@@ -40,6 +40,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   private val eventQueue: mutable.Queue[MouseEvent] = mutable.Queue()
   private val downButtons: mutable.Set[Button] = mutable.Set()
 
+  private var ignoreNextRelativeMove = false
   private var lockRequested = false
 
   private def buttonFromEvent(ev: dom.raw.MouseEvent): Button = {
@@ -75,18 +76,25 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     val ev = e.asInstanceOf[js.Dynamic]
 
     // Get relative position
-    val movX = JsUtils.getOptional[Int](ev, "movementX", "webkitMovementX", "mozMovementX")
-    val movY = JsUtils.getOptional[Int](ev, "movementY", "webkitMovementY", "mozMovementY")
+    val movX = JsUtils.getOptional[Double](ev, "movementX", "webkitMovementX", "mozMovementX")
+    val movY = JsUtils.getOptional[Double](ev, "movementY", "webkitMovementY", "mozMovementY")
 
-    dx = movX.getOrElse(0)
-    dy = movY.getOrElse(0)
+    val mx = movX.getOrElse(0.0).toInt
+    val my = movY.getOrElse(0.0).toInt
+
+    if (this.ignoreNextRelativeMove) {
+      this.ignoreNextRelativeMove = false
+    } else {
+      dx += mx
+      dy += my
+    }
 
     // Get position on element
-    val offX = ev.offsetX.asInstanceOf[js.UndefOr[Int]]
-    val offY = ev.offsetY.asInstanceOf[js.UndefOr[Int]]
+    val offX = ev.offsetX.asInstanceOf[js.UndefOr[Double]]
+    val offY = ev.offsetY.asInstanceOf[js.UndefOr[Double]]
 
     val (posX, posY) = if (offX.isDefined && offY.isDefined) { // For WebKit browsers
-      (offX.get, offY.get)
+      (offX.get.toInt, offY.get.toInt)
     } else { // For... the others
       val (offsetX, offsetY) = JsUtils.offsetOfElement(element)
       ((e.pageX - offsetX).toInt, (e.pageY - offsetY).toInt)
@@ -149,6 +157,12 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   private val onPointerLockChange: js.Function = (e: js.Dynamic) => {
     if (JsUtils.autoToggling) this.locked = lockRequested // If the lock state has changed against the wish of the user, change back ASAP
     //js.Dynamic.global.console.log("onPointerLockChange", this.locked, e)
+
+    // Chrome seems to move the cursor when changing lock state (causing unwanted movement), let's ignore it if it happens during the next 20ms
+    this.ignoreNextRelativeMove = true
+    js.Dynamic.global.setTimeout(() => {
+      this.ignoreNextRelativeMove = false
+    }, 20)
   }
   private val onPointerLockError: js.Function = (e: js.Dynamic) => {
     // nothing to do?

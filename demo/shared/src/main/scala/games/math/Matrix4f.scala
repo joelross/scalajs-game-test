@@ -547,17 +547,17 @@ object Matrix4f {
   }
 
   def setCartesian(src: Matrix4f, dst: Matrix3f): Unit = {
-    dst.m00 = src.m00 / src.m33
-    dst.m01 = src.m01 / src.m33
-    dst.m02 = src.m02 / src.m33
+    dst.m00 = src.m00
+    dst.m01 = src.m01
+    dst.m02 = src.m02
 
-    dst.m10 = src.m10 / src.m33
-    dst.m11 = src.m11 / src.m33
-    dst.m12 = src.m12 / src.m33
+    dst.m10 = src.m10
+    dst.m11 = src.m11
+    dst.m12 = src.m12
 
-    dst.m20 = src.m20 / src.m33
-    dst.m21 = src.m21 / src.m33
-    dst.m22 = src.m22 / src.m33
+    dst.m20 = src.m20
+    dst.m21 = src.m21
+    dst.m22 = src.m22
   }
 
   def negate(src: Matrix4f, dst: Matrix4f): Unit = {
@@ -805,13 +805,13 @@ object Matrix4f {
    * Generates the homogeneous rotation matrix for a given angle (in degrees) and a given unitary axis around the origin
    * See: https://www.opengl.org/sdk/docs/man2/xhtml/glRotate.xml
    */
-  def rotation3D(angle: Float, axis: Vector3f): Matrix4f = {
+  def rotate3D(angle: Float, axis: Vector3f): Matrix4f = {
     val ret = new Matrix4f
-    setRotation3D(angle, axis, ret)
+    setRotate3D(angle, axis, ret)
     ret
   }
 
-  def setRotation3D(angle: Float, axis: Vector3f, dst: Matrix4f): Unit = {
+  def setRotate3D(angle: Float, axis: Vector3f, dst: Matrix4f): Unit = {
     val radAngle = Math.toRadians(angle)
 
     val c = Math.cos(radAngle).toFloat
