@@ -91,9 +91,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var nextProjectileId = 0
   private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
 
-  private val moveTouch: mutable.Map[Int, input.Position] = mutable.Map()
-  private val orientationTouch: mutable.Map[Int, input.Position] = mutable.Map()
-  private val timeTouch: mutable.Map[Int, Long] = mutable.Map()
+  private var moveTouch: Option[(Int, input.Position)] = None
+  private var orientationTouch: Option[(Int, input.Position)] = None
+  private val timeTouches: mutable.Map[Int, Long] = mutable.Map()
 
   def ifPresent[T](action: Present => T): Option[T] = this.localPlayerState match {
     case x: Present => Some(action(x))
@@ -338,22 +338,22 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                 }
               } else { // Control
                 if (touch.position.x < width / 2) { // Move
-                  this.moveTouch += (touch.identifier -> touch.position)
+                  if (this.moveTouch.isEmpty) this.moveTouch = Some(touch.identifier -> touch.position)
                 } else { // Orientation
-                  this.orientationTouch += (touch.identifier -> touch.position)
+                  if (this.orientationTouch.isEmpty) this.orientationTouch = Some(touch.identifier -> touch.position)
                 }
-                this.timeTouch += (touch.identifier -> now)
+                this.timeTouches += (touch.identifier -> now)
               }
 
             case TouchEnd(touch) =>
-              for (time <- this.timeTouch.get(touch.identifier)) {
+              for (time <- this.timeTouches.get(touch.identifier)) {
                 if ((now - time) < maxTouchTimeToShootMS) {
                   bulletShot = true
                 }
               }
-              this.moveTouch -= touch.identifier
-              this.orientationTouch -= touch.identifier
-              this.timeTouch -= touch.identifier
+              for ((id, _) <- this.moveTouch) if (id == touch.identifier) this.moveTouch = None
+              for ((id, _) <- this.orientationTouch) if (id == touch.identifier) this.orientationTouch = None
+              this.timeTouches -= touch.identifier
 
             case _ =>
           }
@@ -376,7 +376,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           if (currentPosition.y < originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat / refSize * screenSizeFactorForMaxSpeed * maxForwardSpeed
           if (currentPosition.y > originalPosition.y) currentVelocity.y += (currentPosition.y - originalPosition.y).toFloat / refSize * screenSizeFactorForMaxSpeed * maxBackwardSpeed
 
-        case None => this.moveTouch -= identifier
+        case None => this.moveTouch = None
       }
 
       for ((identifier, position) <- this.orientationTouch) touchpad.touches.find { _.identifier == identifier } match {
@@ -386,9 +386,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           changeOrientation += ((currentPosition.x - previousPosition.x).toFloat / refSize) * -300f
 
-          this.orientationTouch += identifier -> currentPosition
+          this.orientationTouch = Some(identifier -> currentPosition)
 
-        case None => this.orientationTouch -= identifier
+        case None => this.orientationTouch = None
       }
     }
 
