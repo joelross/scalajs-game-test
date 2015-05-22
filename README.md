@@ -6,11 +6,14 @@ Library for graphics/audio/inputs for Scala.js
 
 ### Commands
 
+The controls are the well-known WASD:
+* Maintain **W** to go forward, **S** to go backward, **A** to move left, **D** to move right
+* Left mouse button to shoot and mouse movement to change the orientation
+
 * Press **Escape** to exit
 * Press **F** to toggle fullscreen
 * Press **L** to toggle pointer lock
-* Maintain **W** to accelerate or **S** to brake
-* Left mouse button to shoot and mouse movement to navigate
+* Press **Tab** to alternate between Qwerty and Azerty key-mapping.
 
 Players are dispatched in room of up to 4 players.
 
