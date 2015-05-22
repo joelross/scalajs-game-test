@@ -26,7 +26,7 @@ Players are dispatched in room of up to 4 players.
 
 #### General
 
-The address the clients will attempt to reach is located in the file ```demo/shared/src/main/resources/games/demo/config```. The responsible line is ```server=ws://localhost:8080/``` by default, which should be fine if you are using both the server and the client locally, but if you are planning to connect to the server from other machines, you should replace ```localhost``` by something more reachable (your IP or your domain name if you have one).
+The address the clients will attempt to reach is located in the file ```demo/shared/src/main/resources/games/demo/config```. The responsible line is ```server=ws://localhost:8080/``` by default, which should be fine if you are starting both the server and the client locally on the same machine, but if you are planning to connect to the server from other machines, you should replace ```localhost``` by something more reachable (your IP or your domain name if you have one).
 
 #### Server + Scala.js client
 
