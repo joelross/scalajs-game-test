@@ -71,8 +71,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var audioOutput: audio.Source = _
   private var audioOutputs3D: mutable.Map[Int, audio.Source3D] = mutable.Map()
-
-  private var shootAudioData: audio.BufferedData = _
+  private var audioPlayers: mutable.Set[audio.Player] = mutable.Set()
+  private var audioShootData: audio.BufferedData = _
 
   private var screenDim: (Int, Int) = _
 
@@ -177,7 +177,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         Physics.setupMap(map)
 
         // Audio
-        this.shootAudioData = audioData
+        this.audioShootData = audioData
         this.audioOutput = audioContext.createSource()
     }(loopExecutionContext)
 
