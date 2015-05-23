@@ -13,31 +13,21 @@ import scala.collection.mutable.Set
 class ALContext extends Context {
   AL.create()
 
-  def createBufferedData(res: games.Resource): games.audio.Data = new ALBufferedData(this, res)
-  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.Data = new ALRawData(this, data, format, channels, freq)
-  def createStreamingData(res: games.Resource): games.audio.Data = new ALStreamingData(this, res)
+  def prepareBufferedData(res: games.Resource): scala.concurrent.Future[games.audio.BufferedData] = ???
+  def prepareRawData(data: java.nio.ByteBuffer, format: games.audio.Format, channels: Int, freq: Int): scala.concurrent.Future[games.audio.BufferedData] = ???
+  def prepareStreamingData(res: games.Resource): scala.concurrent.Future[games.audio.Data] = ???
+
+  def createSource(): games.audio.Source = ???
+  def createSource3D(): games.audio.Source3D = ???
+
+  val listener: games.audio.Listener = new ALListener()
+
+  def volume: Float = ???
+  def volume_=(volume: Float): Unit = ???
 
   override def close(): Unit = {
     super.close()
     AL.destroy()
-  }
-
-  val listener: Listener = new ALListener()
-
-  private[games] var masterVolume = 1f
-
-  def volume: Float = masterVolume
-  def volume_=(volume: Float) = {
-    masterVolume = volume
-    sources.foreach { source => source.masterVolumeChanged() }
-  }
-
-  private val sources: Set[ALSource] = Set()
-  private[games] def addSource(source: ALSource): Unit = {
-    sources += source
-  }
-  private[games] def removeSource(source: ALSource): Unit = {
-    sources -= source
   }
 }
 

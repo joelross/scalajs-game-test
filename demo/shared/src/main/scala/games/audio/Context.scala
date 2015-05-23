@@ -1,6 +1,7 @@
 package games.audio
 
 import scala.concurrent.Future
+import scala.collection.mutable
 
 import games.Resource
 import games.math.Vector3f
@@ -27,7 +28,25 @@ abstract class Context extends Closeable {
   def volume: Float
   def volume_=(volume: Float)
 
-  def close(): Unit = {}
+  private[games] val datas: mutable.Set[Data] = mutable.Set()
+  private[games] def registerData(data: Data): Unit = datas += data
+  private[games] def unregisterData(data: Data): Unit = datas -= data
+
+  private[games] val sources: mutable.Set[AbstractSource] = mutable.Set()
+  private[games] def registerSource(source: AbstractSource): Unit = sources += source
+  private[games] def unregisterSource(source: AbstractSource): Unit = sources -= source
+
+  def close(): Unit = {
+    for (data <- this.datas) {
+      data.close()
+    }
+    for (source <- this.sources) {
+      source.close()
+    }
+
+    datas.clear()
+    sources.clear()
+  }
 }
 
 sealed trait Spatial {
@@ -48,7 +67,17 @@ abstract class Listener extends Closeable with Spatial {
 abstract class Data extends Closeable {
   def attach(source: AbstractSource): Future[games.audio.Player]
 
-  def close(): Unit = {}
+  private[games] val players: mutable.Set[Player] = mutable.Set()
+  private[games] def registerPlayer(player: Player): Unit = players += player
+  private[games] def unregisterPlayer(player: Player): Unit = players -= player
+
+  def close(): Unit = {
+    for (player <- players) {
+      player.close()
+    }
+
+    players.clear()
+  }
 }
 
 abstract class BufferedData extends Data {
@@ -74,7 +103,17 @@ abstract class Player extends Closeable {
 }
 
 abstract class AbstractSource extends Closeable {
-  def close(): Unit = {}
+  private[games] val players: mutable.Set[Player] = mutable.Set()
+  private[games] def registerPlayer(player: Player): Unit = players += player
+  private[games] def unregisterPlayer(player: Player): Unit = players -= player
+
+  def close(): Unit = {
+    for (player <- players) {
+      player.close()
+    }
+
+    players.clear()
+  }
 }
 abstract class Source extends AbstractSource
 abstract class Source3D extends AbstractSource with Spatial

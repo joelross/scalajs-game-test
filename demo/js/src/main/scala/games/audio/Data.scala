@@ -13,20 +13,10 @@ import games.JsUtils
 import games.math.Vector3f
 
 sealed trait JsAbstractSource extends AbstractSource {
-  protected val players: mutable.Set[JsPlayer] = mutable.Set()
-  def registerPlayer(player: JsPlayer): Unit = players += player
-  def unregisterPlayer(player: JsPlayer): Unit = players -= player
-
   def inputNode: js.Dynamic
 
   override def close(): Unit = {
     super.close()
-
-    for (player <- players) {
-      player.close()
-    }
-
-    players.clear()
   }
 }
 class JsSource(val ctx: WebAudioContext, outputNode: js.Dynamic) extends Source with JsAbstractSource {
@@ -69,18 +59,8 @@ class JsSource3D(val ctx: WebAudioContext, outputNode: js.Dynamic) extends Sourc
 }
 
 sealed trait JsData extends Data {
-  protected val players: mutable.Set[JsPlayer] = mutable.Set()
-  def registerPlayer(player: JsPlayer): Unit = players += player
-  def unregisterPlayer(player: JsPlayer): Unit = players -= player
-
   override def close(): Unit = {
     super.close()
-
-    for (player <- players) {
-      player.close()
-    }
-
-    players.clear()
   }
 }
 
