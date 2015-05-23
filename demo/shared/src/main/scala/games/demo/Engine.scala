@@ -174,7 +174,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val dataFuture = audioContext.prepareBufferedData(new Resource("/games/demo/sounds/test_mono.ogg"))
         val source = audioContext.createSource3D()
 
-        source.position = new Vector3f(0, 0, 0)
+        source.position = new Vector3f(16f, 1f, 16f)
 
         dataFuture.onSuccess {
           case data =>
