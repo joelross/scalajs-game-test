@@ -46,10 +46,11 @@ sealed trait KeyLayout {
 
   val mouseLock: Key
   val fullscreen: Key
-
   val escape: Key
-
   val changeLayout: Key
+
+  val volumeIncrease: Key
+  val volumeDecrease: Key
 }
 
 object Qwerty extends KeyLayout {
@@ -60,10 +61,11 @@ object Qwerty extends KeyLayout {
 
   final val mouseLock: Key = Key.L
   final val fullscreen: Key = Key.F
-
   final val escape: Key = Key.Escape
-
   final val changeLayout: Key = Key.Tab
+
+  final val volumeIncrease: Key = Key.NumAdd
+  final val volumeDecrease: Key = Key.NumSubstract
 }
 
 object Azerty extends KeyLayout {
@@ -74,8 +76,9 @@ object Azerty extends KeyLayout {
 
   final val mouseLock: Key = Key.L
   final val fullscreen: Key = Key.F
-
   final val escape: Key = Key.Escape
-
   final val changeLayout: Key = Key.Tab
+
+  final val volumeIncrease: Key = Key.NumAdd
+  final val volumeDecrease: Key = Key.NumSubstract
 }

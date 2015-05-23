@@ -324,7 +324,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           if (key == layout.mouseLock) mouse.locked = !mouse.locked
           else if (key == layout.fullscreen) gl.display.fullscreen = !gl.display.fullscreen
-          else if (key == layout.changeLayout) {
+          else if (key == layout.volumeIncrease) {
+            val newVolume = audioContext.volume + 0.05f
+            audioContext.volume = newVolume
+            itf.printLine("Volume increased to " + newVolume)
+          } else if (key == layout.volumeDecrease) {
+            val newVolume = Math.max(0f, audioContext.volume - 0.05f)
+            audioContext.volume = newVolume
+            itf.printLine("Volume decreased to " + newVolume)
+          } else if (key == layout.changeLayout) {
             if (layout == Qwerty) {
               itf.printLine("Changing keyboard layout for Azerty")
               layout = Azerty
