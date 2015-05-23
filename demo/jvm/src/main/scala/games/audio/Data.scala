@@ -22,6 +22,18 @@ sealed trait ALAbstractSource extends AbstractSource {
 class ALSource(val ctx: ALContext) extends Source with ALAbstractSource {
   ctx.registerSource(this)
 
+  override private[games] def registerPlayer(player: Player): Unit = {
+    super.registerPlayer(player)
+
+    // Apply spatial attributes right now
+    val alSource = player.asInstanceOf[ALPlayer].alSource
+    AL10.alSourcei(alSource, AL10.AL_SOURCE_RELATIVE, AL10.AL_TRUE)
+    AL10.alSource3f(alSource, AL10.AL_POSITION, 0f, 0f, 0f)
+    AL10.alSource3f(alSource, AL10.AL_VELOCITY, 0f, 0f, 0f)
+
+    Util.checkALError()
+  }
+
   override def close(): Unit = {
     super.close()
 
@@ -50,7 +62,7 @@ class ALSource3D(val ctx: ALContext) extends Source3D with ALAbstractSource {
   override private[games] def registerPlayer(player: Player): Unit = {
     super.registerPlayer(player)
 
-    // Preload buffer
+    // Apply spatial attributes right now
     val alSource = player.asInstanceOf[ALPlayer].alSource
     AL10.alSource(alSource, AL10.AL_POSITION, positionBuffer)
     AL10.alGetSource(alSource, AL10.AL_POSITION, positionBuffer)
