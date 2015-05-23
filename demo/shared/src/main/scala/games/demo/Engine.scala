@@ -140,7 +140,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.touchpad = itf.initTouch() // Init touch (if available)
     this.accelerometer = itf.initAccelerometer() // Init accelerometer (if available)
 
-    audioContext.volume = 0.25f // Lower the initial global volume
+    audioContext.volume = 0.5f // Lower the initial global volume
 
     // Load main config file
     val configFuture = Misc.loadConfigFile(Resource(configFile))
@@ -153,7 +153,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
       val shadersFuture = Rendering.loadAllShaders(config("shaders"), gl, loopExecutionContext)
       val mapFuture = Map.load(Resource(config("map")))
-      val audioDataFuture = audioContext.prepareBufferedData(Resource(config("shootSound")))
+      val audioDataFuture = audioContext.prepareBufferedData(Resource(config("shootData")))
 
       Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture, audioDataFuture))
     }
@@ -179,6 +179,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         // Audio
         this.audioShootData = audioData
         this.audioOutput = audioContext.createSource()
+
+        audioShootData.attachNow(audioOutput).playing = true
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
