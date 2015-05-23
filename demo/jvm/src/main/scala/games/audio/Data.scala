@@ -47,6 +47,16 @@ class ALSource3D(val ctx: ALContext) extends Source3D with ALAbstractSource {
     Util.checkALError()
   }
 
+  override private[games] def registerPlayer(player: Player): Unit = {
+    super.registerPlayer(player)
+
+    // Preload buffer
+    val alSource = player.asInstanceOf[ALPlayer].alSource
+    AL10.alSource(alSource, AL10.AL_POSITION, positionBuffer)
+    AL10.alGetSource(alSource, AL10.AL_POSITION, positionBuffer)
+    Util.checkALError()
+  }
+
   private val positionBuffer = ByteBuffer.allocateDirect(3 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
 
   ctx.registerSource(this)
