@@ -9,6 +9,7 @@ import games.JsUtils
 import java.nio.ByteBuffer
 
 import scala.collection.mutable.Set
+import scala.concurrent.Future
 
 import js.Dynamic.{ global => g }
 
@@ -31,35 +32,26 @@ class WebAudioContext extends Context {
     node
   }
 
-  def createBufferedData(res: Resource): games.audio.Data = new JsBufferedData(this, res)
-  def createStreamingData(res: Resource): games.audio.Data = {
+  def prepareStreamingData(res: Resource): Future[games.audio.Data] = {
     // Streaming data is not a good idea on Android Chrome: https://code.google.com/p/chromium/issues/detail?id=138132#c6
     if (JsUtils.Browser.chrome && JsUtils.Browser.android) {
-      Console.err.println("Warning: Android Chrome does not support streaming data, switching to buffered data")
-      this.createBufferedData(res)
-    } else new JsStreamingData(this, res)
+      Console.err.println("Warning: Android Chrome does not support streaming data (resource " + res + "), switching to buffered data")
+      this.prepareBufferedData(res)
+    } else Future.successful(new JsStreamingData(this, res))
   }
-  def createRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): games.audio.Data = new JsRawData(this, data, format, channels, freq)
+  def prepareBufferedData(res: Resource): Future[games.audio.BufferedData] = ???
+  def prepareRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): Future[games.audio.BufferedData] = ???
 
-  override def close(): Unit = {
-    super.close()
-    sources.foreach { source => source.close() }
-    sources.clear()
-  }
+  def createSource(): Source = new JsSource(this, mainOutput)
+  def createSource3D(): Source3D = new JsSource3D(this, mainOutput)
 
   val listener: Listener = new JsListener(this)
 
   def volume: Float = mainOutput.gain.value.asInstanceOf[Double].toFloat
-  def volume_=(volume: Float) = {
-    mainOutput.gain.value = volume.toDouble
-  }
+  def volume_=(volume: Float) = mainOutput.gain.value = volume.toDouble
 
-  private val sources: Set[AbstractSource] = Set()
-  private[games] def addSource(source: AbstractSource): Unit = {
-    sources += source
-  }
-  private[games] def removeSource(source: AbstractSource): Unit = {
-    sources -= source
+  override def close(): Unit = {
+    super.close()
   }
 }
 

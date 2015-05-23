@@ -46,16 +46,16 @@ abstract class Listener extends Closeable with Spatial {
 }
 
 abstract class Data extends Closeable {
-  def attach(source: AbstractSource): Future[games.audio.Control]
+  def attach(source: AbstractSource): Future[games.audio.Player]
 
   def close(): Unit = {}
 }
 
 abstract class BufferedData extends Data {
-  def attachNow(source: AbstractSource): games.audio.Control
+  def attachNow(source: AbstractSource): games.audio.Player
 }
 
-abstract class Control extends Closeable {
+abstract class Player extends Closeable {
   def play: Unit
   def pause: Unit
 
@@ -75,6 +75,8 @@ abstract class Control extends Closeable {
   }
 }
 
-sealed abstract class AbstractSource
+sealed abstract class AbstractSource extends Closeable {
+  def close(): Unit = {}
+}
 abstract class Source extends AbstractSource
 abstract class Source3D extends AbstractSource with Spatial
