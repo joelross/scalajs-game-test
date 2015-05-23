@@ -172,12 +172,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
         // Audio
         val dataFuture = audioContext.prepareBufferedData(new Resource("/games/demo/sounds/test_mono.ogg"))
-        val simpleSource = audioContext.createSource()
+        val source = audioContext.createSource3D()
+
+        source.position = new Vector3f(0, 0, 0)
 
         dataFuture.onSuccess {
           case data =>
             Console.println("Playing sound")
-            val player = data.attachNow(simpleSource)
+            val player = data.attachNow(source)
             player.playing = true
         }
         dataFuture.onFailure { case t => Console.err.println("Could not play sound: " + t) }
@@ -474,7 +476,28 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
 
-    //#### Rendering
+    //#### Audio
+    // Camera data
+    val (camPosition, camOrientation) = ifPresent { present =>
+      (present.position, present.orientation)
+    }.getOrElse {
+      val startingPosition = this.map.startPositions(localPlayerId).center.copy()
+      val startingOrientation = this.map.startOrientations(localPlayerId)
+      (startingPosition, startingOrientation)
+    }
+
+    val cameraRotationMatrix = Matrix3f.rotate3D(camOrientation, Vector3f.Up)
+    val cameraPosition = new Vector3f(camPosition.x, Map.roomHalfSize, camPosition.y)
+    val cameraTranslationMatrix = Matrix4f.translate3D(cameraPosition)
+
+    val cameraTransform = cameraTranslationMatrix * cameraRotationMatrix.toHomogeneous()
+    val cameraTransformInv = cameraTransform.invertedCopy()
+
+    val audioListener = this.audioContext.listener
+    audioListener.setOrientation(cameraRotationMatrix * Vector3f.Front, Vector3f.Up)
+    audioListener.position = cameraPosition
+
+    //#### Graphics
     val curDim = (width, height)
     if (curDim != screenDim) {
       screenDim = curDim
@@ -487,17 +510,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // 3D rendering
     gl.enable(GLES2.DEPTH_TEST)
     gl.enable(GLES2.CULL_FACE)
-
-    // Camera data
-    val (camPosition, camOrientation) = ifPresent { present =>
-      (present.position, present.orientation)
-    }.getOrElse {
-      val startingPosition = this.map.startPositions(localPlayerId).center.copy()
-      val startingOrientation = this.map.startOrientations(localPlayerId)
-      (startingPosition, startingOrientation)
-    }
-    val cameraTransform = Matrix4f.translate3D(new Vector3f(camPosition.x, Map.roomHalfSize, camPosition.y)) * Matrix4f.rotate3D(camOrientation, Vector3f.Up)
-    val cameraTransformInv = cameraTransform.invertedCopy()
 
     Rendering.Wall.init()
     Rendering.Wall.render(cameraTransformInv)
