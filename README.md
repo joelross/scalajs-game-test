@@ -13,6 +13,8 @@ The mouse-keyboard controls are the well-known WASD:
 * Press **F** to toggle fullscreen
 * Press **L** to toggle pointer lock
 * Press **Tab** to alternate between Qwerty and Azerty key-mapping.
+* Press **numpad +** to increase the audio volume
+* Press **numpad -** to decrease the audio volume
 
 The touchscreen controls are:
 * Left part of the screen to move
