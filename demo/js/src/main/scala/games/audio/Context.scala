@@ -38,7 +38,7 @@ private[games] object AuroraHelper {
           val channels = format.channelsPerFrame.asInstanceOf[Int]
           val sampleRate = format.sampleRate.asInstanceOf[Int]
           val dataFuture = ctx.prepareRawData(byteBuffer, Format.Float32, channels, sampleRate)
-          dataFuture.onSuccess { case data => promise.success(data.asInstanceOf[JsBufferData]) }
+          dataFuture.onSuccess { case data => promise.success(data) }
           dataFuture.onFailure { case t => promise.failure(new RuntimeException("Aurora decoded successfully, but could not create the Web Audio buffer", t)) }
 
         case None =>
@@ -85,9 +85,9 @@ class WebAudioContext extends Context {
       this.prepareBufferedData(res)
     } else Future.successful(new JsStreamingData(this, res))
   }
-  def prepareBufferedData(res: Resource): Future[games.audio.BufferedData] = {
+  def prepareBufferedData(res: Resource): Future[games.audio.JsBufferData] = {
     val dataFuture = Utils.getBinaryDataFromResource(res)
-    val promise = Promise[BufferedData]
+    val promise = Promise[JsBufferData]
 
     dataFuture.map { bb =>
       import scala.scalajs.js.typedarray.TypedArrayBufferOps._
@@ -112,7 +112,7 @@ class WebAudioContext extends Context {
 
     promise.future
   }
-  def prepareRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): Future[games.audio.BufferedData] = Future {
+  def prepareRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): Future[games.audio.JsBufferData] = Future {
     format match {
       case Format.Float32 => // good to go
       case _              => throw new RuntimeException("Unsupported data format: " + format)
@@ -145,10 +145,10 @@ class WebAudioContext extends Context {
     new JsBufferData(this, buffer)
   }
 
-  def createSource(): Source = new JsSource(this, mainOutput)
-  def createSource3D(): Source3D = new JsSource3D(this, mainOutput)
+  def createSource(): JsSource = new JsSource(this, mainOutput)
+  def createSource3D(): JsSource3D = new JsSource3D(this, mainOutput)
 
-  val listener: Listener = new JsListener(this)
+  val listener: JsListener = new JsListener(this)
 
   def volume: Float = mainOutput.gain.value.asInstanceOf[Double].toFloat
   def volume_=(volume: Float) = mainOutput.gain.value = volume.toDouble

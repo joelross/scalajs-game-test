@@ -44,9 +44,11 @@ class JsSource3D(val ctx: WebAudioContext, outputNode: js.Dynamic) extends Sourc
   }
 }
 
-class JsBufferData(val ctx: WebAudioContext, webAudioBuffer: js.Dynamic) extends BufferedData {
-  def attach(source: AbstractSource): Future[games.audio.Player] = Future.successful(this.attachNow(source))
-  def attachNow(source: AbstractSource): games.audio.Player = {
+sealed trait JsData extends Data
+
+class JsBufferData(val ctx: WebAudioContext, webAudioBuffer: js.Dynamic) extends BufferedData with JsData {
+  def attach(source: AbstractSource): Future[games.audio.JsBufferPlayer] = Future.successful(this.attachNow(source))
+  def attachNow(source: AbstractSource): games.audio.JsBufferPlayer = {
     val jsSource = source.asInstanceOf[JsAbstractSource]
     new JsBufferPlayer(this, jsSource, webAudioBuffer)
   }
@@ -56,11 +58,11 @@ class JsBufferData(val ctx: WebAudioContext, webAudioBuffer: js.Dynamic) extends
   }
 }
 
-class JsStreamingData(val ctx: WebAudioContext, res: Resource) extends Data {
+class JsStreamingData(val ctx: WebAudioContext, res: Resource) extends Data with JsData {
   private var backupDataFromAurora: Option[JsBufferData] = None
 
-  def attach(source: AbstractSource): Future[games.audio.Player] = {
-    val promise = Promise[games.audio.Player]
+  def attach(source: AbstractSource): Future[games.audio.JsPlayer] = {
+    val promise = Promise[games.audio.JsPlayer]
 
     val audioElement: js.Dynamic = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
     val path = JsUtils.pathForResource(res)
@@ -111,7 +113,9 @@ class JsStreamingData(val ctx: WebAudioContext, res: Resource) extends Data {
   }
 }
 
-class JsBufferPlayer(val data: JsBufferData, val source: JsAbstractSource, webAudioBuffer: js.Dynamic) extends Player {
+sealed trait JsPlayer extends Player
+
+class JsBufferPlayer(val data: JsBufferData, val source: JsAbstractSource, webAudioBuffer: js.Dynamic) extends JsPlayer {
   // Init
   private var sourceNode = data.ctx.webApi.createBufferSource()
   sourceNode.buffer = webAudioBuffer
@@ -174,7 +178,7 @@ class JsBufferPlayer(val data: JsBufferData, val source: JsAbstractSource, webAu
   }
 }
 
-class JsStreamingPlayer(val data: JsStreamingData, val source: JsAbstractSource, audioElement: js.Dynamic) extends Player {
+class JsStreamingPlayer(val data: JsStreamingData, val source: JsAbstractSource, audioElement: js.Dynamic) extends JsPlayer {
   private val sourceNode = data.ctx.webApi.createMediaElementSource(audioElement)
   sourceNode.connect(source.inputNode)
 
