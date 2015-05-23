@@ -143,7 +143,6 @@ abstract class ALBasicPlayer(val data: ALData, val source: ALAbstractSource, val
 
   private[games] def applyChangedVolume(): Unit = {
     val curVolume = data.ctx.masterVolume * thisVolume
-    Console.println("Current gain is " + curVolume)
     AL10.alSourcef(alSource, AL10.AL_GAIN, curVolume)
     Util.checkALError()
   }
