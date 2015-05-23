@@ -69,8 +69,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var connection: Option[ConnectionHandle] = None
 
-  private var audioOutput: audio.Source = _
-  private var audioOutputs3D: mutable.Map[Int, audio.Source3D] = mutable.Map()
+  private var audioSimpleSource: audio.Source = _
+  private var audioSources3D: mutable.Map[Int, audio.Source3D] = mutable.Map()
   private var audioPlayers: mutable.Set[audio.Player] = mutable.Set()
   private var audioShootData: audio.BufferedData = _
 
@@ -178,9 +178,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
         // Audio
         this.audioShootData = audioData
-        this.audioOutput = audioContext.createSource()
-
-        audioShootData.attachNow(audioOutput).playing = true
+        this.audioSimpleSource = audioContext.createSource()
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
@@ -463,6 +461,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           this.lastTimeProjectileShot = Some(now)
           this.nextProjectileId += 1
+
+          val audioPlayer = this.audioShootData.attachNow(this.audioSimpleSource)
+          audioPlayer.playing = true
+          this.audioPlayers += audioPlayer
         }
       }
 
@@ -494,6 +496,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val audioListener = this.audioContext.listener
     audioListener.setOrientation(cameraRotationMatrix * Vector3f.Front, Vector3f.Up)
     audioListener.position = cameraPosition
+
+    // Close and remove sounds that are over
+    this.audioPlayers = this.audioPlayers.filter { player =>
+      val playing = player.playing
+      if (!playing) player.close()
+      playing
+    }
+
+    for (player <- otherActivePlayers) {
+
+    }
 
     //#### Graphics
     val curDim = (width, height)
