@@ -57,7 +57,7 @@ private[games] object Helper {
     }
   }
 
-  def createSource3D(ctx: WebAudioContext, data: DataJS): scala.concurrent.Future[games.audio.Source3D] = {
+  def prepareSource3D(ctx: WebAudioContext, data: DataJS): scala.concurrent.Future[games.audio.Source3D] = {
     val pannerNode = ctx.webApi.createPanner()
     data.createSource(pannerNode).map { source2d =>
       pannerNode.connect(ctx.mainOutput)
@@ -149,8 +149,8 @@ class JsBufferedData private[games] (ctx: WebAudioContext, res: Resource) extend
   def createSource3D(): Future[games.audio.Source3D] = Helper.createSource3D(ctx, this)
 }
 
-class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) extends games.audio.Data with DataJS {
-  private[games] def createSource(outputNode: js.Dynamic): Future[games.audio.Source] = {
+class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) extends games.audio.DelayedData with DataJS {
+  private[games] def prepareSource(outputNode: js.Dynamic): Future[games.audio.Source] = {
     val path = JsUtils.pathForResource(res)
     val promise = Promise[games.audio.Source]
     val audio: js.Dynamic = js.Dynamic.newInstance(js.Dynamic.global.Audio)()
@@ -186,6 +186,6 @@ class JsStreamingData private[games] (ctx: WebAudioContext, res: Resource) exten
     promise.future
   }
 
-  def createSource(): Future[games.audio.Source] = this.createSource(ctx.mainOutput)
-  def createSource3D(): Future[games.audio.Source3D] = Helper.createSource3D(ctx, this)
+  def prepareSource(): Future[games.audio.Source] = this.prepareSource(ctx.mainOutput)
+  def prepareSource3D(): Future[games.audio.Source3D] = Helper.prepareSource3D(ctx, this)
 }
