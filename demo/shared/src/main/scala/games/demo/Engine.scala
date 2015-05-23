@@ -69,6 +69,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var connection: Option[ConnectionHandle] = None
 
+  private var audioOutput: audio.Source = _
+  private var audioOutputs3D: mutable.Map[Int, audio.Source3D] = mutable.Map()
+
+  private var shootAudioData: audio.BufferedData = _
+
   private var screenDim: (Int, Int) = _
 
   private var map: Map = _
@@ -148,14 +153,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
       val shadersFuture = Rendering.loadAllShaders(config("shaders"), gl, loopExecutionContext)
       val mapFuture = Map.load(Resource(config("map")))
+      val audioDataFuture = audioContext.prepareBufferedData(Resource(config("shootSound")))
 
-      Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture))
+      Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture, audioDataFuture))
     }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map) =>
-        itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
+      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioData: audio.BufferedData) =>
+        itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s), audio ready")
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
         this.map = map
@@ -171,18 +177,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         Physics.setupMap(map)
 
         // Audio
-        val dataFuture = audioContext.prepareBufferedData(new Resource("/games/demo/sounds/test_mono.ogg"))
-        val source = audioContext.createSource3D()
-
-        source.position = new Vector3f(16f, 1f, 16f)
-
-        dataFuture.onSuccess {
-          case data =>
-            Console.println("Playing sound")
-            val player = data.attachNow(source)
-            player.playing = true
-        }
-        dataFuture.onFailure { case t => Console.err.println("Could not play sound: " + t) }
+        this.shootAudioData = audioData
+        this.audioOutput = audioContext.createSource()
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
