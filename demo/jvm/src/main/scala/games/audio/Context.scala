@@ -3,31 +3,84 @@ package games.audio
 import org.lwjgl.openal.AL
 import org.lwjgl.openal.AL10
 import org.lwjgl.openal.Util
+
 import games.math.Vector3f
+import games.JvmUtils
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.io.ByteArrayOutputStream
+import java.io.EOFException
 
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Set
 
 class ALContext extends Context {
   AL.create()
 
-  def prepareBufferedData(res: games.Resource): scala.concurrent.Future[games.audio.BufferedData] = ???
-  def prepareRawData(data: java.nio.ByteBuffer, format: games.audio.Format, channels: Int, freq: Int): scala.concurrent.Future[games.audio.BufferedData] = ???
+  def prepareBufferedData(res: games.Resource): scala.concurrent.Future[games.audio.BufferedData] = Future {
+    val alBuffer = AL10.alGenBuffers()
+    val in = JvmUtils.streamForResource(res)
+    val decoder = new VorbisDecoder(in, FixedSigned16Converter)
+    val transfertBufferSize = 4096
+    val transfertBuffer = ByteBuffer.allocate(transfertBufferSize).order(ByteOrder.nativeOrder())
+    val dataStream = new ByteArrayOutputStream(transfertBufferSize)
+
+    var totalDataLength = 0
+
+    try {
+      while (true) {
+        transfertBuffer.rewind()
+        val dataLength = decoder.read(transfertBuffer)
+        val data = transfertBuffer.array()
+        dataStream.write(data, 0, dataLength)
+        totalDataLength += dataLength
+      }
+    } catch {
+      case e: EOFException => // end of stream reached, exit loop
+    }
+
+    val dataArray = dataStream.toByteArray()
+    require(totalDataLength == dataArray.length) // TODO remove later, sanity check
+    val dataBuffer = ByteBuffer.allocateDirect(dataArray.length).order(ByteOrder.nativeOrder())
+
+    dataBuffer.put(dataArray)
+    dataBuffer.rewind()
+
+    val format = decoder.channels match {
+      case 1 => AL10.AL_FORMAT_MONO16
+      case 2 => AL10.AL_FORMAT_STEREO16
+      case x => throw new RuntimeException("Only mono or stereo data are supported. Found channels: " + x)
+    }
+
+    AL10.alBufferData(alBuffer, format, dataBuffer, decoder.rate)
+
+    decoder.close()
+
+    val ret = new ALBufferData(this, alBuffer)
+    Util.checkALError()
+    ret
+  }
+  def prepareRawData(data: java.nio.ByteBuffer, format: games.audio.Format, channels: Int, freq: Int): scala.concurrent.Future[games.audio.BufferedData] = {
+    ???
+  }
   def prepareStreamingData(res: games.Resource): scala.concurrent.Future[games.audio.Data] = ???
 
-  def createSource(): games.audio.Source = ???
-  def createSource3D(): games.audio.Source3D = ???
+  def createSource(): games.audio.Source = new ALSource(this)
+  def createSource3D(): games.audio.Source3D = new ALSource3D(this)
 
   val listener: games.audio.Listener = new ALListener()
 
   def volume: Float = masterVolume
   def volume_=(volume: Float): Unit = {
     masterVolume = volume
-    sources.foreach { source =>
-      //source.masterVolumeChanged()
-      ??? // TODO
+    for (
+      source <- sources;
+      player <- source.players
+    ) {
+      val alPlayer = player.asInstanceOf[ALPlayer]
+      alPlayer.applyChangedVolume()
     }
   }
 
