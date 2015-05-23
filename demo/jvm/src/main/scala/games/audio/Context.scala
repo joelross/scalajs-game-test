@@ -22,8 +22,16 @@ class ALContext extends Context {
 
   val listener: games.audio.Listener = new ALListener()
 
-  def volume: Float = ???
-  def volume_=(volume: Float): Unit = ???
+  def volume: Float = masterVolume
+  def volume_=(volume: Float): Unit = {
+    masterVolume = volume
+    sources.foreach { source =>
+      //source.masterVolumeChanged()
+      ??? // TODO
+    }
+  }
+
+  private[games] var masterVolume = 1f
 
   override def close(): Unit = {
     super.close()
