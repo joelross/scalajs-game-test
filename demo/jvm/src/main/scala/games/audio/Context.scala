@@ -62,8 +62,41 @@ class ALContext extends Context {
     Util.checkALError()
     ret
   }
-  def prepareRawData(data: java.nio.ByteBuffer, format: games.audio.Format, channels: Int, freq: Int): scala.concurrent.Future[games.audio.BufferedData] = {
-    ???
+  def prepareRawData(data: java.nio.ByteBuffer, format: games.audio.Format, channels: Int, freq: Int): scala.concurrent.Future[games.audio.BufferedData] = Future {
+    val alBuffer = AL10.alGenBuffers()
+
+    format match {
+      case Format.Float32 => // good to go
+      case _              => throw new RuntimeException("Unsupported data format: " + format)
+    }
+
+    val channelFormat = channels match {
+      case 1 => AL10.AL_FORMAT_MONO16
+      case 2 => AL10.AL_FORMAT_STEREO16
+      case _ => throw new RuntimeException("Unsupported channels number: " + channels)
+    }
+
+    val converter = FixedSigned16Converter
+    val fb = data.slice().order(ByteOrder.nativeOrder()).asFloatBuffer()
+
+    val sampleCount = fb.remaining() / channels
+
+    val openalData = ByteBuffer.allocateDirect(2 * channels * sampleCount).order(ByteOrder.nativeOrder())
+
+    for (sampleCur <- 0 until sampleCount) {
+      for (channelCur <- 0 until channels) {
+        val value = fb.get()
+        converter(value, openalData)
+      }
+    }
+
+    openalData.rewind()
+
+    AL10.alBufferData(alBuffer, channelFormat, openalData, freq)
+
+    val ret = new ALBufferData(this, alBuffer)
+    Util.checkALError()
+    ret
   }
   def prepareStreamingData(res: games.Resource): scala.concurrent.Future[games.audio.Data] = ???
 
