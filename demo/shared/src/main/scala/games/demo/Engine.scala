@@ -100,16 +100,25 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var orientationTouch: Option[(Int, input.Position)] = None
   private val timeTouches: mutable.Map[Int, Long] = mutable.Map()
 
-  def ifPresent[T](action: Present => T): Option[T] = this.localPlayerState match {
+  private def ifPresent[T](action: Present => T): Option[T] = this.localPlayerState match {
     case x: Present => Some(action(x))
     case _          => None // nothing to do
   }
 
-  def sendMsg(msg: network.ClientMessage): Unit = connection match {
+  private def sendMsg(msg: network.ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
     case Some(conn) =>
       val data = upickle.write(msg)
       conn.write(data)
+  }
+
+  private def getOrCreateSource3D(playerId: Int): audio.Source3D = this.audioSources3D.get(playerId) match {
+    case None =>
+      val source3d = this.audioContext.createSource3D()
+      this.audioSources3D += (playerId -> source3d)
+      source3d
+
+    case Some(source3d) => source3d
   }
 
   def continue(): Boolean = continueCond
@@ -229,7 +238,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
                 newEvents.foreach {
                   case network.ProjectileShot(network.ProjectileIdentifier(playerId, projId), position, orientation) =>
-                    if (playerId != this.localPlayerId) this.projectiles += (playerId -> new Projectile(projId, Misc.conv(position), orientation))
+                    if (playerId != this.localPlayerId) {
+                      this.projectiles += (playerId -> new Projectile(projId, Misc.conv(position), orientation))
+                      val source3d = getOrCreateSource3D(playerId)
+
+                      val player = this.audioShootData.attachNow(source3d)
+                      player.playing = true
+                      this.audioPlayers += player
+                    }
 
                   case network.ProjectileHit(network.ProjectileIdentifier(playerId, projId), playerHitId) =>
                     if (playerHitId == this.localPlayerId) {
@@ -504,8 +520,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       playing
     }
 
-    for (player <- otherActivePlayers) {
+    // Update the position of the 3d sources
+    for ((playerId, playerState) <- otherActivePlayers) {
+      val source3d = getOrCreateSource3D(playerId)
 
+      val position2d = playerState.position
+      val position3d = new Vector3f(position2d.x, Map.roomHalfSize, position2d.y)
+      source3d.position = position3d
     }
 
     //#### Graphics
