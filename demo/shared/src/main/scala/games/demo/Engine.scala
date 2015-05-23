@@ -159,13 +159,28 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
         this.map = map
+
+        // Graphics
         Rendering.Hud.setup(shaders("simple2d"))
         Rendering.Standard.setup(shaders("simple3d"))
         Rendering.Wall.setup(shaders("simple3d"), wallMesh, map)
         Rendering.Player.setup(models("character"))
         Rendering.Bullet.setup(models("bullet"))
 
+        // Physics
         Physics.setupMap(map)
+
+        // Audio
+        val dataFuture = audioContext.prepareBufferedData(new Resource("/games/demo/sounds/test_mono.ogg"))
+        val simpleSource = audioContext.createSource()
+
+        dataFuture.onSuccess {
+          case data =>
+            Console.println("Playing sound")
+            val player = data.attachNow(simpleSource)
+            player.playing = true
+        }
+        dataFuture.onFailure { case t => Console.err.println("Could not play sound: " + t) }
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]

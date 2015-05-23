@@ -130,7 +130,8 @@ class JsBufferPlayer(val data: JsBufferData, val source: JsAbstractSource, webAu
   private var nextStartTime = 0.0
   private var lastStartDate = 0.0
 
-  def play: Unit = {
+  def playing: Boolean = isPlaying
+  def playing_=(playing: Boolean): Unit = if (playing) {
     if (needRestarting) { // a SourceNode can only be started once, need to create a new one
       val oldNode = sourceNode
       oldNode.disconnect() // disconnect the old node
@@ -151,12 +152,9 @@ class JsBufferPlayer(val data: JsBufferData, val source: JsAbstractSource, webAu
       needRestarting = true
       nextStartTime = (JsUtils.now() - lastStartDate) / 1000.0 // msec -> sec
     }
-  }
-  def pause: Unit = {
+  } else {
     sourceNode.stop()
   }
-
-  def playing: Boolean = isPlaying
 
   def volume: Float = gainNode.gain.value.asInstanceOf[Double].toFloat
   def volume_=(volume: Float) = {
@@ -182,17 +180,19 @@ class JsStreamingPlayer(val data: JsStreamingData, val source: JsAbstractSource,
   private val sourceNode = data.ctx.webApi.createMediaElementSource(audioElement)
   sourceNode.connect(source.inputNode)
 
+  audioElement.onpause = audioElement.onended = () => {
+    isPlaying = false
+  }
+
   private var isPlaying = false
 
-  def play: Unit = {
+  def playing: Boolean = isPlaying
+  def playing_=(playing: Boolean): Unit = if (playing) {
     audioElement.play()
     isPlaying = true
-  }
-  def pause: Unit = {
+  } else {
     audioElement.pause()
   }
-
-  def playing: Boolean = isPlaying
 
   def volume: Float = audioElement.volume.asInstanceOf[Double].toFloat
   def volume_=(volume: Float) = {

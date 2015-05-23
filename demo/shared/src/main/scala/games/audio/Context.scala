@@ -56,22 +56,20 @@ abstract class BufferedData extends Data {
 }
 
 abstract class Player extends Closeable {
-  def play: Unit
-  def pause: Unit
-
   def playing: Boolean
+  def playing_=(playing: Boolean): Unit
 
   def volume: Float
-  def volume_=(volume: Float)
+  def volume_=(volume: Float): Unit
 
   def loop: Boolean
-  def loop_=(loop: Boolean)
+  def loop_=(loop: Boolean): Unit
 
   def pitch: Float
-  def pitch_=(pitch: Float)
+  def pitch_=(pitch: Float): Unit
 
   def close(): Unit = {
-    this.pause
+    this.playing = false
   }
 }
 
