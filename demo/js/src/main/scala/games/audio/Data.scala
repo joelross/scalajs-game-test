@@ -156,6 +156,10 @@ class JsStreamingData(val ctx: WebAudioContext, res: Resource) extends Data with
     super.close()
 
     ctx.unregisterData(this)
+
+    for (data <- backupDataFromAurora) {
+      data.close()
+    }
   }
 }
 
