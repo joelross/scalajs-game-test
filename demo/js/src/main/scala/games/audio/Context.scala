@@ -13,6 +13,8 @@ import scala.collection.mutable.Set
 import scala.concurrent.{ Promise, Future }
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
+import scala.collection.{ mutable, immutable }
+
 import js.Dynamic.{ global => g }
 
 private[games] object AuroraHelper {
@@ -68,7 +70,10 @@ object WebAudioContext {
 }
 
 class WebAudioContext extends Context {
-  val audioContext: js.Dynamic = JsUtils.getOptional[js.Dynamic](g, "AudioContext", "webkitAudioContext").getOrElse(throw new RuntimeException("Web Audio API not supported by your browser"))
+  private val datas: mutable.Set[JsData] = mutable.Set()
+  private val sources: mutable.Set[JsAbstractSource] = mutable.Set()
+
+  private val audioContext: js.Dynamic = JsUtils.getOptional[js.Dynamic](g, "AudioContext", "webkitAudioContext").getOrElse(throw new RuntimeException("Web Audio API not supported by your browser"))
   private[games] val webApi = js.Dynamic.newInstance(audioContext)()
 
   private[games] val mainOutput = {
@@ -153,8 +158,24 @@ class WebAudioContext extends Context {
   def volume: Float = mainOutput.gain.value.asInstanceOf[Double].toFloat
   def volume_=(volume: Float) = mainOutput.gain.value = volume.toDouble
 
+  def registerData(data: JsData): Unit = datas += data
+  def unregisterData(data: JsData): Unit = datas -= data
+
+  def registerSource(source: JsAbstractSource): Unit = sources += source
+  def unregisterSource(source: JsAbstractSource): Unit = sources -= source
+
   override def close(): Unit = {
     super.close()
+
+    for (data <- this.datas) {
+      data.close()
+    }
+    for (source <- this.sources) {
+      source.close()
+    }
+
+    datas.clear()
+    sources.clear()
   }
 }
 

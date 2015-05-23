@@ -73,7 +73,7 @@ abstract class Player extends Closeable {
   }
 }
 
-sealed abstract class AbstractSource extends Closeable {
+abstract class AbstractSource extends Closeable {
   def close(): Unit = {}
 }
 abstract class Source extends AbstractSource

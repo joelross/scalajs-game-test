@@ -5,19 +5,39 @@ import org.scalajs.dom
 import scala.concurrent.{ Future, Promise }
 import scalajs.concurrent.JSExecutionContext.Implicits.queue
 
+import scala.collection.{ mutable, immutable }
+
 import games.Resource
 import games.Utils
 import games.JsUtils
 import games.math.Vector3f
 
-sealed trait JsAbstractSource {
+sealed trait JsAbstractSource extends AbstractSource {
+  protected val players: mutable.Set[JsPlayer] = mutable.Set()
+  def registerPlayer(player: JsPlayer): Unit = players += player
+  def unregisterPlayer(player: JsPlayer): Unit = players -= player
+
   def inputNode: js.Dynamic
+
+  override def close(): Unit = {
+    super.close()
+
+    for (player <- players) {
+      player.close()
+    }
+
+    players.clear()
+  }
 }
 class JsSource(val ctx: WebAudioContext, outputNode: js.Dynamic) extends Source with JsAbstractSource {
   val inputNode = outputNode
 
+  ctx.registerSource(this)
+
   override def close(): Unit = {
     super.close()
+
+    ctx.unregisterSource(this)
   }
 }
 class JsSource3D(val ctx: WebAudioContext, outputNode: js.Dynamic) extends Source3D with JsAbstractSource {
@@ -33,6 +53,8 @@ class JsSource3D(val ctx: WebAudioContext, outputNode: js.Dynamic) extends Sourc
   // Init
   this.position = positionData
 
+  ctx.registerSource(this)
+
   def position: games.math.Vector3f = positionData.copy()
   def position_=(position: games.math.Vector3f): Unit = {
     Vector3f.set(position, positionData)
@@ -41,12 +63,30 @@ class JsSource3D(val ctx: WebAudioContext, outputNode: js.Dynamic) extends Sourc
 
   override def close(): Unit = {
     super.close()
+
+    ctx.unregisterSource(this)
   }
 }
 
-sealed trait JsData extends Data
+sealed trait JsData extends Data {
+  protected val players: mutable.Set[JsPlayer] = mutable.Set()
+  def registerPlayer(player: JsPlayer): Unit = players += player
+  def unregisterPlayer(player: JsPlayer): Unit = players -= player
+
+  override def close(): Unit = {
+    super.close()
+
+    for (player <- players) {
+      player.close()
+    }
+
+    players.clear()
+  }
+}
 
 class JsBufferData(val ctx: WebAudioContext, webAudioBuffer: js.Dynamic) extends BufferedData with JsData {
+  ctx.registerData(this)
+
   def attach(source: AbstractSource): Future[games.audio.JsBufferPlayer] = Future.successful(this.attachNow(source))
   def attachNow(source: AbstractSource): games.audio.JsBufferPlayer = {
     val jsSource = source.asInstanceOf[JsAbstractSource]
@@ -55,11 +95,15 @@ class JsBufferData(val ctx: WebAudioContext, webAudioBuffer: js.Dynamic) extends
 
   override def close(): Unit = {
     super.close()
+
+    ctx.unregisterData(this)
   }
 }
 
 class JsStreamingData(val ctx: WebAudioContext, res: Resource) extends Data with JsData {
   private var backupDataFromAurora: Option[JsBufferData] = None
+
+  ctx.registerData(this)
 
   def attach(source: AbstractSource): Future[games.audio.JsPlayer] = {
     val promise = Promise[games.audio.JsPlayer]
@@ -110,6 +154,8 @@ class JsStreamingData(val ctx: WebAudioContext, res: Resource) extends Data with
 
   override def close(): Unit = {
     super.close()
+
+    ctx.unregisterData(this)
   }
 }
 
@@ -129,6 +175,9 @@ class JsBufferPlayer(val data: JsBufferData, val source: JsAbstractSource, webAu
   private var needRestarting = false
   private var nextStartTime = 0.0
   private var lastStartDate = 0.0
+
+  source.registerPlayer(this)
+  data.registerPlayer(this)
 
   def playing: Boolean = isPlaying
   def playing_=(playing: Boolean): Unit = if (playing) {
@@ -173,6 +222,9 @@ class JsBufferPlayer(val data: JsBufferData, val source: JsAbstractSource, webAu
 
   override def close(): Unit = {
     super.close()
+
+    source.unregisterPlayer(this)
+    data.unregisterPlayer(this)
   }
 }
 
@@ -185,6 +237,9 @@ class JsStreamingPlayer(val data: JsStreamingData, val source: JsAbstractSource,
   }
 
   private var isPlaying = false
+
+  source.registerPlayer(this)
+  data.registerPlayer(this)
 
   def playing: Boolean = isPlaying
   def playing_=(playing: Boolean): Unit = if (playing) {
@@ -211,5 +266,8 @@ class JsStreamingPlayer(val data: JsStreamingData, val source: JsAbstractSource,
 
   override def close(): Unit = {
     super.close()
+
+    source.unregisterPlayer(this)
+    data.unregisterPlayer(this)
   }
 }
