@@ -98,7 +98,7 @@ class ALContext extends Context {
     Util.checkALError()
     ret
   }
-  def prepareStreamingData(res: games.Resource): scala.concurrent.Future[games.audio.Data] = ???
+  def prepareStreamingData(res: games.Resource): scala.concurrent.Future[games.audio.Data] = Future.successful(new ALStreamingData(this, res))
 
   def createSource(): games.audio.Source = new ALSource(this)
   def createSource3D(): games.audio.Source3D = new ALSource3D(this)
