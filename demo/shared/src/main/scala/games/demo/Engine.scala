@@ -86,6 +86,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var lastTimeProjectileShot: Option[Long] = None
   private var lastTimeSpawn: Option[Long] = None
+  private var lastTimeHit: Option[Long] = None
 
   private var centerVAngle: Option[Float] = None
 
@@ -469,6 +470,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       if (ret > 0 && shooterId == this.localPlayerId) for (conn <- connection) {
         val hit = network.ClientProjectileHit(projectile.id, ret)
         sendMsg(hit)
+
+        this.lastTimeHit = Some(now)
       }
       ret < 0
     }
@@ -579,7 +582,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.disable(GLES2.CULL_FACE)
 
     Rendering.Hud.init()
-    Rendering.Hud.render(this.localPlayerId, width, height, ifPresent(_.health).getOrElse(0f))
+    Rendering.Hud.render(this.localPlayerId, width, height, ifPresent(_.health).getOrElse(0f), this.lastTimeHit.map { last => (now - last).toInt })
     Rendering.Hud.close()
 
     //#### Ending
