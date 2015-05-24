@@ -2,4 +2,5 @@ server=ws://localhost:8080/
 models=/games/demo/models
 shaders=/games/demo/shaders
 map=/games/demo/maps/map1
-shootData=/games/demo/sounds/flashkit/Sniper_R-MelonHea-7518_hifi.ogg
+shootSound=/games/demo/sounds/flashkit/Sniper_R-MelonHea-7518_hifi.ogg
+damageSound=/games/demo/sounds/flashkit/Spark_1-kayden_r-8968_hifi.ogg

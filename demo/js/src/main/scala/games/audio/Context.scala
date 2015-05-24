@@ -157,6 +157,8 @@ class WebAudioContext extends Context {
 
   override def close(): Unit = {
     super.close()
+
+    mainOutput.disconnect()
   }
 }
 

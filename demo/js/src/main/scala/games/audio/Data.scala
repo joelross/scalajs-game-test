@@ -55,6 +55,8 @@ class JsSource3D(val ctx: WebAudioContext, outputNode: js.Dynamic) extends Sourc
     super.close()
 
     ctx.unregisterSource(this)
+
+    pannerNode.disconnect()
   }
 }
 
@@ -209,6 +211,9 @@ class JsBufferPlayer(val data: JsBufferData, val source: JsAbstractSource, webAu
 
     source.unregisterPlayer(this)
     data.unregisterPlayer(this)
+
+    sourceNode.disconnect()
+    gainNode.disconnect()
   }
 }
 
@@ -253,5 +258,7 @@ class JsStreamingPlayer(val data: JsStreamingData, val source: JsAbstractSource,
 
     source.unregisterPlayer(this)
     data.unregisterPlayer(this)
+
+    sourceNode.disconnect()
   }
 }

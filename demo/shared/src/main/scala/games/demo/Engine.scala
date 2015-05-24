@@ -73,6 +73,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var audioSources3D: mutable.Map[Int, audio.Source3D] = mutable.Map()
   private var audioPlayers: mutable.Set[audio.Player] = mutable.Set()
   private var audioShootData: audio.BufferedData = _
+  private var audioDamageData: audio.BufferedData = _
 
   private var screenDim: (Int, Int) = _
 
@@ -162,14 +163,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
       val shadersFuture = Rendering.loadAllShaders(config("shaders"), gl, loopExecutionContext)
       val mapFuture = Map.load(Resource(config("map")))
-      val audioDataFuture = audioContext.prepareBufferedData(Resource(config("shootData")))
+      val audioShootDataFuture = audioContext.prepareBufferedData(Resource(config("shootSound")))
+      val audioDamageDataFuture = audioContext.prepareBufferedData(Resource(config("damageSound")))
 
-      Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture, audioDataFuture))
+      Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture, audioShootDataFuture, audioDamageDataFuture))
     }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioData: audio.BufferedData) =>
+      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShootData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
         itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s), audio ready")
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
@@ -186,7 +188,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         Physics.setupMap(map)
 
         // Audio
-        this.audioShootData = audioData
+        this.audioShootData = audioShootData
+        this.audioDamageData = audioDamageData
         this.audioSimpleSource = audioContext.createSource()
     }(loopExecutionContext)
 
@@ -261,13 +264,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                             present.position = startingPosition
                             present.orientation = startingOrientation
                             this.lastTimeSpawn = Some(now)
-                            //Console.println("You were hit by player " + playerId + " (you are dead, respawning)")
-                          } else {
-                            //Console.println("You were hit by player " + playerId + " (your health is at " + present.health + ")")
                           }
+
+                          val player = this.audioDamageData.attachNow(this.audioSimpleSource)
+                          player.playing = true
+                          this.audioPlayers += player
                         }
-                      } else {
-                        //Console.println("You were hit by player " + playerId + " (but you are invulnerable for now)")
                       }
                     }
                     this.projectiles = projectiles.filterNot { case (curPlayerId, curProj) => playerId == curPlayerId && projId == curProj.id }
