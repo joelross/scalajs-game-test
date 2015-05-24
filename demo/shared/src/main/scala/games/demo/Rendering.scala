@@ -527,9 +527,9 @@ object Rendering {
       // Sight
 
       val sightVerticesData = GLES2.createFloatBuffer(3 * 2) // 3 vertices, 2 coordinates each
-      sightVerticesData.put(0f).put(0.1f)
-      sightVerticesData.put(0.025f).put(0.2f)
-      sightVerticesData.put(-0.025f).put(0.2f)
+      sightVerticesData.put(0f).put(0f)
+      sightVerticesData.put(0.025f).put(0.1f)
+      sightVerticesData.put(-0.025f).put(0.1f)
       sightVerticesData.flip()
 
       this.sightVerticesBuffer = gl.createBuffer()
@@ -547,10 +547,12 @@ object Rendering {
       gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, sightIndicesBuffer)
       gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, sightIndicesData, GLES2.STATIC_DRAW)
 
+      val baseTransform = Matrix3f.translate2D(new Vector2f(0f, 0.05f))
+
       this.sightTransforms = new Array(3)
-      this.sightTransforms(0) = Matrix3f.rotate2D(0f)
-      this.sightTransforms(1) = Matrix3f.rotate2D(120f)
-      this.sightTransforms(2) = Matrix3f.rotate2D(240f)
+      this.sightTransforms(0) = Matrix3f.rotate2D(0f) * baseTransform
+      this.sightTransforms(1) = Matrix3f.rotate2D(120f) * baseTransform
+      this.sightTransforms(2) = Matrix3f.rotate2D(240f) * baseTransform
 
       // Health indicator
 
@@ -592,9 +594,11 @@ object Rendering {
       gl.disableVertexAttribArray(positionAttrLoc)
     }
 
-    def render(playerId: Int, screenWidth: Int, screenHeight: Int, health: Float)(implicit gl: GLES2): Unit = {
+    def render(playerId: Int, screenWidth: Int, screenHeight: Int, health: Float, timeSinceLastTime: Option[Int])(implicit gl: GLES2): Unit = {
       val screenRatio = screenHeight.toFloat / screenWidth.toFloat
       val screenRatioInv = screenWidth.toFloat / screenHeight.toFloat
+
+      val timeForHitNotificationMs = 200
 
       // Sight
       gl.uniform1f(scaleXUniLoc, screenRatio)
@@ -607,8 +611,13 @@ object Rendering {
 
       gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, this.sightIndicesBuffer)
 
+      val extraTransform = timeSinceLastTime match { // Hit notification
+        case Some(time) if (time < timeForHitNotificationMs) => Matrix3f.translate2D(new Vector2f(0f, Physics.interpol(time, 0, timeForHitNotificationMs, 0.1f, 0f)))
+        case _ => new Matrix3f
+      }
+
       for (transform <- this.sightTransforms) {
-        gl.uniformMatrix3f(transformUniLoc, transform)
+        gl.uniformMatrix3f(transformUniLoc, transform * extraTransform)
         gl.drawElements(GLES2.TRIANGLES, this.sightRenderCount, GLES2.UNSIGNED_SHORT, 0)
       }
 

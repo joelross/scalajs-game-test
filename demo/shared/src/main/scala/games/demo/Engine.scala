@@ -69,6 +69,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var connection: Option[ConnectionHandle] = None
 
+  private var audioSimpleSource: audio.Source = _
+  private var audioSources3D: mutable.Map[Int, audio.Source3D] = mutable.Map()
+  private var audioPlayers: mutable.Set[audio.Player] = mutable.Set()
+  private var audioShootData: audio.BufferedData = _
+  private var audioDamageData: audio.BufferedData = _
+
   private var screenDim: (Int, Int) = _
 
   private var map: Map = _
@@ -80,6 +86,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
   private var lastTimeProjectileShot: Option[Long] = None
   private var lastTimeSpawn: Option[Long] = None
+  private var lastTimeHit: Option[Long] = None
 
   private var centerVAngle: Option[Float] = None
 
@@ -95,16 +102,25 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var orientationTouch: Option[(Int, input.Position)] = None
   private val timeTouches: mutable.Map[Int, Long] = mutable.Map()
 
-  def ifPresent[T](action: Present => T): Option[T] = this.localPlayerState match {
+  private def ifPresent[T](action: Present => T): Option[T] = this.localPlayerState match {
     case x: Present => Some(action(x))
     case _          => None // nothing to do
   }
 
-  def sendMsg(msg: network.ClientMessage): Unit = connection match {
+  private def sendMsg(msg: network.ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
     case Some(conn) =>
       val data = upickle.write(msg)
       conn.write(data)
+  }
+
+  private def getOrCreateSource3D(playerId: Int): audio.Source3D = this.audioSources3D.get(playerId) match {
+    case None =>
+      val source3d = this.audioContext.createSource3D()
+      this.audioSources3D += (playerId -> source3d)
+      source3d
+
+    case Some(source3d) => source3d
   }
 
   def continue(): Boolean = continueCond
@@ -135,7 +151,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.touchpad = itf.initTouch() // Init touch (if available)
     this.accelerometer = itf.initAccelerometer() // Init accelerometer (if available)
 
-    audioContext.volume = 0.25f // Lower the initial global volume
+    audioContext.volume = 0.5f // Lower the initial global volume
 
     // Load main config file
     val configFuture = Misc.loadConfigFile(Resource(configFile))
@@ -148,24 +164,34 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
       val shadersFuture = Rendering.loadAllShaders(config("shaders"), gl, loopExecutionContext)
       val mapFuture = Map.load(Resource(config("map")))
+      val audioShootDataFuture = audioContext.prepareBufferedData(Resource(config("shootSound")))
+      val audioDamageDataFuture = audioContext.prepareBufferedData(Resource(config("damageSound")))
 
-      Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture))
+      Future.sequence(Seq(modelsFuture, wallMeshFuture, shadersFuture, mapFuture, audioShootDataFuture, audioDamageDataFuture))
     }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map) =>
-        itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s)")
+      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShootData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
+        itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s), audio ready")
         itf.printLine("Map size: " + map.width + " by " + map.height)
 
         this.map = map
+
+        // Graphics
         Rendering.Hud.setup(shaders("simple2d"))
         Rendering.Standard.setup(shaders("simple3d"))
         Rendering.Wall.setup(shaders("simple3d"), wallMesh, map)
         Rendering.Player.setup(models("character"))
         Rendering.Bullet.setup(models("bullet"))
 
+        // Physics
         Physics.setupMap(map)
+
+        // Audio
+        this.audioShootData = audioShootData
+        this.audioDamageData = audioDamageData
+        this.audioSimpleSource = audioContext.createSource()
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
@@ -216,7 +242,14 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
                 newEvents.foreach {
                   case network.ProjectileShot(network.ProjectileIdentifier(playerId, projId), position, orientation) =>
-                    if (playerId != this.localPlayerId) this.projectiles += (playerId -> new Projectile(projId, Misc.conv(position), orientation))
+                    if (playerId != this.localPlayerId) {
+                      this.projectiles += (playerId -> new Projectile(projId, Misc.conv(position), orientation))
+                      val source3d = getOrCreateSource3D(playerId)
+
+                      val player = this.audioShootData.attachNow(source3d)
+                      player.playing = true
+                      this.audioPlayers += player
+                    }
 
                   case network.ProjectileHit(network.ProjectileIdentifier(playerId, projId), playerHitId) =>
                     if (playerHitId == this.localPlayerId) {
@@ -232,13 +265,12 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                             present.position = startingPosition
                             present.orientation = startingOrientation
                             this.lastTimeSpawn = Some(now)
-                            //Console.println("You were hit by player " + playerId + " (you are dead, respawning)")
-                          } else {
-                            //Console.println("You were hit by player " + playerId + " (your health is at " + present.health + ")")
                           }
+
+                          val player = this.audioDamageData.attachNow(this.audioSimpleSource)
+                          player.playing = true
+                          this.audioPlayers += player
                         }
-                      } else {
-                        //Console.println("You were hit by player " + playerId + " (but you are invulnerable for now)")
                       }
                     }
                     this.projectiles = projectiles.filterNot { case (curPlayerId, curProj) => playerId == curPlayerId && projId == curProj.id }
@@ -295,7 +327,15 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           if (key == layout.mouseLock) mouse.locked = !mouse.locked
           else if (key == layout.fullscreen) gl.display.fullscreen = !gl.display.fullscreen
-          else if (key == layout.changeLayout) {
+          else if (key == layout.volumeIncrease) {
+            val newVolume = audioContext.volume + 0.05f
+            audioContext.volume = newVolume
+            itf.printLine("Volume increased to " + newVolume)
+          } else if (key == layout.volumeDecrease) {
+            val newVolume = Math.max(0f, audioContext.volume - 0.05f)
+            audioContext.volume = newVolume
+            itf.printLine("Volume decreased to " + newVolume)
+          } else if (key == layout.changeLayout) {
             if (layout == Qwerty) {
               itf.printLine("Changing keyboard layout for Azerty")
               layout = Azerty
@@ -430,6 +470,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       if (ret > 0 && shooterId == this.localPlayerId) for (conn <- connection) {
         val hit = network.ClientProjectileHit(projectile.id, ret)
         sendMsg(hit)
+
+        this.lastTimeHit = Some(now)
       }
       ret < 0
     }
@@ -448,6 +490,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           this.lastTimeProjectileShot = Some(now)
           this.nextProjectileId += 1
+
+          val audioPlayer = this.audioShootData.attachNow(this.audioSimpleSource)
+          audioPlayer.playing = true
+          this.audioPlayers += audioPlayer
         }
       }
 
@@ -459,7 +505,44 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
 
-    //#### Rendering
+    //#### Audio
+    // Camera data
+    val (camPosition, camOrientation) = ifPresent { present =>
+      (present.position, present.orientation)
+    }.getOrElse {
+      val startingPosition = this.map.startPositions(localPlayerId).center.copy()
+      val startingOrientation = this.map.startOrientations(localPlayerId)
+      (startingPosition, startingOrientation)
+    }
+
+    val cameraRotationMatrix = Matrix3f.rotate3D(camOrientation, Vector3f.Up)
+    val cameraPosition = new Vector3f(camPosition.x, Map.roomHalfSize, camPosition.y)
+    val cameraTranslationMatrix = Matrix4f.translate3D(cameraPosition)
+
+    val cameraTransform = cameraTranslationMatrix * cameraRotationMatrix.toHomogeneous()
+    val cameraTransformInv = cameraTransform.invertedCopy()
+
+    val audioListener = this.audioContext.listener
+    audioListener.setOrientation(cameraRotationMatrix * Vector3f.Front, Vector3f.Up)
+    audioListener.position = cameraPosition
+
+    // Close and remove sounds that are over
+    this.audioPlayers = this.audioPlayers.filter { player =>
+      val playing = player.playing
+      if (!playing) player.close()
+      playing
+    }
+
+    // Update the position of the 3d sources
+    for ((playerId, playerState) <- otherActivePlayers) {
+      val source3d = getOrCreateSource3D(playerId)
+
+      val position2d = playerState.position
+      val position3d = new Vector3f(position2d.x, Map.roomHalfSize, position2d.y)
+      source3d.position = position3d
+    }
+
+    //#### Graphics
     val curDim = (width, height)
     if (curDim != screenDim) {
       screenDim = curDim
@@ -472,17 +555,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // 3D rendering
     gl.enable(GLES2.DEPTH_TEST)
     gl.enable(GLES2.CULL_FACE)
-
-    // Camera data
-    val (camPosition, camOrientation) = ifPresent { present =>
-      (present.position, present.orientation)
-    }.getOrElse {
-      val startingPosition = this.map.startPositions(localPlayerId).center.copy()
-      val startingOrientation = this.map.startOrientations(localPlayerId)
-      (startingPosition, startingOrientation)
-    }
-    val cameraTransform = Matrix4f.translate3D(new Vector3f(camPosition.x, Map.roomHalfSize, camPosition.y)) * Matrix4f.rotate3D(camOrientation, Vector3f.Up)
-    val cameraTransformInv = cameraTransform.invertedCopy()
 
     Rendering.Wall.init()
     Rendering.Wall.render(cameraTransformInv)
@@ -510,7 +582,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.disable(GLES2.CULL_FACE)
 
     Rendering.Hud.init()
-    Rendering.Hud.render(this.localPlayerId, width, height, ifPresent(_.health).getOrElse(0f))
+    Rendering.Hud.render(this.localPlayerId, width, height, ifPresent(_.health).getOrElse(0f), this.lastTimeHit.map { last => (now - last).toInt })
     Rendering.Hud.close()
 
     //#### Ending
