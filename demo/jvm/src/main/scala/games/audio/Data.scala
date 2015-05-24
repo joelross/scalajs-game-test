@@ -106,6 +106,9 @@ class ALBufferData(val ctx: ALContext, alBuffer: Int) extends BufferedData with 
     super.close()
 
     ctx.unregisterData(this)
+
+    AL10.alDeleteBuffers(alBuffer)
+    Util.checkALError()
   }
 }
 
