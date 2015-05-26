@@ -444,8 +444,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     if (currentVelocity.y > maxBackwardSpeed) currentVelocity.y = maxBackwardSpeed
 
     ifPresent { present =>
+      val orientation = present.orientation + changeOrientation
+
       present.velocity = currentVelocity
-      present.orientation += changeOrientation
+      present.orientation = Physics.angleCentered(orientation)
     }
 
     val otherActivePlayers = externalPlayersState.flatMap {
