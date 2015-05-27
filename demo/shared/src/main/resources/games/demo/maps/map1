@@ -1,21 +1,21 @@
-#player_orientation:1=180
-#player_orientation:2=0
-#player_orientation:3=270
-#player_orientation:4=90
+#player_orientation:1=270
+#player_orientation:2=90
+#player_orientation:3=0
+#player_orientation:4=180
 #player_orientation:5=90
 #player_orientation:6=270
 #player_orientation:7=180
 #player_orientation:8=0
 
- 7 1
- x x xxxxxx5
- x xxx  x
- xxx  xxxxx4
+7 1x    xxx5
+xx x xxxx x
+x  xxx  x  4
+xxxx  xxxxxx
  x xxxxx x
  x xxxxx xx
  xx xxxxx x
   x xxxxx x
-3xxxxx  xxx
-   x  xxx x
-6xxxxxx x x
-        2 8
+xxxxxx  xxxx
+3  x  xxx  x
+ x xxxx x xx
+6xxx    x2 8
