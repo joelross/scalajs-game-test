@@ -286,7 +286,7 @@ object Rendering {
     var modelViewUniLoc: Token.UniformLocation = _
     var modelViewInvTrUniLoc: Token.UniformLocation = _
 
-    def setup(program: Token.Program, mesh: games.utils.SimpleOBJParser.TriMesh, map: Map)(implicit gl: GLES2): Unit = {
+    def setup(program: Token.Program, wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, ceilingMesh: games.utils.SimpleOBJParser.TriMesh, map: Map)(implicit gl: GLES2): Unit = {
       this.program = program
 
       this.positionAttrLoc = gl.getAttribLocation(program, "position")
@@ -297,15 +297,15 @@ object Rendering {
       this.modelViewUniLoc = gl.getUniformLocation(program, "modelView")
       this.modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
 
-      val vertices = mesh.vertices
-      val normals = mesh.normals.get
+      val vertices = wallMesh.vertices
+      val normals = wallMesh.normals.get
 
       assert(vertices.length == normals.length) // sanity check
 
-      this.submeshCount = mesh.submeshes.length
+      this.submeshCount = wallMesh.submeshes.length
 
       val entityCount = (map.lWalls.length + map.rWalls.length + map.tWalls.length + map.bWalls.length)
-      val entityTrisCountBySubmesh = mesh.submeshes.map(_.tris.length)
+      val entityTrisCountBySubmesh = wallMesh.submeshes.map(_.tris.length)
 
       val globalVerticesCount = entityCount * vertices.length
       val globalNormalsCount = entityCount * normals.length
@@ -313,7 +313,7 @@ object Rendering {
 
       this.renderCountBySubmesh = globalTrisCountBySubmesh.map { trisCount => trisCount * 3 }
 
-      this.materialBySubmesh = mesh.submeshes.map { submesh => submesh.material.get }
+      this.materialBySubmesh = wallMesh.submeshes.map { submesh => submesh.material.get }
 
       this.renderCountBySubmesh.foreach { renderCount =>
         assert(renderCount <= Short.MaxValue) // Sanity check, make sure the indexing will be within short limits (could use "<= 0xFFFF" as the short are unsigned in latter opengl)
@@ -343,7 +343,7 @@ object Rendering {
             transformedNormal.store(globalNormalsData)
           }
           for (i <- 0 until this.submeshCount) {
-            val submesh = mesh.submeshes(i)
+            val submesh = wallMesh.submeshes(i)
             val globalIndicesData = globalIndicesDataBySubmesh(i)
 
             val tris = submesh.tris
@@ -375,7 +375,7 @@ object Rendering {
 
       val globalVerticesBuffer = gl.createBuffer()
       val globalNormalsBuffer = gl.createBuffer()
-      val globalIndicesBufferBySubmesh = mesh.submeshes.map { _ => gl.createBuffer() }
+      val globalIndicesBufferBySubmesh = wallMesh.submeshes.map { _ => gl.createBuffer() }
 
       gl.bindBuffer(GLES2.ARRAY_BUFFER, globalVerticesBuffer)
       gl.bufferData(GLES2.ARRAY_BUFFER, globalVerticesData, GLES2.STATIC_DRAW)
