@@ -631,10 +631,8 @@ object Rendering {
           componentsMult(playerColor, diffuseColor)
           (ambientColor, diffuseColor)
         } else (submesh.ambientColor, submesh.diffuseColor)
-        //val ambientColor = submesh.ambientColor
         gl.uniform3f(ambientColorUniLoc, ambientColor)
-        //val dffuseColor = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
-        gl.uniform3f(diffuseColorUniLoc, dffuseColor)
+        gl.uniform3f(diffuseColorUniLoc, diffuseColor)
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
         gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
       }
