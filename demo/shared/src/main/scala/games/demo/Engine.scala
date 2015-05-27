@@ -180,7 +180,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         // Graphics
         Rendering.Hud.setup(shaders("simple2d"))
         Rendering.Standard.setup(shaders("simple3d"))
-        Rendering.Wall.setup(shaders("simple3d"), wallMesh, floorMesh, ceilingMesh, map)
+        Rendering.Map.setup(shaders("simple3d"), wallMesh, floorMesh, ceilingMesh, map)
         Rendering.Player.setup(models("character"))
         Rendering.Bullet.setup(models("bullet"))
 
@@ -557,9 +557,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     gl.enable(GLES2.DEPTH_TEST)
     gl.enable(GLES2.CULL_FACE)
 
-    Rendering.Wall.init()
-    Rendering.Wall.render(cameraTransformInv)
-    Rendering.Wall.close()
+    Rendering.Map.init()
+    Rendering.Map.render(cameraTransformInv)
+    Rendering.Map.close()
 
     Rendering.Standard.init()
     // Render players
