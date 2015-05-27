@@ -23,15 +23,13 @@ import scala.collection.immutable
 import scala.collection.mutable
 
 abstract class EngineInterface {
-  def printLine(msg: String): Unit
   def initGL(): GLES2
   def initAudio(): Context
   def initKeyboard(): Keyboard
   def initMouse(): Mouse
   def initTouch(): Option[Touchpad]
   def initAccelerometer(): Option[Accelerometer]
-  def update(): Boolean
-  def close(): Unit
+  def continue(): Boolean
 }
 
 sealed abstract class State
@@ -126,8 +124,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   def continue(): Boolean = continueCond
 
   def onClose(): Unit = {
-    itf.printLine("Closing...")
-    itf.close()
+    Console.println("Closing...")
 
     for (acc <- accelerometer) acc.close()
     for (touch <- touchpad) touch.close()
@@ -143,7 +140,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   }
 
   def onCreate(): Option[Future[Unit]] = {
-    itf.printLine("Starting...")
+    Console.println("Starting...")
     this.gl = itf.initGL() // Init OpenGL (Enable automatic error checking by encapsuling it in GLES2Debug)
     this.audioContext = itf.initAudio() // Init Audio
     this.keyboard = itf.initKeyboard() // Init Keyboard listening
@@ -173,8 +170,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
       case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShootData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
-        itf.printLine("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s), audio ready")
-        itf.printLine("Map size: " + map.width + " by " + map.height)
+        Console.println("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s), audio ready")
+        Console.println("Map size: " + map.width + " by " + map.height)
 
         this.map = map
 
@@ -199,11 +196,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     // Init network (wait for data loading to complete before that)
     val networkFuture = retrieveInfoFromDataFuture.flatMap { _ =>
       val serverAddress = config("server")
-      itf.printLine("Server address: " + serverAddress)
+      Console.println("Connecting to " + serverAddress)
 
       val futureConnection = new WebSocketClient().connect(WebSocketUrl(serverAddress))
       futureConnection.map { conn =>
-        itf.printLine("Websocket connection established")
+        Console.println("Websocket connection established")
         // Wait for the Hello packet to register the connection
         conn.handlerPromise.success { msg =>
           val now = System.currentTimeMillis()
@@ -222,7 +219,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                   val startingOrientation = this.map.startOrientations(localPlayerId)
                   this.localPlayerState = new Present(startingPosition, new Vector2f, startingOrientation, initialHealth)
                   this.lastTimeSpawn = Some(now)
-                  itf.printLine("You are player " + playerId)
+                  Console.println("You are player " + playerId)
                   helloPacketReceived.success((): Unit)
                 }
 
@@ -281,7 +278,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         }
         conn.closedFuture.onSuccess {
           case _ =>
-            itf.printLine("Websocket connection closed")
+            Console.println("Websocket connection closed")
             this.connection = None
         }
       }
@@ -330,17 +327,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           else if (key == layout.volumeIncrease) {
             val newVolume = audioContext.volume + 0.05f
             audioContext.volume = newVolume
-            itf.printLine("Volume increased to " + newVolume)
+            Console.println("Volume increased to " + newVolume)
           } else if (key == layout.volumeDecrease) {
             val newVolume = Math.max(0f, audioContext.volume - 0.05f)
             audioContext.volume = newVolume
-            itf.printLine("Volume decreased to " + newVolume)
+            Console.println("Volume decreased to " + newVolume)
           } else if (key == layout.changeLayout) {
             if (layout == Qwerty) {
-              itf.printLine("Changing keyboard layout for Azerty")
+              Console.println("Changing keyboard layout for Azerty")
               layout = Azerty
             } else {
-              itf.printLine("Changing keyboard layout for Qwerty")
+              Console.println("Changing keyboard layout for Qwerty")
               layout = Qwerty
             }
           } else if (key == layout.escape) continueCond = false
@@ -588,6 +585,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     Rendering.Hud.close()
 
     //#### Ending
-    continueCond = continueCond && itf.update()
+    continueCond = continueCond && itf.continue()
   }
 }
