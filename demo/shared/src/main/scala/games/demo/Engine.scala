@@ -160,18 +160,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       val modelsFuture = Rendering.loadAllModels(config("models"), gl, loopExecutionContext)
       val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
       val floorMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/floor", gl, loopExecutionContext)
-      val ceilingMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/ceiling", gl, loopExecutionContext)
       val shadersFuture = Rendering.loadAllShaders(config("shaders"), gl, loopExecutionContext)
       val mapFuture = Map.load(Resource(config("map")))
       val audioShootDataFuture = audioContext.prepareBufferedData(Resource(config("shootSound")))
       val audioDamageDataFuture = audioContext.prepareBufferedData(Resource(config("damageSound")))
 
-      Future.sequence(Seq(modelsFuture, wallMeshFuture, floorMeshFuture, ceilingMeshFuture, shadersFuture, mapFuture, audioShootDataFuture, audioDamageDataFuture))
+      Future.sequence(Seq(modelsFuture, wallMeshFuture, floorMeshFuture, shadersFuture, mapFuture, audioShootDataFuture, audioDamageDataFuture))
     }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, ceilingMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShootData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
+      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShootData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
         Console.println("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s), audio ready")
         Console.println("Map size: " + map.width + " by " + map.height)
 
@@ -180,7 +179,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         // Graphics
         Rendering.Hud.setup(shaders("simple2d"))
         Rendering.Standard.setup(shaders("simple3d"))
-        Rendering.Map.setup(shaders("simple3d"), wallMesh, floorMesh, ceilingMesh, map)
+        Rendering.Map.setup(shaders("simple3d"), wallMesh, floorMesh, map)
         Rendering.Player.setup(models("character"))
         Rendering.Bullet.setup(models("bullet"))
 

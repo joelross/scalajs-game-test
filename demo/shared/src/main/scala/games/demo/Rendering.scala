@@ -386,7 +386,7 @@ object Rendering {
       this.indicesBufferBySubmesh = globalIndicesBufferBySubmesh
     }
 
-    def setup(program: Token.Program, wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, ceilingMesh: games.utils.SimpleOBJParser.TriMesh, map: Map)(implicit gl: GLES2): Unit = {
+    def setup(program: Token.Program, wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, map: Map)(implicit gl: GLES2): Unit = {
       this.program = program
 
       this.positionAttrLoc = gl.getAttribLocation(program, "position")
