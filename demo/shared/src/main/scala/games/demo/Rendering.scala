@@ -290,7 +290,7 @@ object Rendering {
     var diffuseColorUniLoc: Token.UniformLocation = _
     var projectionUniLoc: Token.UniformLocation = _
     var modelViewUniLoc: Token.UniformLocation = _
-    var modelViewInvTrUniLoc: Token.UniformLocation = _
+    var normalModelViewUniLoc: Token.UniformLocation = _
 
     private def setupFloor(mesh: games.utils.SimpleOBJParser.TriMesh, map: Map)(implicit gl: GLES2): Unit = {
       val vertices = mesh.vertices
@@ -493,7 +493,7 @@ object Rendering {
       diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
       this.projectionUniLoc = gl.getUniformLocation(program, "projection")
       this.modelViewUniLoc = gl.getUniformLocation(program, "modelView")
-      this.modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
+      this.normalModelViewUniLoc = gl.getUniformLocation(program, "normalModelView")
 
       setupWall(wallMesh, map)
       setupFloor(floorMesh, map)
@@ -516,10 +516,10 @@ object Rendering {
 
     def render(cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
       val modelView = cameraTransformInv
-      val modelViewInvTr = modelView.invertedCopy().transpose()
+      val normalModelView = modelView.toCartesian().invertedCopy().transpose()
 
       gl.uniformMatrix4f(modelViewUniLoc, modelView)
-      gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
+      gl.uniformMatrix3f(normalModelViewUniLoc, normalModelView)
 
       // Walls
       gl.bindBuffer(GLES2.ARRAY_BUFFER, this.wallVerticesBuffer)
@@ -569,7 +569,7 @@ object Rendering {
     var diffuseColorUniLoc: Token.UniformLocation = _
     var projectionUniLoc: Token.UniformLocation = _
     var modelViewUniLoc: Token.UniformLocation = _
-    var modelViewInvTrUniLoc: Token.UniformLocation = _
+    var normalModelViewUniLoc: Token.UniformLocation = _
 
     def setup(program: Token.Program)(implicit gl: GLES2): Unit = {
       this.program = program
@@ -580,7 +580,7 @@ object Rendering {
       diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
       projectionUniLoc = gl.getUniformLocation(program, "projection")
       modelViewUniLoc = gl.getUniformLocation(program, "modelView")
-      modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
+      normalModelViewUniLoc = gl.getUniformLocation(program, "normalModelView")
     }
 
     def init()(implicit gl: GLES2): Unit = {
@@ -598,10 +598,10 @@ object Rendering {
 
     def render(playerId: Int, mesh: OpenGLMesh, transform: Matrix4f, cameraTransformInv: Matrix4f)(implicit gl: GLES2): Unit = {
       val modelView = cameraTransformInv * transform
-      val modelViewInvTr = modelView.invertedCopy().transpose()
+      val normalModelView = modelView.toCartesian().invertedCopy().transpose()
 
       gl.uniformMatrix4f(modelViewUniLoc, modelView)
-      gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
+      gl.uniformMatrix3f(normalModelViewUniLoc, normalModelView)
 
       gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.verticesBuffer)
       gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)

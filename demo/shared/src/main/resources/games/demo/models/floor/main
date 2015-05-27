@@ -1,3 +1,3 @@
-name=Plane
-obj=plane.obj
-mtl=plane.mtl
+name=Floor
+obj=floor.obj
+mtl=floor.mtl
