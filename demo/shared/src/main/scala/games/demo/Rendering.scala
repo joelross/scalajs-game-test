@@ -287,6 +287,7 @@ object Rendering {
 
     var positionAttrLoc: Int = _
     var normalAttrLoc: Int = _
+    var ambientColorUniLoc: Token.UniformLocation = _
     var diffuseColorUniLoc: Token.UniformLocation = _
     var projectionUniLoc: Token.UniformLocation = _
     var modelViewUniLoc: Token.UniformLocation = _
@@ -490,7 +491,8 @@ object Rendering {
       this.positionAttrLoc = gl.getAttribLocation(program, "position")
       this.normalAttrLoc = gl.getAttribLocation(program, "normal")
 
-      diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
+      this.ambientColorUniLoc = gl.getUniformLocation(program, "ambientColor")
+      this.diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
       this.projectionUniLoc = gl.getUniformLocation(program, "projection")
       this.modelViewUniLoc = gl.getUniformLocation(program, "modelView")
       this.normalModelViewUniLoc = gl.getUniformLocation(program, "normalModelView")
@@ -533,8 +535,11 @@ object Rendering {
         val renderCount = this.wallRenderCountBySubmesh(i)
         val material = this.wallMaterialBySubmesh(i)
 
-        val color = material.diffuseColor.get
-        gl.uniform3f(diffuseColorUniLoc, color)
+        val ambientColor = material.ambientColor.get
+        gl.uniform3f(ambientColorUniLoc, ambientColor)
+
+        val diffuseColor = material.diffuseColor.get
+        gl.uniform3f(diffuseColorUniLoc, diffuseColor)
 
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
         gl.drawElements(GLES2.TRIANGLES, renderCount, GLES2.UNSIGNED_SHORT, 0)
@@ -552,8 +557,11 @@ object Rendering {
         val renderCount = this.floorRenderCountBySubmesh(i)
         val material = this.floorMaterialBySubmesh(i)
 
-        val color = material.diffuseColor.get
-        gl.uniform3f(diffuseColorUniLoc, color)
+        val ambientColor = material.ambientColor.get
+        gl.uniform3f(ambientColorUniLoc, ambientColor)
+
+        val diffuseColor = material.diffuseColor.get
+        gl.uniform3f(diffuseColorUniLoc, diffuseColor)
 
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
         gl.drawElements(GLES2.TRIANGLES, renderCount, GLES2.UNSIGNED_SHORT, 0)
@@ -566,6 +574,7 @@ object Rendering {
 
     var positionAttrLoc: Int = _
     var normalAttrLoc: Int = _
+    var ambientColorUniLoc: Token.UniformLocation = _
     var diffuseColorUniLoc: Token.UniformLocation = _
     var projectionUniLoc: Token.UniformLocation = _
     var modelViewUniLoc: Token.UniformLocation = _
@@ -577,6 +586,7 @@ object Rendering {
       positionAttrLoc = gl.getAttribLocation(program, "position")
       normalAttrLoc = gl.getAttribLocation(program, "normal")
 
+      ambientColorUniLoc = gl.getUniformLocation(program, "ambientColor")
       diffuseColorUniLoc = gl.getUniformLocation(program, "diffuseColor")
       projectionUniLoc = gl.getUniformLocation(program, "projection")
       modelViewUniLoc = gl.getUniformLocation(program, "modelView")
@@ -608,8 +618,10 @@ object Rendering {
       gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
       gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
       mesh.subMeshes.foreach { submesh =>
-        val color = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
-        gl.uniform3f(diffuseColorUniLoc, color)
+        val ambientColor = submesh.ambientColor
+        gl.uniform3f(ambientColorUniLoc, ambientColor)
+        val dffuseColor = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
+        gl.uniform3f(diffuseColorUniLoc, dffuseColor)
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
         gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
       }
