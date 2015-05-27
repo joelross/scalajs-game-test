@@ -618,9 +618,22 @@ object Rendering {
       gl.bindBuffer(GLES2.ARRAY_BUFFER, mesh.normalsBuffer)
       gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
       mesh.subMeshes.foreach { submesh =>
-        val ambientColor = submesh.ambientColor
+        val (ambientColor, diffuseColor) = if (submesh.name == "[player]") {
+          val playerColor = Data.colors(playerId)
+          val ambientColor = submesh.ambientColor.copy()
+          val diffuseColor = submesh.diffuseColor.copy()
+          def componentsMult(src: Vector3f, dst: Vector3f): Unit = {
+            dst.x *= src.x
+            dst.y *= src.y
+            dst.z *= src.z
+          }
+          componentsMult(playerColor, ambientColor)
+          componentsMult(playerColor, diffuseColor)
+          (ambientColor, diffuseColor)
+        } else (submesh.ambientColor, submesh.diffuseColor)
+        //val ambientColor = submesh.ambientColor
         gl.uniform3f(ambientColorUniLoc, ambientColor)
-        val dffuseColor = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
+        //val dffuseColor = if (submesh.name == "[player]") Data.colors(playerId) else submesh.diffuseColor
         gl.uniform3f(diffuseColorUniLoc, dffuseColor)
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
         gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
