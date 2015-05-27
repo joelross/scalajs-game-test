@@ -23,6 +23,8 @@ object Map {
       val startPositions: mutable.Map[Int, Room] = mutable.Map()
       val startOrientations: mutable.Map[Int, Float] = mutable.Map()
 
+      var mapDataLine = false
+
       var y: Int = 0
       for (line <- lines) {
         if (line.startsWith("#")) {
@@ -44,7 +46,9 @@ object Map {
             }
           }
 
-        } else {
+        } else if (mapDataLine || !line.trim().isEmpty()) {
+          mapDataLine = true
+
           var x: Int = 0
           for (char <- line) {
 
