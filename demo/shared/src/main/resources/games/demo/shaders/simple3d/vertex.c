@@ -12,5 +12,5 @@ void main(void) {
   vec4 pos = modelView * vec4(position, 1.0);
   gl_Position = projection * pos;
   varNormal = normalize(normalModelView * normal);
-  varView = normalize(-pos.xyz);
+  varView = -pos.xyz;
 }
