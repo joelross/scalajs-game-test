@@ -12,7 +12,7 @@ object Data {
     3 -> new Vector3f(0f, 1f, 0f), // Green for player 3
     4 -> new Vector3f(1f, 1f, 0f), // Yellow for player 4
     5 -> new Vector3f(0f, 1f, 1f), // Cyan for player 5
-    6 -> new Vector3f(1f, 0.6f, 0.2f), // Orange for player 6
+    6 -> new Vector3f(1f, 0.5f, 0f), // Orange for player 6
     7 -> new Vector3f(0.8f, 0f, 0.8f), // Purple for player 7
     8 -> new Vector3f(1f, 0f, 0.5f) // Pink for player 8
     )

@@ -278,12 +278,111 @@ object Rendering {
     var wallMaterialBySubmesh: Array[games.utils.SimpleOBJParser.Material] = _
     var wallSubmeshCount: Int = _
 
+    var floorVerticesBuffer: Token.Buffer = _
+    var floorNormalsBuffer: Token.Buffer = _
+    var floorIndicesBufferBySubmesh: Array[Token.Buffer] = _
+    var floorRenderCountBySubmesh: Array[Int] = _
+    var floorMaterialBySubmesh: Array[games.utils.SimpleOBJParser.Material] = _
+    var floorSubmeshCount: Int = _
+
     var positionAttrLoc: Int = _
     var normalAttrLoc: Int = _
     var diffuseColorUniLoc: Token.UniformLocation = _
     var projectionUniLoc: Token.UniformLocation = _
     var modelViewUniLoc: Token.UniformLocation = _
     var modelViewInvTrUniLoc: Token.UniformLocation = _
+
+    private def setupFloor(mesh: games.utils.SimpleOBJParser.TriMesh, map: Map)(implicit gl: GLES2): Unit = {
+      val vertices = mesh.vertices
+      val normals = mesh.normals.get
+
+      assert(vertices.length == normals.length) // sanity check
+
+      this.floorSubmeshCount = mesh.submeshes.length
+
+      val entityCount = map.floors.length
+      val entityTrisCountBySubmesh = mesh.submeshes.map(_.tris.length)
+
+      val globalVerticesCount = entityCount * vertices.length
+      val globalNormalsCount = entityCount * normals.length
+      val globalTrisCountBySubmesh = entityTrisCountBySubmesh.map { trisCount => entityCount * trisCount }
+
+      this.floorRenderCountBySubmesh = globalTrisCountBySubmesh.map { trisCount => trisCount * 3 }
+
+      this.floorMaterialBySubmesh = mesh.submeshes.map { submesh => submesh.material.get }
+
+      this.floorRenderCountBySubmesh.foreach { renderCount =>
+        assert(renderCount <= Short.MaxValue) // Sanity check, make sure the indexing will be within short limits (could use "<= 0xFFFF" as the short are unsigned in latter opengl)
+      }
+
+      val globalVerticesData = GLES2.createFloatBuffer(globalVerticesCount * 3) // 3 floats (x, y, z) per vertex
+      val globalNormalsData = GLES2.createFloatBuffer(globalNormalsCount * 3) // 3 floats (x, y, z) per normal
+      val globalIndicesDataBySubmesh = globalTrisCountBySubmesh.map { trisCount => GLES2.createShortBuffer(trisCount * 3) } // 3 indices (vertices) per triangle
+
+      var indicesOffset = 0
+
+      for (floor <- map.floors) {
+        val pos2d = floor
+        val pos3d = new Vector3f(pos2d.x, 0f, pos2d.y)
+
+        val transform = Matrix4f.translate3D(pos3d)
+        val normalTransform = transform.toCartesian().invertedCopy().transposedCopy()
+
+        for (vertex <- vertices) {
+          val transformedVertex = (transform * vertex.toHomogeneous()).toCartesian()
+          transformedVertex.store(globalVerticesData)
+        }
+        for (normal <- normals) {
+          val transformedNormal = (normalTransform * normal).normalizedCopy()
+          transformedNormal.store(globalNormalsData)
+        }
+        for (i <- 0 until this.floorSubmeshCount) {
+          val submesh = mesh.submeshes(i)
+          val globalIndicesData = globalIndicesDataBySubmesh(i)
+
+          val tris = submesh.tris
+
+          for ((i0, i1, i2) <- tris) {
+            globalIndicesData.put((i0 + indicesOffset).toShort)
+            globalIndicesData.put((i1 + indicesOffset).toShort)
+            globalIndicesData.put((i2 + indicesOffset).toShort)
+          }
+        }
+        indicesOffset += vertices.length
+      }
+
+      assert(globalVerticesData.remaining() == 0) // sanity check
+      assert(globalNormalsData.remaining() == 0) // sanity check
+      globalIndicesDataBySubmesh.foreach { globalIndicesData =>
+        assert(globalIndicesData.remaining() == 0) // sanity check
+      }
+
+      globalVerticesData.flip()
+      globalNormalsData.flip()
+      globalIndicesDataBySubmesh.foreach { indicesData => indicesData.flip() }
+
+      val globalVerticesBuffer = gl.createBuffer()
+      val globalNormalsBuffer = gl.createBuffer()
+      val globalIndicesBufferBySubmesh = mesh.submeshes.map { _ => gl.createBuffer() }
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, globalVerticesBuffer)
+      gl.bufferData(GLES2.ARRAY_BUFFER, globalVerticesData, GLES2.STATIC_DRAW)
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, globalNormalsBuffer)
+      gl.bufferData(GLES2.ARRAY_BUFFER, globalNormalsData, GLES2.STATIC_DRAW)
+
+      for (i <- 0 until this.floorSubmeshCount) {
+        val globalIndicesBuffer = globalIndicesBufferBySubmesh(i)
+        val globalIndicesData = globalIndicesDataBySubmesh(i)
+
+        gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, globalIndicesBuffer)
+        gl.bufferData(GLES2.ELEMENT_ARRAY_BUFFER, globalIndicesData, GLES2.STATIC_DRAW)
+      }
+
+      this.floorVerticesBuffer = globalVerticesBuffer
+      this.floorNormalsBuffer = globalNormalsBuffer
+      this.floorIndicesBufferBySubmesh = globalIndicesBufferBySubmesh
+    }
 
     private def setupWall(mesh: games.utils.SimpleOBJParser.TriMesh, map: Map)(implicit gl: GLES2): Unit = {
       val vertices = mesh.vertices
@@ -397,6 +496,7 @@ object Rendering {
       this.modelViewInvTrUniLoc = gl.getUniformLocation(program, "modelViewInvTr")
 
       setupWall(wallMesh, map)
+      setupFloor(floorMesh, map)
 
       gl.checkError()
     }
@@ -421,6 +521,7 @@ object Rendering {
       gl.uniformMatrix4f(modelViewUniLoc, modelView)
       gl.uniformMatrix4f(modelViewInvTrUniLoc, modelViewInvTr)
 
+      // Walls
       gl.bindBuffer(GLES2.ARRAY_BUFFER, this.wallVerticesBuffer)
       gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
 
@@ -431,6 +532,25 @@ object Rendering {
         val indicesBuffer = this.wallIndicesBufferBySubmesh(i)
         val renderCount = this.wallRenderCountBySubmesh(i)
         val material = this.wallMaterialBySubmesh(i)
+
+        val color = material.diffuseColor.get
+        gl.uniform3f(diffuseColorUniLoc, color)
+
+        gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+        gl.drawElements(GLES2.TRIANGLES, renderCount, GLES2.UNSIGNED_SHORT, 0)
+      }
+
+      // Floors
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, this.floorVerticesBuffer)
+      gl.vertexAttribPointer(positionAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+
+      gl.bindBuffer(GLES2.ARRAY_BUFFER, this.floorNormalsBuffer)
+      gl.vertexAttribPointer(normalAttrLoc, 3, GLES2.FLOAT, false, 0, 0)
+
+      for (i <- 0 until this.floorSubmeshCount) {
+        val indicesBuffer = this.floorIndicesBufferBySubmesh(i)
+        val renderCount = this.floorRenderCountBySubmesh(i)
+        val material = this.floorMaterialBySubmesh(i)
 
         val color = material.diffuseColor.get
         gl.uniform3f(diffuseColorUniLoc, color)
