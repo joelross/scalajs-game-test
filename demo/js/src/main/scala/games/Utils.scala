@@ -97,8 +97,12 @@ object JsUtils {
    * Get the offset of the element.
    * From jQuery: https://github.com/jquery/jquery/blob/2.1.3/src/offset.js#L107-L108
    */
-  def offsetOfElement(element: js.Dynamic): (Int, Int) = {
-    val bounding = element.getBoundingClientRect()
+  def offsetOfElement(element: js.Any): (Int, Int) = if (element == dom.document) {
+    (0, 0)
+  } else {
+    val dynElement = element.asInstanceOf[js.Dynamic]
+
+    val bounding = dynElement.getBoundingClientRect()
     val window = js.Dynamic.global.window
 
     val boundingLeft = bounding.left.asInstanceOf[Double]
@@ -107,8 +111,8 @@ object JsUtils {
     val winOffsetX = window.pageXOffset.asInstanceOf[Double]
     val winOffsetY = window.pageYOffset.asInstanceOf[Double]
 
-    val elemOffsetX = element.clientLeft.asInstanceOf[Double]
-    val elemOffsetY = element.clientTop.asInstanceOf[Double]
+    val elemOffsetX = dynElement.clientLeft.asInstanceOf[Double]
+    val elemOffsetY = dynElement.clientTop.asInstanceOf[Double]
 
     ((boundingLeft + winOffsetX - elemOffsetX).toInt, (boundingTop + winOffsetY - elemOffsetY).toInt)
   }

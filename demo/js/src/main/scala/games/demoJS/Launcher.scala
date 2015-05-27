@@ -43,11 +43,11 @@ object Launcher extends js.JSApp {
         keyboard
       }
       def initMouse(): Mouse = {
-        val mouse = new MouseJS(canvas)
+        val mouse = new MouseJS(dom.document)
         mouse
       }
       def initTouch(): Option[Touchpad] = {
-        val touch = new TouchpadJS(canvas)
+        val touch = new TouchpadJS(dom.document)
         Some(touch)
       }
       def initAccelerometer: Option[Accelerometer] = {
