@@ -1,16 +1,16 @@
-# Blender MTL File: 'wall.out.blend'
+# Blender MTL File: 'wall.blend'
 # Material Count: 2
 
-newmtl base
+newmtl wallBase
 Ns 96.078431
 Ka 0.500000 0.500000 0.500000
-Kd 0.200000 0.200000 0.200000
+Kd 0.140000 0.140000 0.140000
 Ks 0.500000 0.500000 0.500000
 Ni 1.000000
 d 1.000000
 illum 2
 
-newmtl depth
+newmtl wallDepth
 Ns 96.078431
 Ka 0.000000 0.000000 0.000000
 Kd 0.032568 0.020657 0.046189
