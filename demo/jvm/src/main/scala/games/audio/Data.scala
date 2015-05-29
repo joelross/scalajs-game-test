@@ -182,9 +182,6 @@ abstract class ALBasicPlayer(val data: ALData, val source: ALAbstractSource, val
 
     source.unregisterPlayer(this)
     data.unregisterPlayer(this)
-
-    AL10.alDeleteSources(alSource)
-    Util.checkALError()
   }
 }
 
@@ -224,6 +221,9 @@ class ALBufferPlayer(override val data: ALBufferData, override val source: ALAbs
 
   override def close(): Unit = {
     super.close()
+
+    AL10.alDeleteSources(alSource)
+    Util.checkALError()
   }
 }
 
@@ -350,9 +350,9 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
             decoder.close()
             decoder = null
           }
-          if (AL10.alIsSource(alSource)) AL10.alDeleteSources(alSource)
+          AL10.alDeleteSources(alSource)
           for (alBuffer <- alBuffers) {
-            if (AL10.alIsBuffer(alBuffer)) AL10.alDeleteBuffers(alBuffer)
+            AL10.alDeleteBuffers(alBuffer)
           }
           data.ctx.unregisterStreamingThread(thisStreamingThread)
           Util.checkALError()
