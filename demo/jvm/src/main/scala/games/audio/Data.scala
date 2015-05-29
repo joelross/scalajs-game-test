@@ -337,9 +337,6 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
 
           }
 
-          // destroy the awaiting buffers
-          buffersReady.foreach { alBuffer => AL10.alDeleteBuffers(alBuffer) }
-
           // destroy the buffers still in use
           val queuedBuffers = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED)
           for (i <- 0 until queuedBuffers) {
