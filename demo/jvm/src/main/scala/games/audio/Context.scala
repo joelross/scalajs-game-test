@@ -14,89 +14,119 @@ import java.io.EOFException
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.collection.mutable.Set
+import scala.collection.{ mutable, immutable }
 
 class ALContext extends Context {
+  private val streamingThreads: mutable.Set[Thread] = mutable.Set()
+  private val lock = new Object()
+  private[games] def registerStreamingThread(thread: Thread): Unit = lock.synchronized { streamingThreads += thread }
+  private[games] def unregisterStreamingThread(thread: Thread): Unit = lock.synchronized {
+    streamingThreads -= thread
+    lock.notifyAll()
+  }
+  private[games] def waitForStreamingThreads(): Unit = lock.synchronized {
+    while (!streamingThreads.isEmpty) lock.wait()
+  }
+
   AL.create()
 
   def prepareBufferedData(res: games.Resource): scala.concurrent.Future[games.audio.BufferedData] = Future {
     val alBuffer = AL10.alGenBuffers()
-    val in = JvmUtils.streamForResource(res)
-    val decoder = new VorbisDecoder(in, FixedSigned16Converter)
-    val transfertBufferSize = 4096
-    val transfertBuffer = ByteBuffer.allocate(transfertBufferSize).order(ByteOrder.nativeOrder())
-    val dataStream = new ByteArrayOutputStream(transfertBufferSize)
-
-    var totalDataLength = 0
-
+    var decoder: VorbisDecoder = null
     try {
-      while (true) {
-        transfertBuffer.rewind()
-        val dataLength = decoder.read(transfertBuffer)
-        val data = transfertBuffer.array()
-        dataStream.write(data, 0, dataLength)
-        totalDataLength += dataLength
+      val in = JvmUtils.streamForResource(res)
+      decoder = new VorbisDecoder(in, FixedSigned16Converter)
+      val transfertBufferSize = 4096
+      val transfertBuffer = ByteBuffer.allocate(transfertBufferSize).order(ByteOrder.nativeOrder())
+      val dataStream = new ByteArrayOutputStream(transfertBufferSize)
+
+      var totalDataLength = 0
+
+      try {
+        while (true) {
+          transfertBuffer.rewind()
+          val dataLength = decoder.read(transfertBuffer)
+          val data = transfertBuffer.array()
+          dataStream.write(data, 0, dataLength)
+          totalDataLength += dataLength
+        }
+      } catch {
+        case e: EOFException => // end of stream reached, exit loop
       }
+
+      val dataArray = dataStream.toByteArray()
+      require(totalDataLength == dataArray.length) // TODO remove later, sanity check
+      val dataBuffer = ByteBuffer.allocateDirect(dataArray.length).order(ByteOrder.nativeOrder())
+
+      dataBuffer.put(dataArray)
+      dataBuffer.rewind()
+
+      val format = decoder.channels match {
+        case 1 => AL10.AL_FORMAT_MONO16
+        case 2 => AL10.AL_FORMAT_STEREO16
+        case x => throw new RuntimeException("Only mono or stereo data are supported. Found channels: " + x)
+      }
+
+      AL10.alBufferData(alBuffer, format, dataBuffer, decoder.rate)
+
+      decoder.close()
+      decoder = null
+
+      val ret = new ALBufferData(this, alBuffer)
+      Util.checkALError()
+      ret
     } catch {
-      case e: EOFException => // end of stream reached, exit loop
+      case t: Throwable =>
+        if (decoder != null) {
+          decoder.close()
+          decoder = null
+        }
+        AL10.alDeleteBuffers(alBuffer)
+        Util.checkALError()
+        throw t
     }
-
-    val dataArray = dataStream.toByteArray()
-    require(totalDataLength == dataArray.length) // TODO remove later, sanity check
-    val dataBuffer = ByteBuffer.allocateDirect(dataArray.length).order(ByteOrder.nativeOrder())
-
-    dataBuffer.put(dataArray)
-    dataBuffer.rewind()
-
-    val format = decoder.channels match {
-      case 1 => AL10.AL_FORMAT_MONO16
-      case 2 => AL10.AL_FORMAT_STEREO16
-      case x => throw new RuntimeException("Only mono or stereo data are supported. Found channels: " + x)
-    }
-
-    AL10.alBufferData(alBuffer, format, dataBuffer, decoder.rate)
-
-    decoder.close()
-
-    val ret = new ALBufferData(this, alBuffer)
-    Util.checkALError()
-    ret
   }
   def prepareRawData(data: java.nio.ByteBuffer, format: games.audio.Format, channels: Int, freq: Int): scala.concurrent.Future[games.audio.BufferedData] = Future {
     val alBuffer = AL10.alGenBuffers()
-
-    format match {
-      case Format.Float32 => // good to go
-      case _              => throw new RuntimeException("Unsupported data format: " + format)
-    }
-
-    val channelFormat = channels match {
-      case 1 => AL10.AL_FORMAT_MONO16
-      case 2 => AL10.AL_FORMAT_STEREO16
-      case _ => throw new RuntimeException("Unsupported channels number: " + channels)
-    }
-
-    val converter = FixedSigned16Converter
-    val fb = data.slice().order(ByteOrder.nativeOrder()).asFloatBuffer()
-
-    val sampleCount = fb.remaining() / channels
-
-    val openalData = ByteBuffer.allocateDirect(2 * channels * sampleCount).order(ByteOrder.nativeOrder())
-
-    for (sampleCur <- 0 until sampleCount) {
-      for (channelCur <- 0 until channels) {
-        val value = fb.get()
-        converter(value, openalData)
+    try {
+      format match {
+        case Format.Float32 => // good to go
+        case _              => throw new RuntimeException("Unsupported data format: " + format)
       }
+
+      val channelFormat = channels match {
+        case 1 => AL10.AL_FORMAT_MONO16
+        case 2 => AL10.AL_FORMAT_STEREO16
+        case _ => throw new RuntimeException("Unsupported channels number: " + channels)
+      }
+
+      val converter = FixedSigned16Converter
+      val fb = data.slice().order(ByteOrder.nativeOrder()).asFloatBuffer()
+
+      val sampleCount = fb.remaining() / channels
+
+      val openalData = ByteBuffer.allocateDirect(2 * channels * sampleCount).order(ByteOrder.nativeOrder())
+
+      for (sampleCur <- 0 until sampleCount) {
+        for (channelCur <- 0 until channels) {
+          val value = fb.get()
+          converter(value, openalData)
+        }
+      }
+
+      openalData.rewind()
+
+      AL10.alBufferData(alBuffer, channelFormat, openalData, freq)
+
+      val ret = new ALBufferData(this, alBuffer)
+      Util.checkALError()
+      ret
+    } catch {
+      case t: Throwable =>
+        AL10.alDeleteBuffers(alBuffer)
+        Util.checkALError()
+        throw t
     }
-
-    openalData.rewind()
-
-    AL10.alBufferData(alBuffer, channelFormat, openalData, freq)
-
-    val ret = new ALBufferData(this, alBuffer)
-    Util.checkALError()
-    ret
   }
   def prepareStreamingData(res: games.Resource): scala.concurrent.Future[games.audio.Data] = Future.successful(new ALStreamingData(this, res))
 
@@ -121,6 +151,10 @@ class ALContext extends Context {
 
   override def close(): Unit = {
     super.close()
+
+    // Wait for all the streaming threads to have done their work
+    this.waitForStreamingThreads()
+
     AL.destroy()
   }
 }

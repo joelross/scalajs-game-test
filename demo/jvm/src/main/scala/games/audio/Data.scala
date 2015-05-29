@@ -7,6 +7,8 @@ import games.JvmUtils
 import scala.concurrent.{ Promise, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.collection.{ mutable, immutable }
+
 import java.nio.{ ByteBuffer, ByteOrder }
 import java.io.EOFException
 
@@ -94,12 +96,19 @@ class ALBufferData(val ctx: ALContext, alBuffer: Int) extends BufferedData with 
   def attach(source: games.audio.AbstractSource): scala.concurrent.Future[games.audio.Player] = Future.successful(this.attachNow(source))
   def attachNow(source: games.audio.AbstractSource): games.audio.Player = {
     val alSource = AL10.alGenSources()
-    AL10.alSourcei(alSource, AL10.AL_BUFFER, alBuffer)
+    try {
+      AL10.alSourcei(alSource, AL10.AL_BUFFER, alBuffer)
 
-    val alAudioSource = source.asInstanceOf[ALAbstractSource]
-    val ret = new ALBufferPlayer(this, alAudioSource, alSource)
-    Util.checkALError()
-    ret
+      val alAudioSource = source.asInstanceOf[ALAbstractSource]
+      val ret = new ALBufferPlayer(this, alAudioSource, alSource)
+      Util.checkALError()
+      ret
+    } catch {
+      case t: Throwable =>
+        AL10.alDeleteSources(alSource)
+        Util.checkALError()
+        throw t
+    }
   }
 
   override def close(): Unit = {
@@ -116,13 +125,22 @@ class ALStreamingData(val ctx: ALContext, res: Resource) extends Data with ALDat
   ctx.registerData(this)
 
   def attach(source: games.audio.AbstractSource): scala.concurrent.Future[games.audio.Player] = {
+    val promise = Promise[games.audio.Player]
+
     val alSource = AL10.alGenSources()
     val alAudioSource = source.asInstanceOf[ALAbstractSource]
     val player = new ALStreamingPlayer(this, alAudioSource, alSource, res)
     Util.checkALError()
-    player.ready.map { _ =>
-      player
+
+    player.ready.onSuccess { case _ => promise.success(player) }
+    player.ready.onFailure {
+      case t: Throwable =>
+        AL10.alDeleteSources(alSource)
+        promise.failure(t)
+        Util.checkALError()
     }
+
+    promise.future
   }
 
   override def close(): Unit = {
@@ -214,126 +232,140 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
   private val converter: Converter = FixedSigned16Converter
 
   private[games] val streamingThread = {
-    val streamingThread = new Thread() {
+    val streamingThread = new Thread() { thisStreamingThread =>
       override def run(): Unit = {
-        // Init
-        var decoder = new VorbisDecoder(JvmUtils.streamForResource(res), converter)
-
-        val bufferedTime = 2.0f // amount of time buffered
         val numBuffers = 8 // buffers
-        val streamingInterval = 1.0f // check for buffer every second
-
-        require(streamingInterval < bufferedTime) // TODO remove later, sanity check, buffer will go empty before we can feed them else (beware of the pitch!)
-
-        val bufferSampleSize = ((bufferedTime * decoder.rate) / numBuffers).toInt
-        val bufferSize = bufferSampleSize * decoder.channels * converter.bytePerValue
-
-        val tmpBufferData = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder())
-
         val alBuffers = new Array[Int](numBuffers)
+        var decoder: VorbisDecoder = null
+        data.ctx.registerStreamingThread(thisStreamingThread)
+        try {
+          // Init
+          decoder = new VorbisDecoder(JvmUtils.streamForResource(res), converter)
 
-        val format = decoder.channels match {
-          case 1 => AL10.AL_FORMAT_MONO16
-          case 2 => AL10.AL_FORMAT_STEREO16
-          case x => throw new RuntimeException("Only mono or stereo data are supported. Found channels: " + x)
-        }
+          val bufferedTime = 2.0f // amount of time buffered
 
-        for (i <- 0 until alBuffers.length) {
-          alBuffers(i) = AL10.alGenBuffers()
-        }
-        Util.checkALError()
+          val streamingInterval = 1.0f // check for buffer every second
 
-        var buffersReady: List[Int] = alBuffers.toList
+          require(streamingInterval < bufferedTime) // TODO remove later, sanity check, buffer will go empty before we can feed them else (beware of the pitch!)
 
-        /**
-         * Fill the buffer with the data from the decoder
-         * Returns false if the end of the stream has been reached (but the data in the buffer are still valid up to the limit), true else
-         */
-        def fillBuffer(buffer: ByteBuffer): Boolean = {
-          buffer.clear()
+          val bufferSampleSize = ((bufferedTime * decoder.rate) / numBuffers).toInt
+          val bufferSize = bufferSampleSize * decoder.channels * converter.bytePerValue
 
-          val ret = try {
-            decoder.readFully(buffer)
-            true
-          } catch {
-            case e: EOFException => false
+          val tmpBufferData = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder())
+
+          val format = decoder.channels match {
+            case 1 => AL10.AL_FORMAT_MONO16
+            case 2 => AL10.AL_FORMAT_STEREO16
+            case x => throw new RuntimeException("Only mono or stereo data are supported. Found channels: " + x)
           }
 
-          buffer.flip()
+          for (i <- 0 until alBuffers.length) {
+            alBuffers(i) = AL10.alGenBuffers()
+          }
+          Util.checkALError()
 
-          ret
-        }
+          var buffersReady: List[Int] = alBuffers.toList
 
-        var running = true
-        var last = System.currentTimeMillis()
+          /**
+           * Fill the buffer with the data from the decoder
+           * Returns false if the end of the stream has been reached (but the data in the buffer are still valid up to the limit), true else
+           */
+          def fillBuffer(buffer: ByteBuffer): Boolean = {
+            buffer.clear()
 
-        // Main thread loop
-        while (threadRunning) {
-          // if we are using this streaming thread...
-          if (running) {
-            // Retrieve the used buffer
-            val processed = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_PROCESSED)
-            for (i <- 0 until processed) {
-              val alBuffer = AL10.alSourceUnqueueBuffers(alSource)
-              buffersReady = alBuffer :: buffersReady
+            val ret = try {
+              decoder.readFully(buffer)
+              true
+            } catch {
+              case e: EOFException => false
             }
 
-            // Fill the buffer and send them to OpenAL again
-            while (running && !buffersReady.isEmpty) {
-              val alBuffer = buffersReady.head
-              buffersReady = buffersReady.tail
+            buffer.flip()
 
-              running = fillBuffer(tmpBufferData)
-              AL10.alBufferData(alBuffer, format, tmpBufferData, decoder.rate)
-              AL10.alSourceQueueBuffers(alSource, alBuffer)
-              Util.checkALError()
+            ret
+          }
 
-              // Check for looping
-              if (!running && looping) {
-                decoder.close()
-                decoder = new VorbisDecoder(JvmUtils.streamForResource(res), converter)
-                running = true
+          var running = true
+          var last = System.currentTimeMillis()
+
+          // Main thread loop
+          while (threadRunning) {
+            // if we are using this streaming thread...
+            if (running) {
+              // Retrieve the used buffer
+              val processed = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_PROCESSED)
+              for (i <- 0 until processed) {
+                val alBuffer = AL10.alSourceUnqueueBuffers(alSource)
+                buffersReady = alBuffer :: buffersReady
               }
+
+              // Fill the buffer and send them to OpenAL again
+              while (running && !buffersReady.isEmpty) {
+                val alBuffer = buffersReady.head
+                buffersReady = buffersReady.tail
+
+                running = fillBuffer(tmpBufferData)
+                AL10.alBufferData(alBuffer, format, tmpBufferData, decoder.rate)
+                AL10.alSourceQueueBuffers(alSource, alBuffer)
+                Util.checkALError()
+
+                // Check for looping
+                if (!running && looping) {
+                  decoder.close()
+                  decoder = new VorbisDecoder(JvmUtils.streamForResource(res), converter)
+                  running = true
+                }
+              }
+
+              // We should have enough data to start the playback at this point
+              if (!promiseReady.isCompleted) promiseReady.success((): Unit)
             }
 
-            // We should have enough data to start the playback at this point
-            if (!promiseReady.isCompleted) promiseReady.success((): Unit)
-          }
-
-          // Sleep a while, adjust for pitch (playback rate)
-          try {
-            val now = System.currentTimeMillis()
-            val elapsedTime = now - last
-            last = System.currentTimeMillis()
-            val remainingTime = streamingInterval - elapsedTime
-            if (remainingTime > 0) { // Sleep only
-              val sleepingTime = (remainingTime / pitchCache * 1000).toLong
-              Thread.sleep(sleepingTime)
+            // Sleep a while, adjust for pitch (playback rate)
+            try {
+              val now = System.currentTimeMillis()
+              val elapsedTime = now - last
+              last = System.currentTimeMillis()
+              val remainingTime = streamingInterval - elapsedTime
+              if (remainingTime > 0) { // Sleep only
+                val sleepingTime = (remainingTime / pitchCache * 1000).toLong
+                Thread.sleep(sleepingTime)
+              }
+            } catch {
+              case e: InterruptedException => // just wake up and do your thing
             }
-          } catch {
-            case e: InterruptedException => // just wake up and do your thing
+
           }
 
+          // destroy the awaiting buffers
+          buffersReady.foreach { alBuffer => AL10.alDeleteBuffers(alBuffer) }
+
+          // destroy the buffers still in use
+          val queuedBuffers = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED)
+          for (i <- 0 until queuedBuffers) {
+            val alBuffer = AL10.alSourceUnqueueBuffers(alSource)
+          }
+
+          // Closing
+          decoder.close()
+          decoder = null
+        } catch {
+          case t: Throwable =>
+            val ex = new RuntimeException("Error in the streaming thread", t)
+            if (promiseReady.isCompleted) throw ex
+            else promiseReady.failure(ex)
+        } finally {
+          if (decoder != null) {
+            decoder.close()
+            decoder = null
+          }
+          AL10.alDeleteSources(alSource)
+          for (alBuffer <- alBuffers) {
+            if (AL10.alIsBuffer(alBuffer)) AL10.alDeleteBuffers(alBuffer)
+          }
+          data.ctx.unregisterStreamingThread(thisStreamingThread)
+          Util.checkALError()
         }
-
-        AL10.alSourceStop(alSource)
-
-        // destroy the awaiting buffers
-        buffersReady.foreach { alBuffer => AL10.alDeleteBuffers(alBuffer) }
-
-        // destroy the buffers still in use
-        val queuedBuffers = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED)
-        for (i <- 0 until queuedBuffers) {
-          val alBuffer = AL10.alSourceUnqueueBuffers(alSource)
-          AL10.alDeleteBuffers(alBuffer)
-        }
-
-        AL10.alDeleteSources(alSource)
-
-        Util.checkALError()
-
-        // Closing
-        decoder.close()
       }
     }
     streamingThread.setDaemon(true)

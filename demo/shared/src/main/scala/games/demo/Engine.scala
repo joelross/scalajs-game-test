@@ -190,6 +190,28 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         this.audioShootData = audioShootData
         this.audioDamageData = audioDamageData
         this.audioSimpleSource = audioContext.createSource()
+
+        // audio test
+        val source = audioContext.createSource()
+        val dataFuture = audioContext.prepareStreamingData(Resource("/games/demo/sounds/test_mono.ogg"))
+
+        dataFuture.onFailure {
+          case t =>
+            Console.err.println("Failed to load data: " + t)
+        }
+        dataFuture.onSuccess {
+          case data =>
+            val playerFuture = data.attach(source)
+            playerFuture.onFailure {
+              case t =>
+                Console.err.println("Failed to create player: " + t)
+            }
+            playerFuture.onSuccess {
+              case player =>
+                Console.println("Player created successfully")
+                player.playing = true
+            }
+        }
     }(loopExecutionContext)
 
     val helloPacketReceived = Promise[Unit]
