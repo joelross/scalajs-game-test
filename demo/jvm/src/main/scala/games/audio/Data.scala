@@ -337,12 +337,6 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
 
           }
 
-          // destroy the buffers still in use
-          val queuedBuffers = AL10.alGetSourcei(alSource, AL10.AL_BUFFERS_QUEUED)
-          for (i <- 0 until queuedBuffers) {
-            val alBuffer = AL10.alSourceUnqueueBuffers(alSource)
-          }
-
           // Closing
           decoder.close()
           decoder = null
@@ -356,7 +350,7 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
             decoder.close()
             decoder = null
           }
-          AL10.alDeleteSources(alSource)
+          if (AL10.alIsSource(alSource)) AL10.alDeleteSources(alSource)
           for (alBuffer <- alBuffers) {
             if (AL10.alIsBuffer(alBuffer)) AL10.alDeleteBuffers(alBuffer)
           }
