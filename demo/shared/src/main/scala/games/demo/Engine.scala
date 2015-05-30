@@ -193,7 +193,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
         // audio test
         val source = audioContext.createSource()
-        val dataFuture = audioContext.prepareStreamingData(Seq(Resource("/games/demo/sounds/test_mono.asdasd"), Resource("/games/demo/sounds/test_mono.ogg")))
+        val dataFuture = audioContext.prepareStreamingData(Seq(Resource("/games/demo/sounds/test_mono.asdasd"), Resource("/games/demo/sounds/test_mono.aiff"), Resource("/games/demo/sounds/test_mono.ogg")))
 
         dataFuture.onFailure {
           case t =>
