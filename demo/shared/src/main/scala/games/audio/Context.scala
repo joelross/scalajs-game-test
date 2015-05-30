@@ -20,24 +20,27 @@ abstract class Context extends Closeable {
   def prepareBufferedData(res: Resource): Future[games.audio.BufferedData]
   def prepareRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): Future[games.audio.BufferedData]
 
-  private def tryFutures[T](res: Seq[Resource], fun: Resource => Future[T])(implicit ec: ExecutionContext): Future[T] = {
+  private def tryFutures[T](res: TraversableOnce[Resource], fun: Resource => Future[T])(implicit ec: ExecutionContext): Future[T] = {
     val promise = Promise[T]
 
-    def prep(datas: List[Resource]): Unit = res match {
-      case Nil => promise.failure(new RuntimeException("No usable resources in " + res))
-      case x :: xs =>
-        val dataFuture = fun(x)
-        dataFuture.onSuccess { case v => promise.success(v) }
-        dataFuture.onFailure { case t => prep(xs) }
+    val iterator = res.toIterator
+
+    def tryNext(): Unit = if (iterator.hasNext) {
+      val nextResource = iterator.next()
+      val dataFuture = fun(nextResource)
+      dataFuture.onSuccess { case v => promise.success(v) }
+      dataFuture.onFailure { case t => tryNext() }
+    } else {
+      promise.failure(new RuntimeException("No usable resource in " + res))
     }
 
-    prep(res.toList)
+    tryNext()
 
     promise.future
   }
 
-  def prepareStreamingData(res: Seq[Resource])(implicit ec: ExecutionContext): Future[games.audio.Data] = tryFutures(res, prepareStreamingData(_))
-  def prepareBufferedData(res: Seq[Resource])(implicit ec: ExecutionContext): Future[games.audio.BufferedData] = tryFutures(res, prepareBufferedData(_))
+  def prepareStreamingData(res: TraversableOnce[Resource])(implicit ec: ExecutionContext): Future[games.audio.Data] = tryFutures(res, prepareStreamingData(_))
+  def prepareBufferedData(res: TraversableOnce[Resource])(implicit ec: ExecutionContext): Future[games.audio.BufferedData] = tryFutures(res, prepareBufferedData(_))
 
   def createSource(): games.audio.Source
   def createSource3D(): games.audio.Source3D
