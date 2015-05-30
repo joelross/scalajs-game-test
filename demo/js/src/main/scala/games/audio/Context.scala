@@ -91,25 +91,30 @@ class WebAudioContext extends Context {
     val dataFuture = Utils.getBinaryDataFromResource(res)
     val promise = Promise[JsBufferData]
 
-    dataFuture.map { bb =>
-      import scala.scalajs.js.typedarray.TypedArrayBufferOps._
+    dataFuture.onSuccess {
+      case bb =>
+        import scala.scalajs.js.typedarray.TypedArrayBufferOps._
 
-      val arraybuffer = bb.arrayBuffer()
-      this.webApi.decodeAudioData(arraybuffer,
-        (decodedBuffer: js.Dynamic) => {
-          promise.success(new JsBufferData(this, decodedBuffer))
-        },
-        () => {
-          val msg = "Failed to decode the audio data from resource " + res
-          // If Aurora is available and this error seems due to decoding, try with Aurora
-          if (WebAudioContext.canUseAurora) {
-            val auroraDataFuture = AuroraHelper.createDataFromAurora(this, arraybuffer)
-            auroraDataFuture.onSuccess { case auroraData => promise.success(auroraData) }
-            auroraDataFuture.onFailure { case t => promise.failure(new RuntimeException(msg + " (result with Aurora: " + t + ")", t)) }
-          } else {
-            promise.failure(new RuntimeException(msg))
-          }
-        })
+        val arraybuffer = bb.arrayBuffer()
+        this.webApi.decodeAudioData(arraybuffer,
+          (decodedBuffer: js.Dynamic) => {
+            promise.success(new JsBufferData(this, decodedBuffer))
+          },
+          () => {
+            val msg = "Failed to decode the audio data from resource " + res
+            // If Aurora is available and this error seems due to decoding, try with Aurora
+            if (WebAudioContext.canUseAurora) {
+              val auroraDataFuture = AuroraHelper.createDataFromAurora(this, arraybuffer)
+              auroraDataFuture.onSuccess { case auroraData => promise.success(auroraData) }
+              auroraDataFuture.onFailure { case t => promise.failure(new RuntimeException(msg + " (result with Aurora: " + t + ")", t)) }
+            } else {
+              promise.failure(new RuntimeException(msg))
+            }
+          })
+    }
+    dataFuture.onFailure {
+      case t =>
+        promise.failure(t)
     }
 
     promise.future
