@@ -1,6 +1,6 @@
 package games.audio
 
-import scala.concurrent.Future
+import scala.concurrent.{ Promise, Future, ExecutionContext }
 import scala.collection.mutable
 
 import games.Resource
@@ -20,13 +20,32 @@ abstract class Context extends Closeable {
   def prepareBufferedData(res: Resource): Future[games.audio.BufferedData]
   def prepareRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): Future[games.audio.BufferedData]
 
-  def createSource(): Source
-  def createSource3D(): Source3D
+  private def tryFutures[T](res: Seq[Resource], fun: Resource => Future[T])(implicit ec: ExecutionContext): Future[T] = {
+    val promise = Promise[T]
+
+    def prep(datas: List[Resource]): Unit = res match {
+      case Nil => promise.failure(new RuntimeException("No usable resources in " + res))
+      case x :: xs =>
+        val dataFuture = fun(x)
+        dataFuture.onSuccess { case v => promise.success(v) }
+        dataFuture.onFailure { case t => prep(xs) }
+    }
+
+    prep(res.toList)
+
+    promise.future
+  }
+
+  def prepareStreamingData(res: Seq[Resource])(implicit ec: ExecutionContext): Future[games.audio.Data] = tryFutures(res, prepareStreamingData(_))
+  def prepareBufferedData(res: Seq[Resource])(implicit ec: ExecutionContext): Future[games.audio.BufferedData] = tryFutures(res, prepareBufferedData(_))
+
+  def createSource(): games.audio.Source
+  def createSource3D(): games.audio.Source3D
 
   def listener: Listener
 
   def volume: Float
-  def volume_=(volume: Float)
+  def volume_=(volume: Float): Unit
 
   private[games] val datas: mutable.Set[Data] = mutable.Set()
   private[games] def registerData(data: Data): Unit = datas += data
