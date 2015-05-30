@@ -12,7 +12,7 @@ import java.nio.ByteOrder
 import java.io.ByteArrayOutputStream
 import java.io.EOFException
 
-import scala.concurrent.Future
+import scala.concurrent.{ Promise, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.{ mutable, immutable }
 
@@ -27,6 +27,8 @@ class ALContext extends Context {
   private[games] def waitForStreamingThreads(): Unit = lock.synchronized {
     while (!streamingThreads.isEmpty) lock.wait()
   }
+
+  private lazy val fakeSource = this.createSource()
 
   AL.create()
 
@@ -128,7 +130,26 @@ class ALContext extends Context {
         throw t
     }
   }
-  def prepareStreamingData(res: games.Resource): scala.concurrent.Future[games.audio.Data] = Future.successful(new ALStreamingData(this, res))
+  def prepareStreamingData(res: games.Resource): scala.concurrent.Future[games.audio.Data] = {
+    val promise = Promise[games.audio.Data]
+
+    val data = new ALStreamingData(this, res)
+
+    // Try to create a player (to make sure it works)
+    val playerFuture = data.attach(fakeSource)
+    playerFuture.onSuccess {
+      case player =>
+        player.close()
+        promise.success(data)
+    }
+    playerFuture.onFailure {
+      case t =>
+        data.close()
+        promise.failure(t)
+    }
+
+    promise.future
+  }
 
   def createSource(): games.audio.Source = new ALSource(this)
   def createSource3D(): games.audio.Source3D = new ALSource3D(this)

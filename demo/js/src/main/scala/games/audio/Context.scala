@@ -73,6 +73,8 @@ class WebAudioContext extends Context {
   private val audioContext: js.Dynamic = JsUtils.getOptional[js.Dynamic](g, "AudioContext", "webkitAudioContext").getOrElse(throw new RuntimeException("Web Audio API not supported by your browser"))
   private[games] val webApi = js.Dynamic.newInstance(audioContext)()
 
+  private lazy val fakeSource = this.createSource()
+
   private[games] val mainOutput = {
     val node = webApi.createGain()
     node.connect(webApi.destination)
@@ -85,7 +87,26 @@ class WebAudioContext extends Context {
     if (JsUtils.Browser.chrome && JsUtils.Browser.android) {
       Console.err.println("Warning: Android Chrome does not support streaming data (resource " + res + "), switching to buffered data")
       this.prepareBufferedData(res)
-    } else Future.successful(new JsStreamingData(this, res))
+    } else {
+      val promise = Promise[games.audio.Data]
+
+      val data = new JsStreamingData(this, res)
+
+      // Try to create a player (to make sure it works)
+      val playerFuture = data.attach(fakeSource)
+      playerFuture.onSuccess {
+        case player =>
+          player.close()
+          promise.success(data)
+      }
+      playerFuture.onFailure {
+        case t =>
+          data.close()
+          promise.failure(t)
+      }
+
+      promise.future
+    }
   }
   def prepareBufferedData(res: Resource): Future[games.audio.JsBufferData] = {
     val dataFuture = Utils.getBinaryDataFromResource(res)
