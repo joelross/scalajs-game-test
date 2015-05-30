@@ -135,7 +135,6 @@ class ALStreamingData(val ctx: ALContext, res: Resource) extends Data with ALDat
     player.ready.onSuccess { case _ => promise.success(player) }
     player.ready.onFailure {
       case t: Throwable =>
-        AL10.alDeleteSources(alSource)
         promise.failure(t)
         Util.checkALError()
     }
@@ -380,27 +379,27 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
   def loop_=(loop: Boolean): Unit = looping = loop
 
   def pitch: Float = {
-    val ret = AL10.alGetSourcef(alSource, AL10.AL_PITCH)
+    val ret = if (AL10.alIsSource(alSource)) AL10.alGetSourcef(alSource, AL10.AL_PITCH) else pitchCache
     Util.checkALError()
     ret
   }
   def pitch_=(pitch: Float): Unit = {
     pitchCache = pitch
-    AL10.alSourcef(alSource, AL10.AL_PITCH, pitch)
+    if (AL10.alIsSource(alSource)) AL10.alSourcef(alSource, AL10.AL_PITCH, pitch)
     Util.checkALError()
     wakeUpThread() // so it can adjust to the new playback rate
   }
 
   def playing: Boolean = {
-    val ret = AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING
+    val ret = if (AL10.alIsSource(alSource)) AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING else false
     Util.checkALError()
     ret
   }
   def playing_=(playing: Boolean): Unit = if (playing) {
-    AL10.alSourcePlay(alSource)
+    if (AL10.alIsSource(alSource)) AL10.alSourcePlay(alSource)
     Util.checkALError()
   } else {
-    AL10.alSourcePause(alSource)
+    if (AL10.alIsSource(alSource)) AL10.alSourcePause(alSource)
     Util.checkALError()
   }
 
