@@ -226,17 +226,17 @@ class ALBufferPlayer(override val data: ALBufferData, override val source: ALAbs
   }
 }
 
-class ALStreamingPlayer(override val data: ALStreamingData, override val source: ALAbstractSource, override val alSource: Int, res: Resource) extends ALBasicPlayer(data, source, alSource) {
+class ALStreamingPlayer(override val data: ALStreamingData, override val source: ALAbstractSource, override val alSource: Int, res: Resource) extends ALBasicPlayer(data, source, alSource) { thisPlayer =>
 
   private val converter: Converter = FixedSigned16Converter
 
-  private[games] val streamingThread = {
+  private def initStreamingThread() = {
     val streamingThread = new Thread() { thisStreamingThread =>
       override def run(): Unit = {
+        data.ctx.registerStreamingThread(thisStreamingThread)
         val numBuffers = 8 // buffers
         val alBuffers = new Array[Int](numBuffers)
         var decoder: VorbisDecoder = null
-        data.ctx.registerStreamingThread(thisStreamingThread)
         try {
           // Init
           decoder = new VorbisDecoder(JvmUtils.streamForResource(res), converter)
@@ -363,6 +363,8 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
 
     streamingThread
   }
+
+  private[games] var streamingThread = this.initStreamingThread()
 
   private def wakeUpThread() {
     streamingThread.interrupt()
