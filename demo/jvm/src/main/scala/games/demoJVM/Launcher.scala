@@ -27,9 +27,6 @@ object Launcher {
     val title = "Scala.js-games"
 
     val itf = new EngineInterface {
-      def printLine(m: String): Unit = {
-        println(m)
-      }
       def initGL(): GLES2 = {
         val glContext: GLES2 = new GLES2LWJGL()
         glContext
@@ -48,11 +45,8 @@ object Launcher {
       }
       def initTouch(): Option[Touchpad] = None
       def initAccelerometer: Option[Accelerometer] = None
-      def update(): Boolean = {
+      def continue(): Boolean = {
         !Display.isCloseRequested()
-      }
-      def close(): Unit = {
-        Display.destroy()
       }
     }
 

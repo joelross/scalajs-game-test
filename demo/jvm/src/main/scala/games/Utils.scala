@@ -42,7 +42,7 @@ private[games] class ExplicitExecutionContext extends ExecutionContext {
 object JvmUtils {
   def streamForResource(res: Resource): InputStream = {
     val stream = JvmUtils.getClass().getResourceAsStream(res.name)
-    if (stream == null) throw new RuntimeException("Could not load resource " + res.name)
+    if (stream == null) throw new RuntimeException("Could not retrieve resource " + res.name)
     stream
   }
 }

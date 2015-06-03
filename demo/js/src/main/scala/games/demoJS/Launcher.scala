@@ -20,16 +20,9 @@ object Launcher extends js.JSApp {
     JsUtils.orientationLockOnFullscreen = false
     if (WebAudioContext.canUseAurora) Console.println("Aurora.js available as fallback")
 
-    val output = dom.document.getElementById("demo-output")
     val canvas = dom.document.getElementById("demo-canvas-main").asInstanceOf[dom.html.Canvas]
 
     val itf = new EngineInterface {
-      def printLine(msg: String): Unit = {
-        //        val line = dom.document.createElement("p")
-        //        line.innerHTML = msg
-        //        output.appendChild(line)
-        println(msg)
-      }
       def initGL(): GLES2 = {
         val glContext: GLES2 = new GLES2WebGL(canvas)
         glContext
@@ -54,8 +47,7 @@ object Launcher extends js.JSApp {
         val acc = new AccelerometerJS()
         Some(acc)
       }
-      def update(): Boolean = true
-      def close(): Unit = {}
+      def continue(): Boolean = true
     }
 
     val engine = new Engine(itf)

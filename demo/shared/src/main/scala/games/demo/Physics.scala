@@ -6,7 +6,7 @@ import scala.collection.{ immutable, mutable }
 
 object Physics {
   final val playerRadius = 0.5f
-  final val projectileVelocity = 10f
+  final val projectileVelocity = 15f
 
   /**
    * Sets an angle in degrees in the interval ]-180, 180]

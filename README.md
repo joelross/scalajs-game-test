@@ -22,7 +22,7 @@ The touchscreen controls are:
 * Tap the screen to shoot
 * Tap top-left of the screen to toggle fullscreen
 
-Players are dispatched in room of up to 4 players.
+Players are dispatched in room of up to 8 players.
 
 ### Launching
 
