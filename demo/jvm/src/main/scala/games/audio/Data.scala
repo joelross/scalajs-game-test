@@ -93,7 +93,6 @@ sealed trait ALData extends Data {
 class ALBufferData(val ctx: ALContext, alBuffer: Int) extends BufferedData with ALData {
   ctx.registerData(this)
 
-  def attach(source: games.audio.AbstractSource): scala.concurrent.Future[games.audio.Player] = Future.successful(this.attachNow(source))
   def attachNow(source: games.audio.AbstractSource): games.audio.Player = {
     val alSource = AL10.alGenSources()
     try {

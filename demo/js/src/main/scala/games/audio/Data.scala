@@ -69,7 +69,6 @@ sealed trait JsData extends Data {
 class JsBufferData(val ctx: WebAudioContext, webAudioBuffer: js.Dynamic) extends BufferedData with JsData {
   ctx.registerData(this)
 
-  def attach(source: AbstractSource): Future[games.audio.JsBufferPlayer] = Future.successful(this.attachNow(source))
   def attachNow(source: AbstractSource): games.audio.JsBufferPlayer = {
     val jsSource = source.asInstanceOf[JsAbstractSource]
     new JsBufferPlayer(this, jsSource, webAudioBuffer)
