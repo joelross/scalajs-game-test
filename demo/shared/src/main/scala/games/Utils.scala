@@ -10,8 +10,6 @@ case class FrameEvent(elapsedTime: Float)
 trait FrameListener {
   final val loopExecutionContext: ExecutionContext = Utils.getLoopThreadExecutionContext()
 
-  def context: GLES2
-
   def onCreate(): Option[Future[Unit]]
   def continue(): Boolean
   def onDraw(fe: FrameEvent): Unit
