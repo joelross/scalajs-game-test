@@ -121,8 +121,9 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
 
   // Init
   {
-    val fullscreenRequest = JsUtils.getOptional[js.Dynamic](canvas, "requestFullscreen", "webkitRequestFullscreen", "mozRequestFullscreen", "mozRequestFullScreen")
-    val fullscreenExit = JsUtils.getOptional[js.Dynamic](document, "exitFullscreen", "webkitCancelFullScreen", "mozCancelFullScreen")
+    // Note the capital 's' in the second mozRequest
+    val fullscreenRequest = JsUtils.getOptional[js.Dynamic](canvas, "requestFullscreen", "webkitRequestFullscreen", "mozRequestFullscreen", "mozRequestFullScreen", "msRequestFullscreen")
+    val fullscreenExit = JsUtils.getOptional[js.Dynamic](document, "exitFullscreen", "webkitCancelFullScreen", "mozCancelFullScreen", "msExitFullscreen")
 
     canvas.fullscreenRequest = fullscreenRequest.getOrElse(JsUtils.featureUnsupportedFunction("Fullscreen (Request)"))
     document.fullscreenExit = fullscreenExit.getOrElse(JsUtils.featureUnsupportedFunction("Fullscreen (Exit)"))
