@@ -151,7 +151,7 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
 
   def fullscreen: Boolean = {
     //val isFullscreen = JsUtils.getOptional[Boolean](document, "webkitIsFullScreen", "mozFullScreen")
-    val element = JsUtils.getOptional[js.Dynamic](document, "fullscreenElement", "webkitFullscreenElement", "mozFullScreenElement")
+    val element = JsUtils.getOptional[js.Dynamic](document, "fullscreenElement", "webkitFullscreenElement", "mozFullScreenElement", "msFullscreenElement")
     element match {
       case Some(el) => el == canvas
       case None     => false
