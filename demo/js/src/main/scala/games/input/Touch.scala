@@ -8,7 +8,7 @@ import scala.collection.immutable
 
 import games.JsUtils
 
-class TouchpadJS(element: js.Dynamic) extends Touchpad {
+class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
   def this() = this(dom.document.asInstanceOf[js.Dynamic])
   def this(any: js.Any) = this(any.asInstanceOf[js.Dynamic])
 

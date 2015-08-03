@@ -27,7 +27,7 @@ abstract class EngineInterface {
   def initAudio(): Context
   def initKeyboard(): Keyboard
   def initMouse(): Mouse
-  def initTouch(): Option[Touchpad]
+  def initTouch(): Option[Touchscreen]
   def initAccelerometer(): Option[Accelerometer]
   def continue(): Boolean
 }
@@ -60,7 +60,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var audioContext: Context = _
   private var keyboard: Keyboard = _
   private var mouse: Mouse = _
-  private var touchpad: Option[Touchpad] = None
+  private var touchscreen: Option[Touchscreen] = None
   private var accelerometer: Option[Accelerometer] = None
 
   private var config: immutable.Map[String, String] = _
@@ -127,7 +127,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     Console.println("Closing...")
 
     for (acc <- accelerometer) acc.close()
-    for (touch <- touchpad) touch.close()
+    for (touch <- touchscreen) touch.close()
     mouse.close()
     keyboard.close()
     audioContext.close()
@@ -145,7 +145,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     this.audioContext = itf.initAudio() // Init Audio
     this.keyboard = itf.initKeyboard() // Init Keyboard listening
     this.mouse = itf.initMouse() // Init Mouse listener
-    this.touchpad = itf.initTouch() // Init touch (if available)
+    this.touchscreen = itf.initTouch() // Init touch (if available)
     this.accelerometer = itf.initAccelerometer() // Init accelerometer (if available)
 
     audioContext.volume = 0.5f // Lower the initial global volume
@@ -362,9 +362,9 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     processMouse()
 
-    for (touchpad <- this.touchpad) {
+    for (touchscreen <- this.touchscreen) {
       def processTouch() {
-        val optTouchEvent = touchpad.nextEvent()
+        val optTouchEvent = touchscreen.nextEvent()
         for (touchEvent <- optTouchEvent) {
           touchEvent match {
             case TouchStart(touch) =>
@@ -403,7 +403,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
       val refSize = Math.max(width, height).toFloat
 
-      for ((identifier, position) <- this.moveTouch) touchpad.touches.find { _.identifier == identifier } match {
+      for ((identifier, position) <- this.moveTouch) touchscreen.touches.find { _.identifier == identifier } match {
         case Some(touch) =>
           val originalPosition = position
           val currentPosition = touch.position
@@ -417,7 +417,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         case None => this.moveTouch = None
       }
 
-      for ((identifier, position) <- this.orientationTouch) touchpad.touches.find { _.identifier == identifier } match {
+      for ((identifier, position) <- this.orientationTouch) touchscreen.touches.find { _.identifier == identifier } match {
         case Some(touch) =>
           val previousPosition = position
           val currentPosition = touch.position
