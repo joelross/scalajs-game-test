@@ -48,7 +48,7 @@ object JvmUtils {
 }
 
 trait UtilsImpl extends UtilsRequirements {
-  def getLoopThreadExecutionContext(): ExecutionContext = new ExplicitExecutionContext
+  private[games] def getLoopThreadExecutionContext(): ExecutionContext = new ExplicitExecutionContext
 
   def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer] = {
     Future {

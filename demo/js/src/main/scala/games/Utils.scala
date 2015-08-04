@@ -130,7 +130,7 @@ object JsUtils {
 }
 
 trait UtilsImpl extends UtilsRequirements {
-  def getLoopThreadExecutionContext(): ExecutionContext = scalajs.concurrent.JSExecutionContext.Implicits.queue
+  private[games] def getLoopThreadExecutionContext(): ExecutionContext = scalajs.concurrent.JSExecutionContext.Implicits.queue
 
   private def isHTTPCodeOk(code: Int): Boolean = (code >= 200 && code < 300) || code == 304 // HTTP Code 2xx or 304, Ok
 
