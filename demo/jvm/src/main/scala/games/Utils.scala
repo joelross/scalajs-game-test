@@ -126,6 +126,8 @@ trait UtilsImpl extends UtilsRequirements {
     }(openglExecutionContext)
   }
   def startFrameListener(fl: games.FrameListener): Unit = {
+    def executePending(): Unit = fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
+
     val frameListenerThread = new Thread(new Runnable {
       def run() {
         var lastLoopTime: Long = System.nanoTime()
@@ -138,7 +140,7 @@ trait UtilsImpl extends UtilsRequirements {
           case Some(future) => // wait for it
             while (!future.isCompleted) {
               // Execute the pending tasks
-              fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
+              executePending()
               Thread.sleep(100) // Don't exhaust the CPU, 10Hz should be enough
             }
 
@@ -153,7 +155,7 @@ trait UtilsImpl extends UtilsRequirements {
 
         try while (looping && fl.continue()) {
           // Execute the pending tasks
-          fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
+          executePending()
 
           // Main loop call
           val currentTime: Long = System.nanoTime()
@@ -169,7 +171,9 @@ trait UtilsImpl extends UtilsRequirements {
             t.printStackTrace(Console.err)
         }
 
+        executePending
         fl.onClose()
+        executePending
       }
     })
     // Start listener
