@@ -139,7 +139,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
   }
 
-  def onCreate(): Option[Future[Unit]] = {
+  def onCreate(): Future[Unit] = {
     Console.println("Starting...")
     this.gl = itf.initGL() // Init OpenGL (Enable automatic error checking by encapsuling it in GLES2Debug)
     this.audioContext = itf.initAudio() // Init Audio
@@ -300,7 +300,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     screenDim = (width, height)
     Rendering.setProjection(width, height)
 
-    Some(networkFuture) // wait for network setup (last part) to complete before proceding
+    networkFuture // wait for network setup (last part) to complete before proceding
   }
 
   def onDraw(fe: games.FrameEvent): Unit = {

@@ -269,25 +269,19 @@ trait UtilsImpl extends UtilsRequirements {
     }
 
     def loopInit(): Unit = {
-      val readyOptFuture = try { fl.onCreate() } catch { case t: Throwable => Some(Future.failed(t)) }
-      readyOptFuture match {
-        case None => loop() // ready right now
+      val readyFuture = try { fl.onCreate() } catch { case t: Throwable => Future.failed(t) }
+      val ec = scalajs.concurrent.JSExecutionContext.Implicits.runNow
+      readyFuture.onSuccess {
+        case _ =>
+          loop()
+      }(ec)
+      readyFuture.onFailure {
+        case t => // Don't start the loop in case of failure of the given future
+          Console.err.println("Could not init FrameListener")
+          t.printStackTrace(Console.err)
 
-        case Some(future) => // wait for the future to complete
-          val ec = scalajs.concurrent.JSExecutionContext.Implicits.runNow
-          future.onSuccess {
-            case _ =>
-              loop()
-          }(ec)
-          future.onFailure {
-            case t => // Don't start the loop in case of failure of the given future
-              Console.err.println("Could not init FrameListener")
-              t.printStackTrace(Console.err)
-
-              close()
-          }(ec)
-
-      }
+          close()
+      }(ec)
 
     }
 

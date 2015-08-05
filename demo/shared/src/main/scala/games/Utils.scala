@@ -10,7 +10,7 @@ case class FrameEvent(elapsedTime: Float)
 trait FrameListener {
   final val loopExecutionContext: ExecutionContext = Utils.getLoopThreadExecutionContext()
 
-  def onCreate(): Option[Future[Unit]]
+  def onCreate(): Future[Unit]
   def continue(): Boolean
   def onDraw(fe: FrameEvent): Unit
   def onClose(): Unit
