@@ -124,8 +124,9 @@ object KeyboardJS {
 }
 
 class KeyboardJS(element: js.Dynamic) extends Keyboard {
-  def this() = this(dom.document.asInstanceOf[js.Dynamic])
-  def this(any: js.Any) = this(any.asInstanceOf[js.Dynamic])
+  def this(el: dom.html.Element) = this(el.asInstanceOf[js.Dynamic])
+  def this(doc: dom.html.Document) = this(doc.asInstanceOf[js.Dynamic])
+  def this() = this(dom.document)
 
   private val eventQueue: mutable.Queue[KeyboardEvent] = mutable.Queue()
   private val downKeys: mutable.Set[Key] = mutable.Set()
