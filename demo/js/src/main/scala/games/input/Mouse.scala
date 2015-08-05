@@ -32,7 +32,6 @@ object MouseJS {
 class MouseJS(element: js.Dynamic) extends Mouse {
   def this(el: dom.html.Element) = this(el.asInstanceOf[js.Dynamic])
   def this(doc: dom.html.Document) = this(doc.asInstanceOf[js.Dynamic])
-  def this() = this(dom.document)
 
   private var mouseInside = false
   private var dx, dy = 0
