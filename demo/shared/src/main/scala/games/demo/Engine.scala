@@ -366,34 +366,33 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       def processTouch() {
         val optTouchEvent = touchscreen.nextEvent()
         for (touchEvent <- optTouchEvent) {
-          touchEvent match {
-            case TouchStart(touch) =>
-              if (touch.position.y < height / 4) { // Config
-                if (touch.position.x < width / 2) {
-                  gl.display.fullscreen = !gl.display.fullscreen
-                } else {
-                  // TODO
-                }
-              } else { // Control
-                if (touch.position.x < width / 2) { // Move
-                  if (this.moveTouch.isEmpty) this.moveTouch = Some(touch.identifier -> touch.position)
-                } else { // Orientation
-                  if (this.orientationTouch.isEmpty) this.orientationTouch = Some(touch.identifier -> touch.position)
-                }
-                this.timeTouches += (touch.identifier -> now)
-              }
+          val touch = touchEvent.data
 
-            case TouchEnd(touch) =>
-              for (time <- this.timeTouches.get(touch.identifier)) {
-                if ((now - time) < maxTouchTimeToShootMS) {
-                  bulletShot = true
-                }
+          if (touchEvent.start) {
+            if (touch.position.y < height / 4) { // Config
+              if (touch.position.x < width / 2) {
+                gl.display.fullscreen = !gl.display.fullscreen
+              } else {
+                // TODO place for another action
               }
-              for ((id, _) <- this.moveTouch) if (id == touch.identifier) this.moveTouch = None
-              for ((id, _) <- this.orientationTouch) if (id == touch.identifier) this.orientationTouch = None
-              this.timeTouches -= touch.identifier
+            } else { // Control
+              if (touch.position.x < width / 2) { // Move
+                if (this.moveTouch.isEmpty) this.moveTouch = Some(touch.identifier -> touch.position)
+              } else { // Orientation
+                if (this.orientationTouch.isEmpty) this.orientationTouch = Some(touch.identifier -> touch.position)
+              }
+              this.timeTouches += (touch.identifier -> now)
+            }
 
-            case _ =>
+          } else {
+            for (time <- this.timeTouches.get(touch.identifier)) {
+              if ((now - time) < maxTouchTimeToShootMS) {
+                bulletShot = true
+              }
+            }
+            for ((id, _) <- this.moveTouch) if (id == touch.identifier) this.moveTouch = None
+            for ((id, _) <- this.orientationTouch) if (id == touch.identifier) this.orientationTouch = None
+            this.timeTouches -= touch.identifier
           }
 
           processTouch() // process next event

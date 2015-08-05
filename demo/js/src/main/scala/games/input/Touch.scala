@@ -33,7 +33,7 @@ class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
       val pos = Position((touchJs.pageX - offsetX).toInt, (touchJs.pageY - offsetY).toInt)
       val data = Touch(pubId, pos)
       touchsMap += (prvId -> data)
-      eventQueue += TouchStart(data)
+      eventQueue += TouchEvent(data, true)
     }
   }
   private val onTouchEnd: js.Function = (e: dom.raw.TouchEvent) => {
@@ -51,7 +51,7 @@ class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
       val pos = Position((touchJs.pageX - offsetX).toInt, (touchJs.pageY - offsetY).toInt)
       val data = Touch(pubId, pos)
       touchsMap -= prvId
-      eventQueue += TouchEnd(data)
+      eventQueue += TouchEvent(data, false)
     }
   }
   private val onTouchMove: js.Function = (e: dom.raw.TouchEvent) => {

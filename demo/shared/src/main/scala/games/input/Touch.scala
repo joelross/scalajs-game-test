@@ -4,9 +4,7 @@ import java.io.Closeable
 
 case class Touch(identifier: Int, position: Position)
 
-abstract sealed class TouchEvent
-case class TouchStart(data: Touch) extends TouchEvent
-case class TouchEnd(data: Touch) extends TouchEvent
+case class TouchEvent(data: Touch, start: Boolean)
 
 abstract class Touchscreen extends Closeable {
   def touches: Seq[Touch]
