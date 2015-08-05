@@ -50,7 +50,7 @@ object JsUtils {
   // TODO performance.now() for microseconds precision: https://developer.mozilla.org/en-US/docs/Web/API/Performance.now%28%29
   def now(): Double = g.Date.now().asInstanceOf[Double]
 
-  def getWebGLRenderingContext(gl: GLES2): dom.raw.WebGLRenderingContext = gl match {
+  def getWebGLRenderingContext(gl: GLES2): dom.webgl.RenderingContext = gl match {
     case gles2webgl: GLES2WebGL => gles2webgl.getWebGLRenderingContext()
     case gles2debug: GLES2Debug => getWebGLRenderingContext(gles2debug.getInternalContext())
     case _                      => throw new RuntimeException("Could not retrieve the WebGLRenderingContext from GLES2")

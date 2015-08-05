@@ -30,8 +30,9 @@ object MouseJS {
 }
 
 class MouseJS(element: js.Dynamic) extends Mouse {
-  def this() = this(dom.document.asInstanceOf[js.Dynamic])
-  def this(any: js.Any) = this(any.asInstanceOf[js.Dynamic])
+  def this(el: dom.html.Element) = this(el.asInstanceOf[js.Dynamic])
+  def this(doc: dom.html.Document) = this(doc.asInstanceOf[js.Dynamic])
+  def this() = this(dom.document)
 
   private var mouseInside = false
   private var dx, dy = 0
@@ -43,13 +44,13 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   private var ignoreNextRelativeMove = false
   private var lockRequested = false
 
-  private def buttonFromEvent(ev: dom.raw.MouseEvent): Button = {
+  private def buttonFromEvent(ev: dom.MouseEvent): Button = {
     val eventButton = ev.button.asInstanceOf[Int]
     val button = MouseJS.getForRemote(eventButton)
     button
   }
 
-  private val onMouseUp: js.Function = (e: dom.raw.MouseEvent) => {
+  private val onMouseUp: js.Function = (e: dom.MouseEvent) => {
     e.preventDefault()
     JsUtils.flushUserEventTasks()
 
@@ -59,7 +60,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
       eventQueue += ButtonEvent(button, false)
     }
   }
-  private val onMouseDown: js.Function = (e: dom.raw.MouseEvent) => {
+  private val onMouseDown: js.Function = (e: dom.MouseEvent) => {
     e.preventDefault()
     JsUtils.flushUserEventTasks()
 
@@ -69,7 +70,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
       eventQueue += ButtonEvent(button, true)
     }
   }
-  private val onMouseMove: js.Function = (e: dom.raw.MouseEvent) => {
+  private val onMouseMove: js.Function = (e: dom.MouseEvent) => {
     e.preventDefault()
     //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
@@ -103,19 +104,19 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     x = posX
     y = posY
   }
-  private val onMouseOver: js.Function = (e: dom.raw.MouseEvent) => {
+  private val onMouseOver: js.Function = (e: dom.MouseEvent) => {
     e.preventDefault()
     //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
     mouseInside = true
   }
-  private val onMouseOut: js.Function = (e: dom.raw.MouseEvent) => {
+  private val onMouseOut: js.Function = (e: dom.MouseEvent) => {
     e.preventDefault()
     //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
     mouseInside = false
   }
-  private val onMouseWheel: js.Function = (e: dom.raw.WheelEvent) => {
+  private val onMouseWheel: js.Function = (e: dom.WheelEvent) => {
     e.preventDefault()
     //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
@@ -134,7 +135,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
       eventQueue += WheelEvent(Wheel.Right)
     }
   }
-  private val onFirefoxMouseWheel: js.Function = (e: dom.raw.WheelEvent) => {
+  private val onFirefoxMouseWheel: js.Function = (e: dom.WheelEvent) => {
     e.preventDefault()
     //JsUtils.flushUserEventTasks() // Apparently, not considered as a user gesture
 
@@ -150,7 +151,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
     }
   }
 
-  private val onContextMenu: js.Function = (e: dom.raw.Event) => {
+  private val onContextMenu: js.Function = (e: dom.Event) => {
     false // disable right-click context-menu
   }
 

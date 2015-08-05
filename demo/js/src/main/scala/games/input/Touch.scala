@@ -17,7 +17,7 @@ class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
 
   private var nextId: Int = 0
 
-  private val onTouchStart: js.Function = (e: dom.raw.TouchEvent) => {
+  private val onTouchStart: js.Function = (e: dom.TouchEvent) => {
     if (preventMouse) e.preventDefault()
     JsUtils.flushUserEventTasks()
 
@@ -36,7 +36,7 @@ class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
       eventQueue += TouchEvent(data, true)
     }
   }
-  private val onTouchEnd: js.Function = (e: dom.raw.TouchEvent) => {
+  private val onTouchEnd: js.Function = (e: dom.TouchEvent) => {
     if (preventMouse) e.preventDefault()
     JsUtils.flushUserEventTasks()
 
@@ -54,7 +54,7 @@ class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
       eventQueue += TouchEvent(data, false)
     }
   }
-  private val onTouchMove: js.Function = (e: dom.raw.TouchEvent) => {
+  private val onTouchMove: js.Function = (e: dom.TouchEvent) => {
     if (preventMouse) e.preventDefault()
     JsUtils.flushUserEventTasks()
 
