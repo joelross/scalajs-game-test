@@ -30,7 +30,7 @@ case class WheelEvent(direction: Wheel) extends MouseEvent
 
 abstract class Mouse extends Closeable {
   def position: Position
-  def deltaPosition: Position
+  def deltaMotion: Position
 
   def locked: Boolean
   def locked_=(locked: Boolean): Unit

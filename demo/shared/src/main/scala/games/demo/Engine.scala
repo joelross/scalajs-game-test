@@ -310,7 +310,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val width = gl.display.width
     val height = gl.display.height
 
-    val delta = mouse.deltaPosition
+    val delta = mouse.deltaMotion
 
     var bulletShot = false
 

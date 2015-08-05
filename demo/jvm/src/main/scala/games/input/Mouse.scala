@@ -35,7 +35,7 @@ class MouseLWJGL() extends Mouse {
     val y = LWJGLMouse.getY()
     Position(x, org.lwjgl.opengl.Display.getDisplayMode().getHeight() - y)
   }
-  def deltaPosition: games.input.Position = {
+  def deltaMotion: games.input.Position = {
     val dx = LWJGLMouse.getDX()
     val dy = LWJGLMouse.getDY()
     Position(dx, -dy)

@@ -216,7 +216,7 @@ class MouseJS(element: js.Dynamic) extends Mouse {
   def position: games.input.Position = {
     Position(x, y)
   }
-  def deltaPosition: games.input.Position = {
+  def deltaMotion: games.input.Position = {
     val delta = Position(dx, dy)
 
     // Reset relative position
