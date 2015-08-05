@@ -9,8 +9,9 @@ import scala.collection.immutable
 import games.JsUtils
 
 class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
-  def this() = this(dom.document.asInstanceOf[js.Dynamic])
-  def this(any: js.Any) = this(any.asInstanceOf[js.Dynamic])
+  def this(el: dom.html.Element) = this(el.asInstanceOf[js.Dynamic])
+  def this(doc: dom.html.Document) = this(doc.asInstanceOf[js.Dynamic])
+  def this() = this(dom.document)
 
   private val eventQueue: mutable.Queue[TouchEvent] = mutable.Queue()
   private val touchsMap: mutable.Map[Int, Touch] = mutable.Map()
