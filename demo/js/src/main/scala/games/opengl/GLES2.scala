@@ -202,11 +202,10 @@ class DisplayGLES2(gl: GLES2WebGL) extends Display {
 }
 
 class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
-  require(webGL != null)
-
   def this(canvas: dom.html.Canvas) = {
     this((canvas.getContext("webgl").asInstanceOf[js.UndefOr[dom.webgl.RenderingContext]]).orElse(canvas.getContext("experimental-webgl").asInstanceOf[js.UndefOr[dom.webgl.RenderingContext]]).getOrElse(throw new RuntimeException("WebGL not supported by the browser")))
   }
+  require(webGL != null)
 
   final val display: Display = new DisplayGLES2(this)
 
