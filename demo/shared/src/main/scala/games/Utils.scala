@@ -24,27 +24,4 @@ trait UtilsRequirements {
   def startFrameListener(fl: games.FrameListener): Unit
 }
 
-object Utils extends UtilsImpl {
-  /**
-   * Trivial ExecutionContext that simply execute the Runnable immediately in the same thread
-   */
-  val immediateExecutionContext: ExecutionContext = new ExecutionContext {
-    def execute(runnable: Runnable): Unit = {
-      try { runnable.run() }
-      catch { case t: Throwable => this.reportFailure(t) }
-    }
-    def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
-  }
-
-  /**
-   * Trivial function that cut a string into lines
-   */
-  def lines(text: String): Array[String] = {
-    text.replaceAll("\r", "").split("\n")
-  }
-
-  /**
-   * Function reducing a Future[Future[T]] to a Future[T]
-   */
-  def reduceFuture[T](orig: Future[Future[T]])(implicit ec: ExecutionContext): Future[T] = orig.flatMap(identity)(Utils.immediateExecutionContext)
-}
+object Utils extends UtilsImpl

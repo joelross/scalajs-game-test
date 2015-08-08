@@ -12,7 +12,7 @@ object Misc {
     val configFileFuture = Utils.getTextDataFromResource(resourceConfig)
 
     for (configFile <- configFileFuture) yield {
-      val lines = Utils.lines(configFile)
+      val lines = configFile.lines
       lines.map { line =>
         val tokens = line.split("=", 2)
         if (tokens.size != 2) throw new RuntimeException("Config file malformed: \"" + line + "\"")

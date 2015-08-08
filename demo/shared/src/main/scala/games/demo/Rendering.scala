@@ -27,7 +27,7 @@ object Rendering {
     val listResource = Resource(resourceFolder + "/list")
     val listFileFuture = Utils.getTextDataFromResource(listResource)
     listFileFuture.flatMap { listFile =>
-      val lines = Utils.lines(listFile)
+      val lines = listFile.lines.toArray
       val dataFutures = lines.map { line =>
         val dataResourcePath = resourceFolder + "/" + line
         asyncGet(dataResourcePath)
@@ -87,7 +87,7 @@ object Rendering {
     val mainResource = Resource(resourceFolder + "/main")
     val mainFileFuture = Utils.getTextDataFromResource(mainResource)
     mainFileFuture.flatMap { mainFile =>
-      val mainLines = Utils.lines(mainFile)
+      val mainLines = mainFile.lines
 
       var nameOpt: Option[String] = None
       var objPathOpt: Option[String] = None
@@ -127,8 +127,8 @@ object Rendering {
         objFile <- objFileFuture;
         mtlFiles <- mtlFilesFuture
       ) yield {
-        val objLines = Utils.lines(objFile)
-        val mtlLines = mtlPaths.zip(mtlFiles.map(Utils.lines(_))).toMap
+        val objLines = objFile.lines.toArray
+        val mtlLines = mtlPaths.zip(mtlFiles.map(_.lines.toArray)).toMap
 
         val objs = SimpleOBJParser.parseOBJ(objLines, mtlLines)
         val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
@@ -187,7 +187,7 @@ object Rendering {
     val mainResource = Resource(resourceFolder + "/main")
     val mainFileFuture = Utils.getTextDataFromResource(mainResource)
     mainFileFuture.flatMap { mainFile =>
-      val mainLines = Utils.lines(mainFile)
+      val mainLines = mainFile.lines
 
       var nameOpt: Option[String] = None
       var objPathOpt: Option[String] = None
@@ -227,8 +227,8 @@ object Rendering {
         objFile <- objFileFuture;
         mtlFiles <- mtlFilesFuture
       ) yield {
-        val objLines = Utils.lines(objFile)
-        val mtlLines = mtlPaths.zip(mtlFiles.map(Utils.lines(_))).toMap
+        val objLines = objFile.lines.toArray
+        val mtlLines = mtlPaths.zip(mtlFiles.map(_.lines.toArray)).toMap
 
         val objs = SimpleOBJParser.parseOBJ(objLines, mtlLines)
         val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
