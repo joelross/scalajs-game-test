@@ -27,14 +27,14 @@ object Rendering {
     val listResource = Resource(resourceFolder + "/list")
     val listFileFuture = Utils.getTextDataFromResource(listResource)
     listFileFuture.flatMap { listFile =>
-      val lines = listFile.lines.toArray
+      val lines = listFile.lines.toSeq
       val dataFutures = lines.map { line =>
         val dataResourcePath = resourceFolder + "/" + line
         asyncGet(dataResourcePath)
       }
-      val datasFuture = Future.sequence(dataFutures.toSeq)
-      datasFuture.map { seqShaders =>
-        lines.zip(seqShaders).toMap
+      val datasFuture = Future.sequence(dataFutures)
+      datasFuture.map { seqDatas =>
+        lines.zip(seqDatas).toMap
       }
     }
   }
@@ -127,8 +127,8 @@ object Rendering {
         objFile <- objFileFuture;
         mtlFiles <- mtlFilesFuture
       ) yield {
-        val objLines = objFile.lines.toArray
-        val mtlLines = mtlPaths.zip(mtlFiles.map(_.lines.toArray)).toMap
+        val objLines = objFile.lines
+        val mtlLines = mtlPaths.zip(mtlFiles.map(_.lines)).toMap
 
         val objs = SimpleOBJParser.parseOBJ(objLines, mtlLines)
         val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
@@ -227,8 +227,8 @@ object Rendering {
         objFile <- objFileFuture;
         mtlFiles <- mtlFilesFuture
       ) yield {
-        val objLines = objFile.lines.toArray
-        val mtlLines = mtlPaths.zip(mtlFiles.map(_.lines.toArray)).toMap
+        val objLines = objFile.lines
+        val mtlLines = mtlPaths.zip(mtlFiles.map(_.lines)).toMap
 
         val objs = SimpleOBJParser.parseOBJ(objLines, mtlLines)
         val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)

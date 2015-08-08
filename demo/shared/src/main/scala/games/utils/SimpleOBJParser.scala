@@ -173,7 +173,7 @@ object SimpleOBJParser {
     texInfo
   }
 
-  def parseMTL(mtlFile: Array[String]): scala.collection.Map[String, Material] = {
+  def parseMTL(mtlFile: TraversableOnce[String]): scala.collection.Map[String, Material] = {
     val mats: Map[String, Material] = Map()
     var curMat: Option[Material] = None
 
@@ -332,7 +332,7 @@ object SimpleOBJParser {
     override def toString(): String = "Object(name=\"" + name + "\")"
   }
 
-  def parseOBJ(objFile: Array[String], extraFiles: scala.collection.Map[String, Array[String]]): scala.collection.Map[String, OBJObject] = {
+  def parseOBJ(objFile: TraversableOnce[String], extraFiles: scala.collection.Map[String, TraversableOnce[String]]): scala.collection.Map[String, OBJObject] = {
     val objs: Map[String, OBJObject] = Map()
 
     var curObjGroupPart: Option[OBJObjectGroupPart] = None
