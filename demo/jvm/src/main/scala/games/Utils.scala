@@ -94,7 +94,7 @@ trait UtilsImpl extends UtilsRequirements {
       text.toString()
     }
   }
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext, preload: => Boolean = true)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit] = {
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit] = {
     Future {
       val stream = JvmUtils.streamForResource(res)
 
@@ -117,8 +117,6 @@ trait UtilsImpl extends UtilsRequirements {
       (width, height, byteBuffer)
     }.map { // Execute this part with the openglExecutionContext instead of the standard one
       case (width, height, byteBuffer) =>
-        if (!preload) throw new RuntimeException("Texture loading cancelled by user")
-
         val previousTexture = gl.getParameterTexture(GLES2.TEXTURE_BINDING_2D)
         gl.bindTexture(GLES2.TEXTURE_2D, texture)
         gl.texImage2D(GLES2.TEXTURE_2D, 0, GLES2.RGBA, width, height, 0, GLES2.RGBA, GLES2.UNSIGNED_BYTE, byteBuffer)

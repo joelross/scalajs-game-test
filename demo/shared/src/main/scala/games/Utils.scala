@@ -20,7 +20,7 @@ trait UtilsRequirements {
   private[games] def getLoopThreadExecutionContext(): ExecutionContext
   def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer]
   def getTextDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[String]
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext, preload: => Boolean = true)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit]
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit]
   def startFrameListener(fl: games.FrameListener): Unit
 }
 

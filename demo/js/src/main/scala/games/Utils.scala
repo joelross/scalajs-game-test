@@ -196,15 +196,13 @@ trait UtilsImpl extends UtilsRequirements {
 
     promise.future
   }
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext, preload: => Boolean = true)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit] = {
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit] = {
     val image = dom.document.createElement("img").asInstanceOf[js.Dynamic]
 
     val promise = Promise[Unit]
 
     image.onload = () => {
       try {
-        if (preload) throw new RuntimeException("Texture loading cancelled by user")
-
         val previousTexture = gl.getParameterTexture(GLES2.TEXTURE_BINDING_2D)
         gl.bindTexture(GLES2.TEXTURE_2D, texture)
 
