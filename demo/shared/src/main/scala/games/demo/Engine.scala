@@ -121,8 +121,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     case Some(source3d) => source3d
   }
 
-  def continue(): Boolean = continueCond
-
   def onClose(): Unit = {
     Console.println("Closing...")
 
@@ -303,7 +301,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     networkFuture // wait for network setup (last part) to complete before proceding
   }
 
-  def onDraw(fe: games.FrameEvent): Unit = {
+  def onDraw(fe: games.FrameEvent): Boolean = {
     val now = System.currentTimeMillis()
     val elapsedSinceLastFrame = fe.elapsedTime
 
@@ -586,5 +584,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     //#### Ending
     continueCond = continueCond && itf.continue()
+    continueCond
   }
 }

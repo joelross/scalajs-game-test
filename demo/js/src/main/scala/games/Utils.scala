@@ -246,19 +246,21 @@ trait UtilsImpl extends UtilsRequirements {
 
     def loop(): Unit = {
       if (!ctx.closed) {
-        try if (fl.continue()) {
+        try {
           // Main loop call
           val currentTime = JsUtils.now()
           val diff = ((currentTime - ctx.lastLoopTime) / 1e3).toFloat
           ctx.lastLoopTime = currentTime
           val frameEvent = FrameEvent(diff)
-          fl.onDraw(frameEvent)
-          requestAnimation(loop _)
-        } else {
-          close()
+          val continue = fl.onDraw(frameEvent)
+          if (continue) {
+            requestAnimation(loop _)
+          } else {
+            close()
+          }
         } catch {
           case t: Throwable =>
-            Console.err.println("Error during looping of FrameListener")
+            Console.err.println("Error during onDraw loop of FrameListener")
             t.printStackTrace(Console.err)
 
             close()

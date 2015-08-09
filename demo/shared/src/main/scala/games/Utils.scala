@@ -11,8 +11,7 @@ trait FrameListener {
   final val loopExecutionContext: ExecutionContext = Utils.getLoopThreadExecutionContext()
 
   def onCreate(): Future[Unit]
-  def continue(): Boolean
-  def onDraw(fe: FrameEvent): Unit
+  def onDraw(fe: FrameEvent): Boolean
   def onClose(): Unit
 }
 
