@@ -40,17 +40,18 @@ class Projectile(val id: Int, var position: Vector2f, val orientation: Float)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
   final val updateIntervalMs: Int = 50 // Resend position at 20Hz
-  final val shotIntervalMs: Int = 500 // 2 shots per second
-  final val invulnerabilityTimeMs: Int = 10000 // 10 seconds of invulnerability when spawning
   final val configFile: String = "/games/demo/config"
   final val initialHealth: Float = 100f
-  final val damagePerShot: Float = 20f // 5 shots to destroy
 
-  final val maxForwardSpeed: Float = 4f
-  final val maxBackwardSpeed: Float = 2f
-  final val maxLateralSpeed: Float = 3f
+  var shotIntervalMs: Int = _
+  var invulnerabilityTimeMs: Int = _
+  var damagePerShot: Float = _
 
-  final val maxTouchTimeToShootMS: Int = 100
+  var maxForwardSpeed: Float = _
+  var maxBackwardSpeed: Float = _
+  var maxLateralSpeed: Float = _
+
+  var maxTouchTimeToShotMS: Int = _
 
   def context: games.opengl.GLES2 = gl
 
@@ -70,7 +71,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var audioSimpleSource: audio.Source = _
   private var audioSources3D: mutable.Map[Int, audio.Source3D] = mutable.Map()
   private var audioPlayers: mutable.Set[audio.Player] = mutable.Set()
-  private var audioShootData: audio.BufferedData = _
+  private var audioShotData: audio.BufferedData = _
   private var audioDamageData: audio.BufferedData = _
 
   private var screenDim: (Int, Int) = _
@@ -155,20 +156,28 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val dataFuture = configFuture.flatMap { config =>
       this.config = config
 
+      this.shotIntervalMs = config.get("shotIntervalMs").map(_.toInt).getOrElse(500) // default: 2 shots per second
+      this.invulnerabilityTimeMs = config.get("invulnerabilityTimeMs").map(_.toInt).getOrElse(10000) // default: // 10 seconds of invulnerability when spawning
+      this.damagePerShot = initialHealth / (config.get("shotToKill").map(_.toFloat).filter(_ > 0f).getOrElse(5f)) // default: 5 shots to destroy
+      this.maxForwardSpeed = config.get("maxForwardSpeed").map(_.toFloat).getOrElse(4f) // default: forward velocity 4
+      this.maxBackwardSpeed = config.get("maxBackwardSpeed").map(_.toFloat).getOrElse(2f) // default: backward velocity 2
+      this.maxLateralSpeed = config.get("maxLateralSpeed").map(_.toFloat).getOrElse(3f) // default: lateral velocity 3
+      this.maxTouchTimeToShotMS = config.get("maxTouchTimeToShotMS").map(_.toInt).getOrElse(100) // default: 100ms max to be considered a tap
+
       val modelsFuture = Rendering.loadAllModels(config("models"), gl, loopExecutionContext)
       val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
       val floorMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/floor", gl, loopExecutionContext)
       val shadersFuture = Rendering.loadAllShaders(config("shaders"), gl, loopExecutionContext)
       val mapFuture = Map.load(Resource(config("map")))
-      val audioShootDataFuture = audioContext.prepareBufferedData(Resource(config("shootSound")))
+      val audioShotDataFuture = audioContext.prepareBufferedData(Resource(config("shotSound")))
       val audioDamageDataFuture = audioContext.prepareBufferedData(Resource(config("damageSound")))
 
-      Future.sequence(Seq(modelsFuture, wallMeshFuture, floorMeshFuture, shadersFuture, mapFuture, audioShootDataFuture, audioDamageDataFuture))
+      Future.sequence(Seq(modelsFuture, wallMeshFuture, floorMeshFuture, shadersFuture, mapFuture, audioShotDataFuture, audioDamageDataFuture))
     }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShootData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
+      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShotData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
         Console.println("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s), audio ready")
         Console.println("Map size: " + map.width + " by " + map.height)
 
@@ -185,7 +194,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         Physics.setupMap(map)
 
         // Audio
-        this.audioShootData = audioShootData
+        this.audioShotData = audioShotData
         this.audioDamageData = audioDamageData
         this.audioSimpleSource = audioContext.createSource()
     }(loopExecutionContext)
@@ -242,7 +251,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                       this.projectiles += (playerId -> new Projectile(projId, Misc.conv(position), orientation))
                       val source3d = getOrCreateSource3D(playerId)
 
-                      val player = this.audioShootData.attachNow(source3d)
+                      val player = this.audioShotData.attachNow(source3d)
                       player.playing = true
                       this.audioPlayers += player
                     }
@@ -384,7 +393,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           } else {
             for (time <- this.timeTouches.get(touch.identifier)) {
-              if ((now - time) < maxTouchTimeToShootMS) {
+              if ((now - time) < maxTouchTimeToShotMS) {
                 bulletShot = true
               }
             }
@@ -488,7 +497,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           this.lastTimeProjectileShot = Some(now)
           this.nextProjectileId += 1
 
-          val audioPlayer = this.audioShootData.attachNow(this.audioSimpleSource)
+          val audioPlayer = this.audioShotData.attachNow(this.audioSimpleSource)
           audioPlayer.playing = true
           this.audioPlayers += audioPlayer
         }
