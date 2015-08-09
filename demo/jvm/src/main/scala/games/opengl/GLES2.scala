@@ -318,6 +318,10 @@ class GLES2LWJGL(glMajor: Int = 3, glMinor: Int = 0, displaySettings: Option[Dis
     // may be a good idea to check that an element array buffer is currently bound
     GL11.glDrawElements(mode, count, `type`, offset)
   }
+  final def drawElements(mode: Int, count: Int, `type`: Int, offset: Int): Unit = {
+    // may be a good idea to check that an element array buffer is currently bound
+    GL11.glDrawElements(mode, count, `type`, offset)
+  }
 
   final def enable(cap: Int): Unit = {
     GL11.glEnable(cap)
@@ -828,6 +832,9 @@ class GLES2LWJGL(glMajor: Int = 3, glMinor: Int = 0, displaySettings: Option[Dis
   }
 
   final def vertexAttribPointer(index: Int, size: Int, `type`: Int, normalized: Boolean, stride: Int, offset: Long): Unit = {
+    GL20.glVertexAttribPointer(index, size, `type`, normalized, stride, offset)
+  }
+  final def vertexAttribPointer(index: Int, size: Int, `type`: Int, normalized: Boolean, stride: Int, offset: Int): Unit = {
     GL20.glVertexAttribPointer(index, size, `type`, normalized, stride, offset)
   }
 

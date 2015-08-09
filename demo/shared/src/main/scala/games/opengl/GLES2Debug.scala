@@ -307,6 +307,10 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
     ogl.drawElements(mode, count, `type`, offset)
     this.checkError()
   }
+  final def drawElements(mode: Int, count: Int, `type`: Int, offset: Int): Unit = {
+    ogl.drawElements(mode, count, `type`, offset)
+    this.checkError()
+  }
 
   final def enable(cap: Int): Unit = {
     ogl.enable(cap)
@@ -947,6 +951,10 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
   }
 
   final def vertexAttribPointer(index: Int, size: Int, `type`: Int, normalized: Boolean, stride: Int, offset: Long): Unit = {
+    ogl.vertexAttribPointer(index, size, `type`, normalized, stride, offset)
+    this.checkError()
+  }
+  final def vertexAttribPointer(index: Int, size: Int, `type`: Int, normalized: Boolean, stride: Int, offset: Int): Unit = {
     ogl.vertexAttribPointer(index, size, `type`, normalized, stride, offset)
     this.checkError()
   }

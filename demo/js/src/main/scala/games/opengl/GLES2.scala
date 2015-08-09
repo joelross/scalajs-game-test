@@ -439,6 +439,10 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
     // may be a good idea to check that an element array buffer is currently bound
     webGL.drawElements(mode, count, `type`, offset.toInt)
   }
+  final def drawElements(mode: Int, count: Int, `type`: Int, offset: Int): Unit = {
+    // may be a good idea to check that an element array buffer is currently bound
+    webGL.drawElements(mode, count, `type`, offset)
+  }
 
   final def enable(cap: Int): Unit = {
     webGL.enable(cap)
@@ -996,6 +1000,9 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
 
   final def vertexAttribPointer(index: Int, size: Int, `type`: Int, normalized: Boolean, stride: Int, offset: Long): Unit = {
     webGL.vertexAttribPointer(index, size, `type`, normalized, stride, offset.toInt)
+  }
+  final def vertexAttribPointer(index: Int, size: Int, `type`: Int, normalized: Boolean, stride: Int, offset: Int): Unit = {
+    webGL.vertexAttribPointer(index, size, `type`, normalized, stride, offset)
   }
 
   final def viewport(x: Int, y: Int, width: Int, height: Int): Unit = {
