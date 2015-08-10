@@ -156,6 +156,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val dataFuture = configFuture.flatMap { config =>
       this.config = config
 
+      Physics.load(config)
+
       this.shotIntervalMs = config.get("shotIntervalMs").map(_.toInt).getOrElse(500) // default: 2 shots per second
       this.invulnerabilityTimeMs = config.get("invulnerabilityTimeMs").map(_.toInt).getOrElse(10000) // default: // 10 seconds of invulnerability when spawning
       this.damagePerShot = initialHealth / (config.get("shotToKill").map(_.toFloat).filter(_ > 0f).getOrElse(5f)) // default: 5 shots to destroy

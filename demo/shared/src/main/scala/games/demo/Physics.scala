@@ -5,8 +5,12 @@ import games.math._
 import scala.collection.{ immutable, mutable }
 
 object Physics {
-  final val playerRadius = 0.5f
-  final val projectileVelocity = 15f
+  final val playerRadius: Float = 0.5f
+  var projectileVelocity: Float = _
+
+  def load(config: immutable.Map[String, String]): Unit = {
+    this.projectileVelocity = config.get("projectileVelocity").map(_.toFloat).getOrElse(15f) // default: velocity of 15
+  }
 
   /**
    * Sets an angle in degrees in the interval ]-180, 180]
