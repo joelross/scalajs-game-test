@@ -331,7 +331,7 @@ object SimpleOBJParser {
     override def toString(): String = "Object(name=\"" + name + "\")"
   }
 
-  def parseOBJ(objFile: String, extraFiles: scala.collection.Map[String, String]): scala.collection.Map[String, OBJObject] = {
+  def parseOBJ(objFile: String, mtlFiles: scala.collection.Map[String, String]): scala.collection.Map[String, OBJObject] = {
     val objs: Map[String, OBJObject] = Map()
 
     var curObjGroupPart: Option[OBJObjectGroupPart] = None
@@ -540,7 +540,7 @@ object SimpleOBJParser {
           curObjGroupPart = Some(newSubObj)
 
         case "mtllib" if (tokens.size >= 2) =>
-          val mtlFile = extraFiles(tokens(1))
+          val mtlFile = mtlFiles(tokens(1))
 
           availableMats ++= parseMTL(mtlFile)
 
