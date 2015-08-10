@@ -4,7 +4,6 @@ import scala.collection.mutable.Map
 import scala.collection.mutable.ArrayBuffer
 
 import games.math.{ Vector2f, Vector3f, Vector4f, Matrix3f }
-import games.opengl.GLException
 
 object SimpleOBJParser {
   class TexInfo(var path: String) {
@@ -45,10 +44,10 @@ object SimpleOBJParser {
     override def toString(): String = "Material(name=\"" + name + "\")"
   }
 
-  private def onOff(value: String): Boolean = value match {
+  private def onOff(value: String): Boolean = value.toLowerCase() match {
     case "1" | "on"  => true
     case "0" | "off" => false
-    case _           => true
+    case _           => throw new RuntimeException("Unknown value \"" + value + "\"")
   }
 
   // From http://en.wikipedia.org/wiki/CIE_1931_color_space#Construction_of_the_CIE_XYZ_color_space_from_the_Wright.E2.80.93Guild_data
@@ -177,7 +176,7 @@ object SimpleOBJParser {
     val mats: Map[String, Material] = Map()
     var curMat: Option[Material] = None
 
-    def mat(): Material = curMat.getOrElse(throw new GLException("No material currently selected"))
+    def mat(): Material = curMat.getOrElse(throw new RuntimeException("No material currently selected"))
 
     def flushCurMat(): Unit = for (cur <- curMat) {
       mats += (cur.name -> cur)
@@ -341,11 +340,11 @@ object SimpleOBJParser {
 
     val availableMats: Map[String, Material] = Map()
 
-    def objGroupPart(): OBJObjectGroupPart = curObjGroupPart.getOrElse(throw new GLException("No material currently selected for object"))
+    def objGroupPart(): OBJObjectGroupPart = curObjGroupPart.getOrElse(throw new RuntimeException("No material currently selected for object"))
 
-    def objGroup(): OBJObjectGroup = curObjGroup.getOrElse(throw new GLException("No group currently selected for object"))
+    def objGroup(): OBJObjectGroup = curObjGroup.getOrElse(throw new RuntimeException("No group currently selected for object"))
 
-    def obj(): OBJObject = curObj.getOrElse(throw new GLException("No object currently selected"))
+    def obj(): OBJObject = curObj.getOrElse(throw new RuntimeException("No object currently selected"))
 
     def flushCurObjGroupPart(): Unit = for (cur <- curObjGroupPart) {
       if (!objGroup().parts.contains(cur)) objGroup().parts += cur
@@ -455,7 +454,7 @@ object SimpleOBJParser {
               case 1 => (indices(0).toInt, None, None)
               case 2 => (indices(0).toInt, strToInt(indices(1)), None)
               case 3 => (indices(0).toInt, strToInt(indices(1)), strToInt(indices(2)))
-              case _ => throw new GLException("Malformed vertex data \"" + tokens(currentToken) + "\"")
+              case _ => throw new RuntimeException("Malformed vertex data \"" + tokens(currentToken) + "\"")
             }
 
             face(currentToken - 1) = vertex
@@ -647,8 +646,8 @@ object SimpleOBJParser {
         }
 
         val formatErr = "The vertex data format is not uniform accross the vertices"
-        if (texCoordinates.size > 0 && texCoordinates.size != vertices.size) throw new GLException(formatErr)
-        if (normals.size > 0 && normals.size != vertices.size) throw new GLException(formatErr)
+        if (texCoordinates.size > 0 && texCoordinates.size != vertices.size) throw new RuntimeException(formatErr)
+        if (normals.size > 0 && normals.size != vertices.size) throw new RuntimeException(formatErr)
 
         index
       }
@@ -703,7 +702,7 @@ object SimpleOBJParser {
                 addTri(v0, v1, v3)
                 addTri(v1, v2, v3)
 
-              case _ => throw new GLException("Only faces composed of 3 of 4 vertices are supported")
+              case _ => throw new RuntimeException("Only faces composed of 3 of 4 vertices are supported")
             }
           }
 
