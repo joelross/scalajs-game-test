@@ -127,10 +127,9 @@ object Rendering {
         objFile <- objFileFuture;
         mtlFiles <- mtlFilesFuture
       ) yield {
-        val objLines = objFile.lines
-        val mtlLines = mtlPaths.zip(mtlFiles.map(_.lines)).toMap
+        val mapMtlFiles = mtlPaths.zip(mtlFiles).toMap
 
-        val objs = SimpleOBJParser.parseOBJ(objLines, mtlLines)
+        val objs = SimpleOBJParser.parseOBJ(objFile, mapMtlFiles)
         val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
 
         val mesh = meshes(name)
@@ -227,10 +226,9 @@ object Rendering {
         objFile <- objFileFuture;
         mtlFiles <- mtlFilesFuture
       ) yield {
-        val objLines = objFile.lines
-        val mtlLines = mtlPaths.zip(mtlFiles.map(_.lines)).toMap
+        val mapMtlFiles = mtlPaths.zip(mtlFiles).toMap
 
-        val objs = SimpleOBJParser.parseOBJ(objLines, mtlLines)
+        val objs = SimpleOBJParser.parseOBJ(objFile, mapMtlFiles)
         val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
 
         val mesh = meshes(name)

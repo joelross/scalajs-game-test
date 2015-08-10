@@ -172,7 +172,7 @@ object SimpleOBJParser {
     texInfo
   }
 
-  def parseMTL(mtlFile: TraversableOnce[String]): scala.collection.Map[String, Material] = {
+  def parseMTL(mtlFile: String): scala.collection.Map[String, Material] = {
     val mats: Map[String, Material] = Map()
     var curMat: Option[Material] = None
 
@@ -183,7 +183,7 @@ object SimpleOBJParser {
       curMat = None
     }
 
-    for (currentLine <- mtlFile) {
+    for (currentLine <- mtlFile.lines) {
       val index = currentLine.indexOf("#")
       val line = if (index < 0) currentLine else currentLine.substring(0, index).trim()
 
@@ -331,7 +331,7 @@ object SimpleOBJParser {
     override def toString(): String = "Object(name=\"" + name + "\")"
   }
 
-  def parseOBJ(objFile: TraversableOnce[String], extraFiles: scala.collection.Map[String, TraversableOnce[String]]): scala.collection.Map[String, OBJObject] = {
+  def parseOBJ(objFile: String, extraFiles: scala.collection.Map[String, String]): scala.collection.Map[String, OBJObject] = {
     val objs: Map[String, OBJObject] = Map()
 
     var curObjGroupPart: Option[OBJObjectGroupPart] = None
@@ -380,7 +380,7 @@ object SimpleOBJParser {
       existingObj.getOrElse(new OBJObject(name))
     }
 
-    for (currentLine <- objFile) {
+    for (currentLine <- objFile.lines) {
       val index = currentLine.indexOf("#")
       val line = if (index < 0) currentLine else currentLine.substring(0, index).trim()
 
@@ -540,9 +540,9 @@ object SimpleOBJParser {
           curObjGroupPart = Some(newSubObj)
 
         case "mtllib" if (tokens.size >= 2) =>
-          val mtlFileContent = extraFiles(tokens(1))
+          val mtlFile = extraFiles(tokens(1))
 
-          availableMats ++= parseMTL(mtlFileContent)
+          availableMats ++= parseMTL(mtlFile)
 
         case "shadow_obj" => println("Shadow object not supported")
 
