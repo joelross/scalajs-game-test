@@ -130,9 +130,8 @@ object Rendering {
         val mapMtlFiles = mtlPaths.zip(mtlFiles).toMap
 
         val objs = SimpleOBJParser.parseOBJ(objFile, mapMtlFiles)
-        val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
-
-        val mesh = meshes(name)
+        val obj = objs(name)
+        val mesh = SimpleOBJParser.convOBJObjectToTriMesh(obj)
 
         mesh
       }
@@ -229,9 +228,8 @@ object Rendering {
         val mapMtlFiles = mtlPaths.zip(mtlFiles).toMap
 
         val objs = SimpleOBJParser.parseOBJ(objFile, mapMtlFiles)
-        val meshes = SimpleOBJParser.convOBJObjectToTriMesh(objs)
-
-        val mesh = meshes(name)
+        val obj = objs(name)
+        val mesh = SimpleOBJParser.convOBJObjectToTriMesh(obj)
 
         mesh
       }

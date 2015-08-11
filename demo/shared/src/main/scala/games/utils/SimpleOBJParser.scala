@@ -711,6 +711,4 @@ object SimpleOBJParser {
 
     new TriMesh(obj.name, vertices.toArray, if (texCoordinates.size > 0) Some(texCoordinates.toArray) else None, if (normals.size > 0) Some(normals.toArray) else None, subs.toArray)
   }
-
-  def convOBJObjectToTriMesh(objs: scala.collection.Map[String, OBJObject]): scala.collection.Map[String, TriMesh] = objs.map { case (name, obj) => (name, convOBJObjectToTriMesh(obj)) }
 }
