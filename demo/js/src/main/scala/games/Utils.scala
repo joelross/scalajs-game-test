@@ -119,7 +119,7 @@ object JsUtils {
     relativeResourcePath = Some(path)
   }
 
-  var autoToggling = false
+  var autoToggling: Boolean = false
   var orientationLockOnFullscreen: Boolean = false
   var useAuroraJs: Boolean = true
 }
