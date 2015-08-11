@@ -11,8 +11,6 @@ import games.opengl.GLES2Debug
 import scala.collection.mutable.Queue
 
 object JsUtils {
-  var autoToggling = false
-
   private val userEventTasks: Queue[Runnable] = Queue()
 
   def flushUserEventTasks(): Unit = {
@@ -27,36 +25,28 @@ object JsUtils {
     userEventTasks.clear()
   }
 
-  def addUserEventTask(runnable: Runnable): Unit = {
-    userEventTasks += runnable
-  }
-
   val userEventExecutionContext: ExecutionContext = new ExecutionContext() {
-    def execute(runnable: Runnable): Unit = addUserEventTask(runnable)
+    def execute(runnable: Runnable): Unit = userEventTasks += runnable
     def reportFailure(cause: Throwable): Unit = ExecutionContext.defaultReporter(cause)
   }
 
   private var relativeResourcePath: Option[String] = None
 
-  def pathForResource(res: Resource): String = relativeResourcePath match {
+  private[games] def pathForResource(res: Resource): String = relativeResourcePath match {
     case Some(path) => path + res.name
     case None       => throw new RuntimeException("Relative path must be defined before calling pathForResource")
   }
 
-  def setResourcePath(path: String): Unit = {
-    relativeResourcePath = Some(path)
-  }
-
   // TODO performance.now() for microseconds precision: https://developer.mozilla.org/en-US/docs/Web/API/Performance.now%28%29
-  def now(): Double = g.Date.now().asInstanceOf[Double]
+  private[games] def now(): Double = g.Date.now().asInstanceOf[Double]
 
-  def getWebGLRenderingContext(gl: GLES2): dom.webgl.RenderingContext = gl match {
+  private[games] def getWebGLRenderingContext(gl: GLES2): dom.webgl.RenderingContext = gl match {
     case gles2webgl: GLES2WebGL => gles2webgl.getWebGLRenderingContext()
     case gles2debug: GLES2Debug => getWebGLRenderingContext(gles2debug.getInternalContext())
     case _                      => throw new RuntimeException("Could not retrieve the WebGLRenderingContext from GLES2")
   }
 
-  def getOptional[T](el: js.Dynamic, fields: String*): Option[T] = {
+  private[games] def getOptional[T](el: js.Dynamic, fields: String*): Option[T] = {
     def getOptionalJS(fields: String*): js.UndefOr[T] = {
       if (fields.isEmpty) js.undefined
       else el.selectDynamic(fields.head).asInstanceOf[js.UndefOr[T]].orElse(getOptionalJS(fields.tail: _*))
@@ -65,15 +55,15 @@ object JsUtils {
     getOptionalJS(fields: _*).toOption
   }
 
-  def featureUnsupportedText(feature: String): String = {
+  private[games] def featureUnsupportedText(feature: String): String = {
     "Feature " + feature + " not supported"
   }
 
-  def featureUnsupportedFunction(feature: String): js.Function = {
+  private[games] def featureUnsupportedFunction(feature: String): js.Function = {
     () => { Console.err.println(featureUnsupportedText(feature)) }
   }
 
-  def throwFeatureUnsupported(feature: String): Nothing = {
+  private[games] def throwFeatureUnsupported(feature: String): Nothing = {
     throw new RuntimeException(featureUnsupportedText(feature))
   }
 
@@ -86,7 +76,7 @@ object JsUtils {
    * "Hello" -> String
    * null -> Null
    */
-  def typeName(jsObj: js.Any): String = {
+  private[games] def typeName(jsObj: js.Any): String = {
     val fullName = g.Object.prototype.selectDynamic("toString").call(jsObj).asInstanceOf[String]
     val execArray = typeRegex.exec(fullName).asInstanceOf[js.Array[String]]
     val name = execArray(1)
@@ -97,7 +87,7 @@ object JsUtils {
    * Get the offset of the element.
    * From jQuery: https://github.com/jquery/jquery/blob/2.1.3/src/offset.js#L107-L108
    */
-  def offsetOfElement(element: js.Any): (Int, Int) = if (element == dom.document) {
+  private[games] def offsetOfElement(element: js.Any): (Int, Int) = if (element == dom.document) {
     (0, 0)
   } else {
     val dynElement = element.asInstanceOf[js.Dynamic]
@@ -117,7 +107,7 @@ object JsUtils {
     ((boundingLeft + winOffsetX - elemOffsetX).toInt, (boundingTop + winOffsetY - elemOffsetY).toInt)
   }
 
-  object Browser {
+  private[games] object Browser {
     private val userAgent: String = js.Dynamic.global.navigator.userAgent.asInstanceOf[String].toLowerCase()
 
     val chrome: Boolean = userAgent.contains("chrome/")
@@ -125,6 +115,11 @@ object JsUtils {
     val android: Boolean = userAgent.contains("android")
   }
 
+  def setResourcePath(path: String): Unit = {
+    relativeResourcePath = Some(path)
+  }
+
+  var autoToggling = false
   var orientationLockOnFullscreen: Boolean = false
   var useAuroraJs: Boolean = true
 }
