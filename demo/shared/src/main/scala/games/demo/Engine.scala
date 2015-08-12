@@ -97,6 +97,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var nextProjectileId = 0
   private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
 
+  private var inverseTouchPanels: Boolean = false
   private var moveTouch: Option[(Int, input.Position)] = None
   private var orientationTouch: Option[(Int, input.Position)] = None
   private val timeTouches: mutable.Map[Int, Long] = mutable.Map()
@@ -382,10 +383,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
               if (touch.position.x < width / 2) {
                 gl.display.fullscreen = !gl.display.fullscreen
               } else {
-                // TODO place for another action
+                inverseTouchPanels = !inverseTouchPanels
               }
             } else { // Control
-              if (touch.position.x < width / 2) { // Move
+              if ((touch.position.x < width / 2) ^ inverseTouchPanels) { // Move
                 if (this.moveTouch.isEmpty) this.moveTouch = Some(touch.identifier -> touch.position)
               } else { // Orientation
                 if (this.orientationTouch.isEmpty) this.orientationTouch = Some(touch.identifier -> touch.position)
