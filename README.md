@@ -38,7 +38,7 @@ The address the clients will attempt to reach is located in the file ```demo/sha
 
 #### JVM client (requires a running server to connect to)
 
-Run ```sbt "demoJVM/run"```.
+Run ```sbt demoJVM/run```.
 
 ## License
 
