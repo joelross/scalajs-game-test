@@ -262,7 +262,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                   case network.ProjectileHit(network.ProjectileIdentifier(playerId, projId), playerHitId) =>
                     if (playerHitId == this.localPlayerId) {
 
-                      if (this.lastTimeSpawn.isDefined && (now - this.lastTimeSpawn.get) > invulnerabilityTimeMs) {
+                      if (this.lastTimeSpawn.isDefined && (now - this.lastTimeSpawn.get) >= invulnerabilityTimeMs) {
                         ifPresent { present =>
                           present.health -= damagePerShot
                           if (present.health <= 0f) { // Reset the player
@@ -492,7 +492,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val uVelocity = Misc.conv(present.velocity)
         val uOrientation = present.orientation
 
-        if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get > shotIntervalMs)) {
+        if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get >= shotIntervalMs)) {
           this.projectiles += (this.localPlayerId -> new Projectile(this.nextProjectileId, present.position.copy(), present.orientation))
           val shot = network.ClientProjectileShot(this.nextProjectileId, uPosition, uOrientation)
           sendMsg(shot)
@@ -506,7 +506,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         }
       }
 
-      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
+      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get >= updateIntervalMs) {
         val update = network.ClientUpdate(Misc.conv(this.localPlayerState))
         sendMsg(update)
 
