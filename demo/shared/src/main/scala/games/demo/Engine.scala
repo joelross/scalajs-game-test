@@ -438,10 +438,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
 
-    if (keyboard.isKeyDown(layout.forward)) currentVelocity.y += -maxForwardSpeed
-    if (keyboard.isKeyDown(layout.backward)) currentVelocity.y += maxBackwardSpeed
-    if (keyboard.isKeyDown(layout.right)) currentVelocity.x += maxLateralSpeed
-    if (keyboard.isKeyDown(layout.left)) currentVelocity.x += -maxLateralSpeed
+    if (keyboard.isKeyDown(layout.forward) || keyboard.isKeyDown(Key.Up)) currentVelocity.y += -maxForwardSpeed
+    if (keyboard.isKeyDown(layout.backward) || keyboard.isKeyDown(Key.Down)) currentVelocity.y += maxBackwardSpeed
+    if (keyboard.isKeyDown(layout.right) || keyboard.isKeyDown(Key.Right)) currentVelocity.x += maxLateralSpeed
+    if (keyboard.isKeyDown(layout.left) || keyboard.isKeyDown(Key.Left)) currentVelocity.x += -maxLateralSpeed
 
     changeOrientation += (delta.x.toFloat / width.toFloat) * -200f
 

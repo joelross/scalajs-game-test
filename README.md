@@ -7,7 +7,7 @@ Library for graphics/audio/inputs for Scala.js
 ### Commands
 
 The mouse-keyboard controls are the well-known WASD:
-* Maintain **W** to go forward, **S** to go backward, **A** to move left, **D** to move right
+* Maintain **W** to go forward, **S** to go backward, **A** to move left, **D** to move right (or the arrows)
 * Left mouse button to shoot and mouse movement to change the orientation
 * Press **Escape** to exit
 * Press **F** to toggle fullscreen
