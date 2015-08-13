@@ -39,7 +39,7 @@ class Present(var position: Vector2f, var velocity: Vector2f, var orientation: F
 class Projectile(val id: Int, var position: Vector2f, val orientation: Float)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
-  final val updateIntervalMs: Int = 32 // Resend position at about 30Hz
+  final val updateIntervalMs: Int = 50 // Resend position at about 20Hz
   final val configFile: String = "/games/demo/config"
   final val initialHealth: Float = 100f
 
