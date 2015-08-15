@@ -51,7 +51,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   var maxBackwardSpeed: Float = _
   var maxLateralSpeed: Float = _
 
-  var maxTouchTimeToShotMS: Int = _
+  var maxTouchTimeToShotMs: Int = _
 
   def context: games.opengl.GLES2 = gl
 
@@ -165,7 +165,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       this.maxForwardSpeed = config.get("maxForwardSpeed").map(_.toFloat).getOrElse(4f) // default: forward velocity 4
       this.maxBackwardSpeed = config.get("maxBackwardSpeed").map(_.toFloat).getOrElse(2f) // default: backward velocity 2
       this.maxLateralSpeed = config.get("maxLateralSpeed").map(_.toFloat).getOrElse(3f) // default: lateral velocity 3
-      this.maxTouchTimeToShotMS = config.get("maxTouchTimeToShotMS").map(_.toInt).getOrElse(100) // default: 100ms max to be considered a tap
+      this.maxTouchTimeToShotMs = config.get("maxTouchTimeToShotMs").map(_.toInt).getOrElse(100) // default: 100ms max to be considered a tap
 
       val modelsFuture = Rendering.loadAllModels(config("models"), gl, loopExecutionContext)
       val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
@@ -396,7 +396,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
           } else {
             for (time <- this.timeTouches.get(touch.identifier)) {
-              if ((now - time) < maxTouchTimeToShotMS) {
+              if ((now - time) < maxTouchTimeToShotMs) {
                 bulletShot = true
               }
             }

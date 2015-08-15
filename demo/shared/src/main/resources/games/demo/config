@@ -10,5 +10,5 @@ shotToKill=5
 maxForwardSpeed=4
 maxBackwardSpeed=2
 maxLateralSpeed=3
-maxTouchTimeToShotMS=100
+maxTouchTimeToShotMs=100
 projectileVelocity=15
