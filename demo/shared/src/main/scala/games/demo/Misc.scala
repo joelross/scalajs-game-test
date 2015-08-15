@@ -24,8 +24,6 @@ object Misc {
     }
   }
 
-  def conv(v: network.Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
-  def conv(v: Vector3f): network.Vector3 = network.Vector3(v.x, v.y, v.z)
   def conv(v: network.Vector2): Vector2f = new Vector2f(v.x, v.y)
   def conv(v: Vector2f): network.Vector2 = network.Vector2(v.x, v.y)
   def conv(v: network.State): State = v match {

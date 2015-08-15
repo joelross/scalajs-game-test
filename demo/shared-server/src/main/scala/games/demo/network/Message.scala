@@ -1,7 +1,6 @@
 package games.demo.network
 
 case class Vector2(x: Float, y: Float)
-case class Vector3(x: Float, y: Float, z: Float)
 
 case class ProjectileIdentifier(playerId: Int, projectileId: Int)
 
