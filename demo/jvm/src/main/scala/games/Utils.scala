@@ -40,7 +40,7 @@ private[games] class ExplicitExecutionContext extends ExecutionContext {
 }
 
 object JvmUtils {
-  def streamForResource(res: Resource): InputStream = {
+  private[games] def streamForResource(res: Resource): InputStream = {
     val stream = JvmUtils.getClass().getResourceAsStream(res.name)
     if (stream == null) throw new RuntimeException("Could not retrieve resource " + res.name)
     stream
@@ -48,7 +48,7 @@ object JvmUtils {
 }
 
 trait UtilsImpl extends UtilsRequirements {
-  def getLoopThreadExecutionContext(): ExecutionContext = new ExplicitExecutionContext
+  private[games] def getLoopThreadExecutionContext(): ExecutionContext = new ExplicitExecutionContext
 
   def getBinaryDataFromResource(res: games.Resource)(implicit ec: ExecutionContext): scala.concurrent.Future[java.nio.ByteBuffer] = {
     Future {
@@ -94,7 +94,7 @@ trait UtilsImpl extends UtilsRequirements {
       text.toString()
     }
   }
-  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext, preload: => Boolean = true)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit] = {
+  def loadTexture2DFromResource(res: games.Resource, texture: games.opengl.Token.Texture, gl: games.opengl.GLES2, openglExecutionContext: ExecutionContext)(implicit ec: ExecutionContext): scala.concurrent.Future[Unit] = {
     Future {
       val stream = JvmUtils.streamForResource(res)
 
@@ -117,8 +117,6 @@ trait UtilsImpl extends UtilsRequirements {
       (width, height, byteBuffer)
     }.map { // Execute this part with the openglExecutionContext instead of the standard one
       case (width, height, byteBuffer) =>
-        if (!preload) throw new RuntimeException("Texture loading cancelled by user")
-
         val previousTexture = gl.getParameterTexture(GLES2.TEXTURE_BINDING_2D)
         gl.bindTexture(GLES2.TEXTURE_2D, texture)
         gl.texImage2D(GLES2.TEXTURE_2D, 0, GLES2.RGBA, width, height, 0, GLES2.RGBA, GLES2.UNSIGNED_BYTE, byteBuffer)
@@ -126,50 +124,49 @@ trait UtilsImpl extends UtilsRequirements {
     }(openglExecutionContext)
   }
   def startFrameListener(fl: games.FrameListener): Unit = {
+    def executePending(): Unit = fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
+
     val frameListenerThread = new Thread(new Runnable {
       def run() {
         var lastLoopTime: Long = System.nanoTime()
-        val readyOptFuture = try { fl.onCreate() } catch { case t: Throwable => Some(Future.failed(t)) }
+        val readyFuture = try { fl.onCreate() } catch { case t: Throwable => Future.failed(t) }
 
-        var looping = true
-
-        readyOptFuture match {
-          case None => // just continue
-          case Some(future) => // wait for it
-            while (!future.isCompleted) {
-              // Execute the pending tasks
-              fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
-              Thread.sleep(100) // Don't exhaust the CPU, 10Hz should be enough
-            }
-
-            future.value.get match {
-              case Success(_) => // Ok, nothing to do, just continue
-              case Failure(t) =>
-                Console.err.println("Could not init FrameListener")
-                t.printStackTrace(Console.err)
-                looping = false
-            }
+        while (!readyFuture.isCompleted) {
+          // Execute the pending tasks
+          executePending()
+          Thread.sleep(100) // Don't exhaust the CPU, 10Hz should be enough
         }
 
-        try while (looping && fl.continue()) {
+        var continue = readyFuture.value.get match {
+          case Success(_) => // Ok, nothing to do, just continue
+            true
+          case Failure(t) =>
+            Console.err.println("Could not init FrameListener")
+            t.printStackTrace(Console.err)
+            false
+        }
+
+        try while (continue) {
           // Execute the pending tasks
-          fl.loopExecutionContext.asInstanceOf[ExplicitExecutionContext].flushPending()
+          executePending()
 
           // Main loop call
           val currentTime: Long = System.nanoTime()
           val diff = ((currentTime - lastLoopTime) / 1e9).toFloat
           lastLoopTime = currentTime
           val frameEvent = FrameEvent(diff)
-          fl.onDraw(frameEvent)
+          continue = continue && fl.onDraw(frameEvent)
 
           Display.update()
         } catch {
           case t: Throwable =>
-            Console.err.println("Error during looping of FrameListener")
+            Console.err.println("Error during onDraw loop of FrameListener")
             t.printStackTrace(Console.err)
         }
 
+        executePending
         fl.onClose()
+        executePending
       }
     })
     // Start listener

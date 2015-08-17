@@ -4,7 +4,6 @@ import scala.collection.mutable.Map
 import scala.collection.mutable.ArrayBuffer
 
 import games.math.{ Vector2f, Vector3f, Vector4f, Matrix3f }
-import games.opengl.GLException
 
 object SimpleOBJParser {
   class TexInfo(var path: String) {
@@ -45,10 +44,10 @@ object SimpleOBJParser {
     override def toString(): String = "Material(name=\"" + name + "\")"
   }
 
-  private def onOff(value: String): Boolean = value match {
+  private def onOff(value: String): Boolean = value.toLowerCase() match {
     case "1" | "on"  => true
     case "0" | "off" => false
-    case _           => true
+    case _           => throw new RuntimeException("Unknown value \"" + value + "\"")
   }
 
   // From http://en.wikipedia.org/wiki/CIE_1931_color_space#Construction_of_the_CIE_XYZ_color_space_from_the_Wright.E2.80.93Guild_data
@@ -173,18 +172,18 @@ object SimpleOBJParser {
     texInfo
   }
 
-  def parseMTL(mtlFile: Array[String]): scala.collection.Map[String, Material] = {
+  def parseMTL(mtlFile: String): scala.collection.Map[String, Material] = {
     val mats: Map[String, Material] = Map()
     var curMat: Option[Material] = None
 
-    def mat(): Material = curMat.getOrElse(throw new GLException("No material currently selected"))
+    def mat(): Material = curMat.getOrElse(throw new RuntimeException("No material currently selected"))
 
     def flushCurMat(): Unit = for (cur <- curMat) {
       mats += (cur.name -> cur)
       curMat = None
     }
 
-    for (currentLine <- mtlFile) {
+    for (currentLine <- mtlFile.lines) {
       val index = currentLine.indexOf("#")
       val line = if (index < 0) currentLine else currentLine.substring(0, index).trim()
 
@@ -332,7 +331,7 @@ object SimpleOBJParser {
     override def toString(): String = "Object(name=\"" + name + "\")"
   }
 
-  def parseOBJ(objFile: Array[String], extraFiles: scala.collection.Map[String, Array[String]]): scala.collection.Map[String, OBJObject] = {
+  def parseOBJ(objFile: String, mtlFiles: scala.collection.Map[String, String]): scala.collection.Map[String, OBJObject] = {
     val objs: Map[String, OBJObject] = Map()
 
     var curObjGroupPart: Option[OBJObjectGroupPart] = None
@@ -341,11 +340,11 @@ object SimpleOBJParser {
 
     val availableMats: Map[String, Material] = Map()
 
-    def objGroupPart(): OBJObjectGroupPart = curObjGroupPart.getOrElse(throw new GLException("No material currently selected for object"))
+    def objGroupPart(): OBJObjectGroupPart = curObjGroupPart.getOrElse(throw new RuntimeException("No material currently selected for object"))
 
-    def objGroup(): OBJObjectGroup = curObjGroup.getOrElse(throw new GLException("No group currently selected for object"))
+    def objGroup(): OBJObjectGroup = curObjGroup.getOrElse(throw new RuntimeException("No group currently selected for object"))
 
-    def obj(): OBJObject = curObj.getOrElse(throw new GLException("No object currently selected"))
+    def obj(): OBJObject = curObj.getOrElse(throw new RuntimeException("No object currently selected"))
 
     def flushCurObjGroupPart(): Unit = for (cur <- curObjGroupPart) {
       if (!objGroup().parts.contains(cur)) objGroup().parts += cur
@@ -381,7 +380,7 @@ object SimpleOBJParser {
       existingObj.getOrElse(new OBJObject(name))
     }
 
-    for (currentLine <- objFile) {
+    for (currentLine <- objFile.lines) {
       val index = currentLine.indexOf("#")
       val line = if (index < 0) currentLine else currentLine.substring(0, index).trim()
 
@@ -455,7 +454,7 @@ object SimpleOBJParser {
               case 1 => (indices(0).toInt, None, None)
               case 2 => (indices(0).toInt, strToInt(indices(1)), None)
               case 3 => (indices(0).toInt, strToInt(indices(1)), strToInt(indices(2)))
-              case _ => throw new GLException("Malformed vertex data \"" + tokens(currentToken) + "\"")
+              case _ => throw new RuntimeException("Malformed vertex data \"" + tokens(currentToken) + "\"")
             }
 
             face(currentToken - 1) = vertex
@@ -541,9 +540,9 @@ object SimpleOBJParser {
           curObjGroupPart = Some(newSubObj)
 
         case "mtllib" if (tokens.size >= 2) =>
-          val mtlFileContent = extraFiles(tokens(1))
+          val mtlFile = mtlFiles(tokens(1))
 
-          availableMats ++= parseMTL(mtlFileContent)
+          availableMats ++= parseMTL(mtlFile)
 
         case "shadow_obj" => println("Shadow object not supported")
 
@@ -589,135 +588,127 @@ object SimpleOBJParser {
     override def toString(): String = """TriMesh(name="${name}")"""
   }
 
-  def convOBJObjectToTriMesh(objs: scala.collection.Map[String, OBJObject]): scala.collection.Map[String, TriMesh] = {
+  def convOBJObjectToTriMesh(obj: OBJObject): TriMesh = {
+    val subs = new ArrayBuffer[SubTriMesh]()
 
-    def conv(obj: OBJObject): TriMesh = {
-      val subs = new ArrayBuffer[SubTriMesh]()
+    val vertices = new ArrayBuffer[Vector3f]()
+    val texCoordinates = new ArrayBuffer[Vector2f]()
+    val normals = new ArrayBuffer[Vector3f]()
 
-      val vertices = new ArrayBuffer[Vector3f]()
-      val texCoordinates = new ArrayBuffer[Vector2f]()
-      val normals = new ArrayBuffer[Vector3f]()
+    def bufferIndexOfVertex(vertexData: VertexData): Int = {
+      val (vertex, texCoordinate, normal) = vertexData
 
-      def bufferIndexOfVertex(vertexData: VertexData): Int = {
-        val (vertex, texCoordinate, normal) = vertexData
+      val index = (texCoordinate, normal) match {
+        case (Some(tex), Some(norm)) =>
+          for (i <- 0 until vertices.size) {
+            if (vertices(i) == vertex && texCoordinates(i) == tex && normals(i) == norm) return i
+          }
+          // No matching vertex data found, add it at the end
+          vertices += vertex
+          texCoordinates += tex
+          normals += norm
 
-        val index = (texCoordinate, normal) match {
-          case (Some(tex), Some(norm)) =>
-            for (i <- 0 until vertices.size) {
-              if (vertices(i) == vertex && texCoordinates(i) == tex && normals(i) == norm) return i
-            }
-            // No matching vertex data found, add it at the end
-            vertices += vertex
-            texCoordinates += tex
-            normals += norm
+          vertices.size - 1 // return index of the new vertex
 
-            vertices.size - 1 // return index of the new vertex
-
-          case (None, Some(norm)) =>
-            for (i <- 0 until vertices.size) {
-              if (vertices(i) == vertex && normals(i) == norm) return i
-            }
-
-            // No matching vertex data found, add it at the end
-            vertices += vertex
-            normals += norm
-
-            vertices.size - 1 // return index of the new vertex
-
-          case (Some(tex), None) =>
-            for (i <- 0 until vertices.size) {
-              if (vertices(i) == vertex && texCoordinates(i) == tex) return i
-            }
-
-            // No matching vertex data found, add it at the end
-            vertices += vertex
-            texCoordinates += tex
-
-            vertices.size - 1 // return index of the new vertex
-
-          case (None, None) =>
-            for (i <- 0 until vertices.size) {
-              if (vertices(i) == vertex) return i
-            }
-
-            // No matching vertex data found, add it at the end
-            vertices += vertex
-
-            vertices.size - 1 // return index of the new vertex
-        }
-
-        val formatErr = "The vertex data format is not uniform accross the vertices"
-        if (texCoordinates.size > 0 && texCoordinates.size != vertices.size) throw new GLException(formatErr)
-        if (normals.size > 0 && normals.size != vertices.size) throw new GLException(formatErr)
-
-        index
-      }
-
-      obj.groups.foreach { group =>
-        group.parts.filter { _.faces.size > 0 }.foreach { part =>
-          val trisIndices = new ArrayBuffer[Tri]()
-
-          def addTri(v0: TmpVertex, v1: TmpVertex, v2: TmpVertex): Unit = {
-            def dataFromFileIndices(v: TmpVertex): VertexData = {
-              val (indexV, optIndexT, optIndexN) = v
-
-              val ova = obj.vertices(indexV - 1)
-              val ov = new Vector3f(ova.x, ova.y, ova.z)
-              val ot = optIndexT.map { t => val ota = obj.texCoordinates(t - 1); new Vector2f(ota.x, ota.y) }
-              val on = optIndexN.map { n => obj.normals(n - 1) }
-
-              // Data in OBJ files are indexed from 1 (instead of 0)
-              (
-                ov,
-                ot,
-                on)
-            }
-
-            val v0Data = dataFromFileIndices(v0)
-            val v1Data = dataFromFileIndices(v1)
-            val v2Data = dataFromFileIndices(v2)
-
-            val v0Index = bufferIndexOfVertex(v0Data)
-            val v1Index = bufferIndexOfVertex(v1Data)
-            val v2Index = bufferIndexOfVertex(v2Data)
-
-            val newTri: Tri = (v0Index, v1Index, v2Index)
-            trisIndices += newTri
+        case (None, Some(norm)) =>
+          for (i <- 0 until vertices.size) {
+            if (vertices(i) == vertex && normals(i) == norm) return i
           }
 
-          part.faces.foreach { face =>
-            face.size match {
-              case 3 =>
-                val v0 = face(0)
-                val v1 = face(1)
-                val v2 = face(2)
+          // No matching vertex data found, add it at the end
+          vertices += vertex
+          normals += norm
 
-                addTri(v0, v1, v2)
+          vertices.size - 1 // return index of the new vertex
 
-              case 4 =>
-                val v0 = face(0)
-                val v1 = face(1)
-                val v2 = face(2)
-                val v3 = face(3)
-
-                addTri(v0, v1, v3)
-                addTri(v1, v2, v3)
-
-              case _ => throw new GLException("Only faces composed of 3 of 4 vertices are supported")
-            }
+        case (Some(tex), None) =>
+          for (i <- 0 until vertices.size) {
+            if (vertices(i) == vertex && texCoordinates(i) == tex) return i
           }
 
-          val newSub = new SubTriMesh(part.material, trisIndices.toArray)
-          subs += newSub
-        }
+          // No matching vertex data found, add it at the end
+          vertices += vertex
+          texCoordinates += tex
+
+          vertices.size - 1 // return index of the new vertex
+
+        case (None, None) =>
+          for (i <- 0 until vertices.size) {
+            if (vertices(i) == vertex) return i
+          }
+
+          // No matching vertex data found, add it at the end
+          vertices += vertex
+
+          vertices.size - 1 // return index of the new vertex
       }
 
-      new TriMesh(obj.name, vertices.toArray, if (texCoordinates.size > 0) Some(texCoordinates.toArray) else None, if (normals.size > 0) Some(normals.toArray) else None, subs.toArray)
+      val formatErr = "The vertex data format is not uniform accross the vertices"
+      if (texCoordinates.size > 0 && texCoordinates.size != vertices.size) throw new RuntimeException(formatErr)
+      if (normals.size > 0 && normals.size != vertices.size) throw new RuntimeException(formatErr)
+
+      index
     }
 
-    //val meshes = objs.mapValues(conv)
-    val meshes = objs.map { case (name, obj) => (name, conv(obj)) }
+    obj.groups.foreach { group =>
+      group.parts.filter { _.faces.size > 0 }.foreach { part =>
+        val trisIndices = new ArrayBuffer[Tri]()
 
-    meshes
+        def addTri(v0: TmpVertex, v1: TmpVertex, v2: TmpVertex): Unit = {
+          def dataFromFileIndices(v: TmpVertex): VertexData = {
+            val (indexV, optIndexT, optIndexN) = v
+
+            val ova = obj.vertices(indexV - 1)
+            val ov = new Vector3f(ova.x, ova.y, ova.z)
+            val ot = optIndexT.map { t => val ota = obj.texCoordinates(t - 1); new Vector2f(ota.x, ota.y) }
+            val on = optIndexN.map { n => obj.normals(n - 1) }
+
+            // Data in OBJ files are indexed from 1 (instead of 0)
+            (
+              ov,
+              ot,
+              on)
+          }
+
+          val v0Data = dataFromFileIndices(v0)
+          val v1Data = dataFromFileIndices(v1)
+          val v2Data = dataFromFileIndices(v2)
+
+          val v0Index = bufferIndexOfVertex(v0Data)
+          val v1Index = bufferIndexOfVertex(v1Data)
+          val v2Index = bufferIndexOfVertex(v2Data)
+
+          val newTri: Tri = (v0Index, v1Index, v2Index)
+          trisIndices += newTri
+        }
+
+        part.faces.foreach { face =>
+          face.size match {
+            case 3 =>
+              val v0 = face(0)
+              val v1 = face(1)
+              val v2 = face(2)
+
+              addTri(v0, v1, v2)
+
+            case 4 =>
+              val v0 = face(0)
+              val v1 = face(1)
+              val v2 = face(2)
+              val v3 = face(3)
+
+              addTri(v0, v1, v3)
+              addTri(v1, v2, v3)
+
+            case _ => throw new RuntimeException("Only faces composed of 3 of 4 vertices are supported")
+          }
+        }
+
+        val newSub = new SubTriMesh(part.material, trisIndices.toArray)
+        subs += newSub
+      }
+    }
+
+    new TriMesh(obj.name, vertices.toArray, if (texCoordinates.size > 0) Some(texCoordinates.toArray) else None, if (normals.size > 0) Some(normals.toArray) else None, subs.toArray)
   }
 }

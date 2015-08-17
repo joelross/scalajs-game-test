@@ -27,7 +27,7 @@ abstract class EngineInterface {
   def initAudio(): Context
   def initKeyboard(): Keyboard
   def initMouse(): Mouse
-  def initTouch(): Option[Touchpad]
+  def initTouch(): Option[Touchscreen]
   def initAccelerometer(): Option[Accelerometer]
   def continue(): Boolean
 }
@@ -39,18 +39,19 @@ class Present(var position: Vector2f, var velocity: Vector2f, var orientation: F
 class Projectile(val id: Int, var position: Vector2f, val orientation: Float)
 
 class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.FrameListener {
-  final val updateIntervalMs: Int = 50 // Resend position at 20Hz
-  final val shotIntervalMs: Int = 500 // 2 shots per second
-  final val invulnerabilityTimeMs: Int = 10000 // 10 seconds of invulnerability when spawning
+  final val updateIntervalMs: Int = 50 // Resend position at about 20Hz
   final val configFile: String = "/games/demo/config"
   final val initialHealth: Float = 100f
-  final val damagePerShot: Float = 20f // 5 shots to destroy
 
-  final val maxForwardSpeed: Float = 4f
-  final val maxBackwardSpeed: Float = 2f
-  final val maxLateralSpeed: Float = 3f
+  var shotIntervalMs: Int = _
+  var invulnerabilityTimeMs: Int = _
+  var damagePerShot: Float = _
 
-  final val maxTouchTimeToShootMS: Int = 100
+  var maxForwardSpeed: Float = _
+  var maxBackwardSpeed: Float = _
+  var maxLateralSpeed: Float = _
+
+  var maxTouchTimeToShotMs: Int = _
 
   def context: games.opengl.GLES2 = gl
 
@@ -60,7 +61,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var audioContext: Context = _
   private var keyboard: Keyboard = _
   private var mouse: Mouse = _
-  private var touchpad: Option[Touchpad] = None
+  private var touchscreen: Option[Touchscreen] = None
   private var accelerometer: Option[Accelerometer] = None
 
   private var config: immutable.Map[String, String] = _
@@ -70,7 +71,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var audioSimpleSource: audio.Source = _
   private var audioSources3D: mutable.Map[Int, audio.Source3D] = mutable.Map()
   private var audioPlayers: mutable.Set[audio.Player] = mutable.Set()
-  private var audioShootData: audio.BufferedData = _
+  private var audioShotData: audio.BufferedData = _
   private var audioDamageData: audio.BufferedData = _
 
   private var screenDim: (Int, Int) = _
@@ -96,6 +97,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private var nextProjectileId = 0
   private var projectiles: mutable.Buffer[(Int, Projectile)] = mutable.Buffer()
 
+  private var inverseTouchPanels: Boolean = false
   private var moveTouch: Option[(Int, input.Position)] = None
   private var orientationTouch: Option[(Int, input.Position)] = None
   private val timeTouches: mutable.Map[Int, Long] = mutable.Map()
@@ -121,13 +123,11 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     case Some(source3d) => source3d
   }
 
-  def continue(): Boolean = continueCond
-
   def onClose(): Unit = {
     Console.println("Closing...")
 
     for (acc <- accelerometer) acc.close()
-    for (touch <- touchpad) touch.close()
+    for (touch <- touchscreen) touch.close()
     mouse.close()
     keyboard.close()
     audioContext.close()
@@ -139,13 +139,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
   }
 
-  def onCreate(): Option[Future[Unit]] = {
+  def onCreate(): Future[Unit] = {
     Console.println("Starting...")
     this.gl = itf.initGL() // Init OpenGL (Enable automatic error checking by encapsuling it in GLES2Debug)
     this.audioContext = itf.initAudio() // Init Audio
     this.keyboard = itf.initKeyboard() // Init Keyboard listening
     this.mouse = itf.initMouse() // Init Mouse listener
-    this.touchpad = itf.initTouch() // Init touch (if available)
+    this.touchscreen = itf.initTouch() // Init touch (if available)
     this.accelerometer = itf.initAccelerometer() // Init accelerometer (if available)
 
     audioContext.volume = 0.5f // Lower the initial global volume
@@ -157,20 +157,30 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     val dataFuture = configFuture.flatMap { config =>
       this.config = config
 
+      Physics.load(config)
+
+      this.shotIntervalMs = config.get("shotIntervalMs").map(_.toInt).getOrElse(500) // default: 2 shots per second
+      this.invulnerabilityTimeMs = config.get("invulnerabilityTimeMs").map(_.toInt).getOrElse(10000) // default: // 10 seconds of invulnerability when spawning
+      this.damagePerShot = initialHealth / (config.get("shotToKill").map(_.toFloat).filter(_ > 0f).getOrElse(5f)) // default: 5 shots to destroy
+      this.maxForwardSpeed = config.get("maxForwardSpeed").map(_.toFloat).getOrElse(4f) // default: forward velocity 4
+      this.maxBackwardSpeed = config.get("maxBackwardSpeed").map(_.toFloat).getOrElse(2f) // default: backward velocity 2
+      this.maxLateralSpeed = config.get("maxLateralSpeed").map(_.toFloat).getOrElse(3f) // default: lateral velocity 3
+      this.maxTouchTimeToShotMs = config.get("maxTouchTimeToShotMs").map(_.toInt).getOrElse(100) // default: 100ms max to be considered a tap
+
       val modelsFuture = Rendering.loadAllModels(config("models"), gl, loopExecutionContext)
       val wallMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/wall", gl, loopExecutionContext)
       val floorMeshFuture = Rendering.loadTriMeshFromResourceFolder("/games/demo/models/floor", gl, loopExecutionContext)
       val shadersFuture = Rendering.loadAllShaders(config("shaders"), gl, loopExecutionContext)
       val mapFuture = Map.load(Resource(config("map")))
-      val audioShootDataFuture = audioContext.prepareBufferedData(Resource(config("shootSound")))
+      val audioShotDataFuture = audioContext.prepareBufferedData(Resource(config("shotSound")))
       val audioDamageDataFuture = audioContext.prepareBufferedData(Resource(config("damageSound")))
 
-      Future.sequence(Seq(modelsFuture, wallMeshFuture, floorMeshFuture, shadersFuture, mapFuture, audioShootDataFuture, audioDamageDataFuture))
+      Future.sequence(Seq(modelsFuture, wallMeshFuture, floorMeshFuture, shadersFuture, mapFuture, audioShotDataFuture, audioDamageDataFuture))
     }
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShootData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
+      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShotData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
         Console.println("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s), audio ready")
         Console.println("Map size: " + map.width + " by " + map.height)
 
@@ -187,7 +197,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         Physics.setupMap(map)
 
         // Audio
-        this.audioShootData = audioShootData
+        this.audioShotData = audioShotData
         this.audioDamageData = audioDamageData
         this.audioSimpleSource = audioContext.createSource()
     }(loopExecutionContext)
@@ -244,7 +254,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                       this.projectiles += (playerId -> new Projectile(projId, Misc.conv(position), orientation))
                       val source3d = getOrCreateSource3D(playerId)
 
-                      val player = this.audioShootData.attachNow(source3d)
+                      val player = this.audioShotData.attachNow(source3d)
                       player.playing = true
                       this.audioPlayers += player
                     }
@@ -252,7 +262,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
                   case network.ProjectileHit(network.ProjectileIdentifier(playerId, projId), playerHitId) =>
                     if (playerHitId == this.localPlayerId) {
 
-                      if (this.lastTimeSpawn.isDefined && (now - this.lastTimeSpawn.get) > invulnerabilityTimeMs) {
+                      if (this.lastTimeSpawn.isDefined && (now - this.lastTimeSpawn.get) >= invulnerabilityTimeMs) {
                         ifPresent { present =>
                           present.health -= damagePerShot
                           if (present.health <= 0f) { // Reset the player
@@ -300,17 +310,17 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     screenDim = (width, height)
     Rendering.setProjection(width, height)
 
-    Some(networkFuture) // wait for network setup (last part) to complete before proceding
+    networkFuture // wait for network setup (last part) to complete before proceding
   }
 
-  def onDraw(fe: games.FrameEvent): Unit = {
+  def onDraw(fe: games.FrameEvent): Boolean = {
     val now = System.currentTimeMillis()
     val elapsedSinceLastFrame = fe.elapsedTime
 
     val width = gl.display.width
     val height = gl.display.height
 
-    val delta = mouse.deltaPosition
+    val delta = mouse.deltaMotion
 
     var bulletShot = false
 
@@ -362,38 +372,37 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
     }
     processMouse()
 
-    for (touchpad <- this.touchpad) {
+    for (touchscreen <- this.touchscreen) {
       def processTouch() {
-        val optTouchEvent = touchpad.nextEvent()
+        val optTouchEvent = touchscreen.nextEvent()
         for (touchEvent <- optTouchEvent) {
-          touchEvent match {
-            case TouchStart(touch) =>
-              if (touch.position.y < height / 4) { // Config
-                if (touch.position.x < width / 2) {
-                  gl.display.fullscreen = !gl.display.fullscreen
-                } else {
-                  // TODO
-                }
-              } else { // Control
-                if (touch.position.x < width / 2) { // Move
-                  if (this.moveTouch.isEmpty) this.moveTouch = Some(touch.identifier -> touch.position)
-                } else { // Orientation
-                  if (this.orientationTouch.isEmpty) this.orientationTouch = Some(touch.identifier -> touch.position)
-                }
-                this.timeTouches += (touch.identifier -> now)
-              }
+          val touch = touchEvent.data
 
-            case TouchEnd(touch) =>
-              for (time <- this.timeTouches.get(touch.identifier)) {
-                if ((now - time) < maxTouchTimeToShootMS) {
-                  bulletShot = true
-                }
+          if (touchEvent.start) {
+            if (touch.position.y < height / 4) { // Config
+              if (touch.position.x < width / 2) {
+                gl.display.fullscreen = !gl.display.fullscreen
+              } else {
+                inverseTouchPanels = !inverseTouchPanels
               }
-              for ((id, _) <- this.moveTouch) if (id == touch.identifier) this.moveTouch = None
-              for ((id, _) <- this.orientationTouch) if (id == touch.identifier) this.orientationTouch = None
-              this.timeTouches -= touch.identifier
+            } else { // Control
+              if ((touch.position.x < width / 2) ^ inverseTouchPanels) { // Move
+                if (this.moveTouch.isEmpty) this.moveTouch = Some(touch.identifier -> touch.position)
+              } else { // Orientation
+                if (this.orientationTouch.isEmpty) this.orientationTouch = Some(touch.identifier -> touch.position)
+              }
+              this.timeTouches += (touch.identifier -> now)
+            }
 
-            case _ =>
+          } else {
+            for (time <- this.timeTouches.get(touch.identifier)) {
+              if ((now - time) < maxTouchTimeToShotMs) {
+                bulletShot = true
+              }
+            }
+            for ((id, _) <- this.moveTouch) if (id == touch.identifier) this.moveTouch = None
+            for ((id, _) <- this.orientationTouch) if (id == touch.identifier) this.orientationTouch = None
+            this.timeTouches -= touch.identifier
           }
 
           processTouch() // process next event
@@ -403,7 +412,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
       val refSize = Math.max(width, height).toFloat
 
-      for ((identifier, position) <- this.moveTouch) touchpad.touches.find { _.identifier == identifier } match {
+      for ((identifier, position) <- this.moveTouch) touchscreen.touches.find { _.identifier == identifier } match {
         case Some(touch) =>
           val originalPosition = position
           val currentPosition = touch.position
@@ -417,7 +426,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         case None => this.moveTouch = None
       }
 
-      for ((identifier, position) <- this.orientationTouch) touchpad.touches.find { _.identifier == identifier } match {
+      for ((identifier, position) <- this.orientationTouch) touchscreen.touches.find { _.identifier == identifier } match {
         case Some(touch) =>
           val previousPosition = position
           val currentPosition = touch.position
@@ -430,10 +439,10 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
       }
     }
 
-    if (keyboard.isKeyDown(layout.forward)) currentVelocity.y += -maxForwardSpeed
-    if (keyboard.isKeyDown(layout.backward)) currentVelocity.y += maxBackwardSpeed
-    if (keyboard.isKeyDown(layout.right)) currentVelocity.x += maxLateralSpeed
-    if (keyboard.isKeyDown(layout.left)) currentVelocity.x += -maxLateralSpeed
+    if (keyboard.isKeyDown(layout.forward) || keyboard.isKeyDown(Key.Up)) currentVelocity.y += -maxForwardSpeed
+    if (keyboard.isKeyDown(layout.backward) || keyboard.isKeyDown(Key.Down)) currentVelocity.y += maxBackwardSpeed
+    if (keyboard.isKeyDown(layout.right) || keyboard.isKeyDown(Key.Right)) currentVelocity.x += maxLateralSpeed
+    if (keyboard.isKeyDown(layout.left) || keyboard.isKeyDown(Key.Left)) currentVelocity.x += -maxLateralSpeed
 
     changeOrientation += (delta.x.toFloat / width.toFloat) * -200f
 
@@ -483,7 +492,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         val uVelocity = Misc.conv(present.velocity)
         val uOrientation = present.orientation
 
-        if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get > shotIntervalMs)) {
+        if (bulletShot && (lastTimeProjectileShot.isEmpty || now - lastTimeProjectileShot.get >= shotIntervalMs)) {
           this.projectiles += (this.localPlayerId -> new Projectile(this.nextProjectileId, present.position.copy(), present.orientation))
           val shot = network.ClientProjectileShot(this.nextProjectileId, uPosition, uOrientation)
           sendMsg(shot)
@@ -491,13 +500,13 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
           this.lastTimeProjectileShot = Some(now)
           this.nextProjectileId += 1
 
-          val audioPlayer = this.audioShootData.attachNow(this.audioSimpleSource)
+          val audioPlayer = this.audioShotData.attachNow(this.audioSimpleSource)
           audioPlayer.playing = true
           this.audioPlayers += audioPlayer
         }
       }
 
-      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get > updateIntervalMs) {
+      if (lastTimeUpdateToServer.isEmpty || now - lastTimeUpdateToServer.get >= updateIntervalMs) {
         val update = network.ClientUpdate(Misc.conv(this.localPlayerState))
         sendMsg(update)
 
@@ -587,5 +596,6 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     //#### Ending
     continueCond = continueCond && itf.continue()
+    continueCond
   }
 }

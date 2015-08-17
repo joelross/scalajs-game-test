@@ -124,8 +124,9 @@ object KeyboardJS {
 }
 
 class KeyboardJS(element: js.Dynamic) extends Keyboard {
-  def this() = this(dom.document.asInstanceOf[js.Dynamic])
-  def this(any: js.Any) = this(any.asInstanceOf[js.Dynamic])
+  def this(el: dom.html.Element) = this(el.asInstanceOf[js.Dynamic])
+  def this(doc: dom.html.Document) = this(doc.asInstanceOf[js.Dynamic])
+  def this() = this(dom.document)
 
   private val eventQueue: mutable.Queue[KeyboardEvent] = mutable.Queue()
   private val downKeys: mutable.Set[Key] = mutable.Set()
@@ -136,7 +137,7 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
     case x => leftKey // just default to the left one
   }
 
-  private def locateKeyIfNecessary(key: Key, ev: dom.raw.KeyboardEvent): Key = key match {
+  private def locateKeyIfNecessary(key: Key, ev: dom.KeyboardEvent): Key = key match {
     case Key.ShiftLeft | Key.ShiftRight     => selectLocatedKey(Key.ShiftLeft, Key.ShiftRight, ev.location)
     case Key.ControlLeft | Key.ControlRight => selectLocatedKey(Key.ControlLeft, Key.ControlRight, ev.location)
     case Key.AltLeft | Key.AltRight         => selectLocatedKey(Key.AltLeft, Key.AltRight, ev.location)
@@ -144,7 +145,7 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
     case _                                  => key
   }
 
-  private def keyFromEvent(ev: dom.raw.KeyboardEvent): Option[Key] = {
+  private def keyFromEvent(ev: dom.KeyboardEvent): Option[Key] = {
     val keyCode = ev.keyCode
     KeyboardJS.keyCodeMapper.getForRemote(keyCode) match {
       case Some(key) => Some(locateKeyIfNecessary(key, ev))
@@ -166,21 +167,21 @@ class KeyboardJS(element: js.Dynamic) extends Keyboard {
     }
   }
 
-  private val onKeyUp: js.Function = (e: dom.raw.Event) => {
+  private val onKeyUp: js.Function = (e: dom.Event) => {
     e.preventDefault()
     JsUtils.flushUserEventTasks()
 
-    val ev = e.asInstanceOf[dom.raw.KeyboardEvent]
+    val ev = e.asInstanceOf[dom.KeyboardEvent]
     keyFromEvent(ev) match {
       case Some(key) => keyUp(key)
       case None      => // unknown key, ignore
     }
   }
-  private val onKeyDown: js.Function = (e: dom.raw.Event) => {
+  private val onKeyDown: js.Function = (e: dom.Event) => {
     e.preventDefault()
     JsUtils.flushUserEventTasks()
 
-    val ev = e.asInstanceOf[dom.raw.KeyboardEvent]
+    val ev = e.asInstanceOf[dom.KeyboardEvent]
     keyFromEvent(ev) match {
       case Some(key) => keyDown(key)
       case None      => // unknown key, ignore

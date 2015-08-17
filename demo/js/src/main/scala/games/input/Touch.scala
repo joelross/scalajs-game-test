@@ -8,16 +8,16 @@ import scala.collection.immutable
 
 import games.JsUtils
 
-class TouchpadJS(element: js.Dynamic) extends Touchpad {
-  def this() = this(dom.document.asInstanceOf[js.Dynamic])
-  def this(any: js.Any) = this(any.asInstanceOf[js.Dynamic])
+class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
+  def this(el: dom.html.Element) = this(el.asInstanceOf[js.Dynamic])
+  def this(doc: dom.html.Document) = this(doc.asInstanceOf[js.Dynamic])
 
   private val eventQueue: mutable.Queue[TouchEvent] = mutable.Queue()
   private val touchsMap: mutable.Map[Int, Touch] = mutable.Map()
 
   private var nextId: Int = 0
 
-  private val onTouchStart: js.Function = (e: dom.raw.TouchEvent) => {
+  private val onTouchStart: js.Function = (e: dom.TouchEvent) => {
     if (preventMouse) e.preventDefault()
     JsUtils.flushUserEventTasks()
 
@@ -33,10 +33,10 @@ class TouchpadJS(element: js.Dynamic) extends Touchpad {
       val pos = Position((touchJs.pageX - offsetX).toInt, (touchJs.pageY - offsetY).toInt)
       val data = Touch(pubId, pos)
       touchsMap += (prvId -> data)
-      eventQueue += TouchStart(data)
+      eventQueue += TouchEvent(data, true)
     }
   }
-  private val onTouchEnd: js.Function = (e: dom.raw.TouchEvent) => {
+  private val onTouchEnd: js.Function = (e: dom.TouchEvent) => {
     if (preventMouse) e.preventDefault()
     JsUtils.flushUserEventTasks()
 
@@ -51,10 +51,10 @@ class TouchpadJS(element: js.Dynamic) extends Touchpad {
       val pos = Position((touchJs.pageX - offsetX).toInt, (touchJs.pageY - offsetY).toInt)
       val data = Touch(pubId, pos)
       touchsMap -= prvId
-      eventQueue += TouchEnd(data)
+      eventQueue += TouchEvent(data, false)
     }
   }
-  private val onTouchMove: js.Function = (e: dom.raw.TouchEvent) => {
+  private val onTouchMove: js.Function = (e: dom.TouchEvent) => {
     if (preventMouse) e.preventDefault()
     JsUtils.flushUserEventTasks()
 

@@ -144,6 +144,7 @@ trait GLES2 extends Closeable {
    */
 
   def drawElements(mode: Int, count: Int, `type`: Int, offset: Long): Unit
+  def drawElements(mode: Int, count: Int, `type`: Int, offset: Int): Unit
 
   def enable(cap: Int): Unit
 
@@ -407,6 +408,7 @@ trait GLES2 extends Closeable {
    */
 
   def vertexAttribPointer(index: Int, size: Int, `type`: Int, normalized: Boolean, stride: Int, offset: Long): Unit
+  def vertexAttribPointer(index: Int, size: Int, `type`: Int, normalized: Boolean, stride: Int, offset: Int): Unit
 
   def viewport(x: Int, y: Int, width: Int, height: Int): Unit
 

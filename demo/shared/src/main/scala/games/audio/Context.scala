@@ -16,11 +16,11 @@ object Format {
 }
 
 abstract class Context extends Closeable {
-  def prepareStreamingData(res: Resource): Future[games.audio.Data]
-  def prepareBufferedData(res: Resource): Future[games.audio.BufferedData]
-  def prepareRawData(data: ByteBuffer, format: Format, channels: Int, freq: Int): Future[games.audio.BufferedData]
+  def prepareStreamingData(res: games.Resource): Future[games.audio.Data]
+  def prepareBufferedData(res: games.Resource): Future[games.audio.BufferedData]
+  def prepareRawData(data: java.nio.ByteBuffer, format: games.audio.Format, channels: Int, freq: Int): Future[games.audio.BufferedData]
 
-  private def tryFutures[T](res: TraversableOnce[Resource], fun: Resource => Future[T])(implicit ec: ExecutionContext): Future[T] = {
+  private def tryFutures[T](res: TraversableOnce[games.Resource], fun: Resource => Future[T])(implicit ec: ExecutionContext): Future[T] = {
     val promise = Promise[T]
 
     val iterator = res.toIterator
@@ -39,13 +39,13 @@ abstract class Context extends Closeable {
     promise.future
   }
 
-  def prepareStreamingData(res: TraversableOnce[Resource])(implicit ec: ExecutionContext): Future[games.audio.Data] = tryFutures(res, prepareStreamingData(_))
-  def prepareBufferedData(res: TraversableOnce[Resource])(implicit ec: ExecutionContext): Future[games.audio.BufferedData] = tryFutures(res, prepareBufferedData(_))
+  def prepareStreamingData(res: scala.collection.TraversableOnce[games.Resource])(implicit ec: scala.concurrent.ExecutionContext): Future[games.audio.Data] = tryFutures(res, prepareStreamingData(_))
+  def prepareBufferedData(res: scala.collection.TraversableOnce[games.Resource])(implicit ec: scala.concurrent.ExecutionContext): Future[games.audio.BufferedData] = tryFutures(res, prepareBufferedData(_))
 
   def createSource(): games.audio.Source
   def createSource3D(): games.audio.Source3D
 
-  def listener: Listener
+  def listener: games.audio.Listener
 
   def volume: Float
   def volume_=(volume: Float): Unit
@@ -72,22 +72,22 @@ abstract class Context extends Closeable {
 }
 
 sealed trait Spatial {
-  def position: Vector3f
-  def position_=(position: Vector3f)
+  def position: games.math.Vector3f
+  def position_=(position: games.math.Vector3f)
 }
 
 abstract class Listener extends Closeable with Spatial {
-  def up: Vector3f
+  def up: games.math.Vector3f
 
-  def orientation: Vector3f
+  def orientation: games.math.Vector3f
 
-  def setOrientation(orientation: Vector3f, up: Vector3f): Unit
+  def setOrientation(orientation: games.math.Vector3f, up: games.math.Vector3f): Unit
 
   def close(): Unit = {}
 }
 
 abstract class Data extends Closeable {
-  def attach(source: AbstractSource): Future[games.audio.Player]
+  def attach(source: games.audio.AbstractSource): scala.concurrent.Future[games.audio.Player]
 
   private[games] val players: mutable.Set[Player] = mutable.Set()
   private[games] def registerPlayer(player: Player): Unit = players += player
@@ -103,7 +103,12 @@ abstract class Data extends Closeable {
 }
 
 abstract class BufferedData extends Data {
-  def attachNow(source: AbstractSource): games.audio.Player
+  def attachNow(source: games.audio.AbstractSource): games.audio.Player
+  def attach(source: games.audio.AbstractSource): scala.concurrent.Future[games.audio.Player] = try {
+    Future.successful(this.attachNow(source))
+  } catch {
+    case t: Throwable => Future.failed(t)
+  }
 }
 
 abstract class Player extends Closeable {

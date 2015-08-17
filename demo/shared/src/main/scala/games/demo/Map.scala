@@ -17,7 +17,7 @@ object Map {
     val mapFileFuture: Future[String] = Utils.getTextDataFromResource(resourceMap)
 
     for (mapFile <- mapFileFuture) yield {
-      val lines: Array[String] = Utils.lines(mapFile)
+      val lines = mapFile.lines
 
       val rooms: mutable.ArrayBuffer[Room] = mutable.ArrayBuffer()
       val startPositions: mutable.Map[Int, Room] = mutable.Map()

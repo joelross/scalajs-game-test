@@ -12,7 +12,7 @@ object Misc {
     val configFileFuture = Utils.getTextDataFromResource(resourceConfig)
 
     for (configFile <- configFileFuture) yield {
-      val lines = Utils.lines(configFile)
+      val lines = configFile.lines
       lines.map { line =>
         val tokens = line.split("=", 2)
         if (tokens.size != 2) throw new RuntimeException("Config file malformed: \"" + line + "\"")
@@ -24,8 +24,6 @@ object Misc {
     }
   }
 
-  def conv(v: network.Vector3): Vector3f = new Vector3f(v.x, v.y, v.z)
-  def conv(v: Vector3f): network.Vector3 = network.Vector3(v.x, v.y, v.z)
   def conv(v: network.Vector2): Vector2f = new Vector2f(v.x, v.y)
   def conv(v: Vector2f): network.Vector2 = network.Vector2(v.x, v.y)
   def conv(v: network.State): State = v match {

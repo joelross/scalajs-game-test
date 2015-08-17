@@ -7,7 +7,7 @@ Library for graphics/audio/inputs for Scala.js
 ### Commands
 
 The mouse-keyboard controls are the well-known WASD:
-* Maintain **W** to go forward, **S** to go backward, **A** to move left, **D** to move right
+* Maintain **W** to go forward, **S** to go backward, **A** to move left, **D** to move right (or the arrows)
 * Left mouse button to shoot and mouse movement to change the orientation
 * Press **Escape** to exit
 * Press **F** to toggle fullscreen
@@ -17,10 +17,11 @@ The mouse-keyboard controls are the well-known WASD:
 * Press **numpad -** to decrease the audio volume
 
 The touchscreen controls are:
-* Left part of the screen to move
-* Right part of the screen to change the orientation
-* Tap the screen to shoot
-* Tap top-left of the screen to toggle fullscreen
+* Left part of the image to move
+* Right part of the image to change the orientation
+* Tap the image to shoot
+* Tap the top-left corner of the image to toggle fullscreen
+* Tap the top-right corner of the image to switch the part to move and the part for orientation (may be more comfortable if you are left handed)
 
 Players are dispatched in room of up to 8 players.
 
@@ -37,7 +38,7 @@ The address the clients will attempt to reach is located in the file ```demo/sha
 
 #### JVM client (requires a running server to connect to)
 
-Run ```sbt "demoJVM/run"```.
+Run ```sbt demoJVM/run```.
 
 ## License
 

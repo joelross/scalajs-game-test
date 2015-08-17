@@ -109,7 +109,7 @@ class Room(val id: Int) extends Actor {
   private val pingIntervalMs = 5000 // Once every 5 seconds
   private val pingScheduler = this.context.system.scheduler.schedule(pingIntervalMs.milliseconds, pingIntervalMs.milliseconds, this.self, PingReminder)
 
-  private val updateIntervalMs = 100 // 10Hz refresh rate
+  private val updateIntervalMs = 50 // about 20Hz refresh rate
   private val updateScheduler = this.context.system.scheduler.schedule(updateIntervalMs.milliseconds, updateIntervalMs.milliseconds, this.self, UpdateReminder)
 
   def receive: Receive = {

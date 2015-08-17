@@ -18,14 +18,7 @@ import games.demo._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Launcher {
-
   def main(args: Array[String]): Unit = {
-    val glMajor = 3
-    val glMinor = 0
-    val width = 640
-    val height = 360
-    val title = "Scala.js-games"
-
     val itf = new EngineInterface {
       def initGL(): GLES2 = {
         val glContext: GLES2 = new GLES2LWJGL()
@@ -43,7 +36,7 @@ object Launcher {
         val mouse = new MouseLWJGL()
         mouse
       }
-      def initTouch(): Option[Touchpad] = None
+      def initTouch(): Option[Touchscreen] = None
       def initAccelerometer: Option[Accelerometer] = None
       def continue(): Boolean = {
         !Display.isCloseRequested()
