@@ -300,11 +300,11 @@ object SimpleOBJParser {
     mats
   }
 
-  type TmpVertex = (Int, Option[Int], Option[Int]) // position index, texture index, normal index
-  type TmpFace = Array[TmpVertex]
+  type OBJVertex = (Int, Option[Int], Option[Int]) // position index, texture index, normal index
+  type OBJFace = Array[OBJVertex]
 
   class OBJObjectGroupPart(val material: Option[Material]) {
-    val faces: ArrayBuffer[TmpFace] = new ArrayBuffer[TmpFace]()
+    val faces: ArrayBuffer[OBJFace] = new ArrayBuffer[OBJFace]()
 
     override def toString(): String = material match {
       case Some(mat) => "ObjectGroupPart(material=\"" + mat.name + "\")"
@@ -440,7 +440,7 @@ object SimpleOBJParser {
         case "l"      => println("Line element not supported")
 
         case "f" =>
-          val face = new Array[TmpVertex](tokens.size - 1)
+          val face = new Array[OBJVertex](tokens.size - 1)
 
           def strToInt(str: String): Option[Int] = {
             if (str == "") None
@@ -450,7 +450,7 @@ object SimpleOBJParser {
           for (currentToken <- 1 until tokens.size) {
             val indices = tokens(currentToken).split("/")
 
-            val vertex: TmpVertex = indices.length match {
+            val vertex: OBJVertex = indices.length match {
               case 1 => (indices(0).toInt, None, None)
               case 2 => (indices(0).toInt, strToInt(indices(1)), None)
               case 3 => (indices(0).toInt, strToInt(indices(1)), strToInt(indices(2)))
@@ -654,8 +654,8 @@ object SimpleOBJParser {
       group.parts.filter { _.faces.size > 0 }.foreach { part =>
         val trisIndices = new ArrayBuffer[Tri]()
 
-        def addTri(v0: TmpVertex, v1: TmpVertex, v2: TmpVertex): Unit = {
-          def dataFromFileIndices(v: TmpVertex): VertexData = {
+        def addTri(v0: OBJVertex, v1: OBJVertex, v2: OBJVertex): Unit = {
+          def dataFromFileIndices(v: OBJVertex): VertexData = {
             val (indexV, optIndexT, optIndexN) = v
 
             val ova = obj.vertices(indexV - 1)
