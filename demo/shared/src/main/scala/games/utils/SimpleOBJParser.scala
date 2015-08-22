@@ -576,7 +576,7 @@ object SimpleOBJParser {
     objs
   }
 
-  case class VertexData(position: Vector3f, texture: Option[Vector2f], normal: Option[Vector3f])
+  class VertexData(val position: Vector3f, val texture: Option[Vector2f], val normal: Option[Vector3f])
   type Tri = (Int, Int, Int) // The three indices of the vertices of the triangle
 
   class SubTriMesh(val material: Option[Material], val tris: Array[Tri]) {
@@ -668,7 +668,7 @@ object SimpleOBJParser {
             val ot = optIndexT.map { t => val ota = obj.texCoordinates(t); new Vector2f(ota.x, ota.y) }
             val on = optIndexN.map { n => obj.normals(n) }
 
-            VertexData(ov, ot, on)
+            new VertexData(ov, ot, on)
           }
 
           val v0Data = dataFromFileIndices(v0)
