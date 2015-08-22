@@ -300,7 +300,7 @@ object SimpleOBJParser {
     mats
   }
 
-  type OBJVertex = (Int, Option[Int], Option[Int]) // position index, texture index, normal index
+  case class OBJVertex(position: Int, texture: Option[Int], normal: Option[Int])
   type OBJFace = Array[OBJVertex]
 
   class OBJObjectGroupPart(val material: Option[Material]) {
@@ -450,10 +450,10 @@ object SimpleOBJParser {
           for (currentToken <- 1 until tokens.size) {
             val indices = tokens(currentToken).split("/")
 
-            val vertex: OBJVertex = indices.length match {
-              case 1 => (indices(0).toInt, None, None)
-              case 2 => (indices(0).toInt, strToInt(indices(1)), None)
-              case 3 => (indices(0).toInt, strToInt(indices(1)), strToInt(indices(2)))
+            val vertex = indices.length match {
+              case 1 => OBJVertex(indices(0).toInt, None, None)
+              case 2 => OBJVertex(indices(0).toInt, strToInt(indices(1)), None)
+              case 3 => OBJVertex(indices(0).toInt, strToInt(indices(1)), strToInt(indices(2)))
               case _ => throw new RuntimeException("Malformed vertex data \"" + tokens(currentToken) + "\"")
             }
 
@@ -576,8 +576,8 @@ object SimpleOBJParser {
     objs
   }
 
+  case class VertexData(position: Vector3f, texture: Option[Vector2f], normal: Option[Vector3f])
   type Tri = (Int, Int, Int) // The three indices of the vertices of the triangle
-  type VertexData = (Vector3f, Option[Vector2f], Option[Vector3f])
 
   class SubTriMesh(val material: Option[Material], val tris: Array[Tri]) {
     override def toString(): String = material.fold { "SubTriMesh(no material)" } { mat => s"""SubTriMesh(material="${mat.name}")""" }
@@ -596,7 +596,9 @@ object SimpleOBJParser {
     val normals = new ArrayBuffer[Vector3f]()
 
     def bufferIndexOfVertex(vertexData: VertexData): Int = {
-      val (vertex, texCoordinate, normal) = vertexData
+      val vertex = vertexData.position
+      val texCoordinate = vertexData.texture
+      val normal = vertexData.normal
 
       val index = (texCoordinate, normal) match {
         case (Some(tex), Some(norm)) =>
@@ -656,18 +658,17 @@ object SimpleOBJParser {
 
         def addTri(v0: OBJVertex, v1: OBJVertex, v2: OBJVertex): Unit = {
           def dataFromFileIndices(v: OBJVertex): VertexData = {
-            val (indexV, optIndexT, optIndexN) = v
-
-            val ova = obj.vertices(indexV - 1)
-            val ov = new Vector3f(ova.x, ova.y, ova.z)
-            val ot = optIndexT.map { t => val ota = obj.texCoordinates(t - 1); new Vector2f(ota.x, ota.y) }
-            val on = optIndexN.map { n => obj.normals(n - 1) }
-
             // Data in OBJ files are indexed from 1 (instead of 0)
-            (
-              ov,
-              ot,
-              on)
+            val indexV = v.position - 1
+            val optIndexT = v.texture.map{_ - 1}
+            val optIndexN = v.normal.map{_ - 1}
+
+            val ova = obj.vertices(indexV)
+            val ov = new Vector3f(ova.x, ova.y, ova.z)
+            val ot = optIndexT.map { t => val ota = obj.texCoordinates(t); new Vector2f(ota.x, ota.y) }
+            val on = optIndexN.map { n => obj.normals(n) }
+
+            VertexData(ov, ot, on)
           }
 
           val v0Data = dataFromFileIndices(v0)
