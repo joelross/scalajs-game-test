@@ -8,7 +8,7 @@ import games.opengl.Token
 case class FrameEvent(elapsedTime: Float)
 
 trait FrameListener {
-  final val loopExecutionContext: ExecutionContext = Utils.getLoopThreadExecutionContext()
+  val loopExecutionContext: ExecutionContext = Utils.getLoopThreadExecutionContext()
 
   def onCreate(): Future[Unit]
   def onDraw(fe: FrameEvent): Boolean
