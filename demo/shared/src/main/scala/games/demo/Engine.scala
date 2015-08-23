@@ -15,7 +15,7 @@ import java.nio.{ ByteBuffer, FloatBuffer, ByteOrder }
 import games.opengl.GLES2Debug
 import games.audio.Source3D
 import games.input.ButtonEvent
-import games.audio.AbstractSource
+import games.audio.Source
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 

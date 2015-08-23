@@ -15,7 +15,7 @@ import java.io.EOFException
 import org.lwjgl.openal.AL10
 import org.lwjgl.openal.Util
 
-sealed trait ALAbstractSource extends AbstractSource {
+sealed trait ALAbstractSource extends Source {
   override def close(): Unit = {
     super.close()
   }
@@ -93,7 +93,7 @@ sealed trait ALData extends Data {
 class ALBufferData(val ctx: ALContext, alBuffer: Int) extends BufferedData with ALData {
   ctx.registerData(this)
 
-  def attachNow(source: games.audio.AbstractSource): games.audio.Player = {
+  def attachNow(source: games.audio.Source): games.audio.Player = {
     val alSource = AL10.alGenSources()
     try {
       AL10.alSourcei(alSource, AL10.AL_BUFFER, alBuffer)
@@ -123,7 +123,7 @@ class ALBufferData(val ctx: ALContext, alBuffer: Int) extends BufferedData with 
 class ALStreamingData(val ctx: ALContext, res: Resource) extends Data with ALData {
   ctx.registerData(this)
 
-  def attach(source: games.audio.AbstractSource): scala.concurrent.Future[games.audio.Player] = {
+  def attach(source: games.audio.Source): scala.concurrent.Future[games.audio.Player] = {
     val promise = Promise[games.audio.Player]
 
     val alSource = AL10.alGenSources()

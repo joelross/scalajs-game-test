@@ -54,9 +54,9 @@ abstract class Context extends Closeable {
   private[games] def registerData(data: Data): Unit = datas += data
   private[games] def unregisterData(data: Data): Unit = datas -= data
 
-  private[games] val sources: mutable.Set[AbstractSource] = mutable.Set()
-  private[games] def registerSource(source: AbstractSource): Unit = sources += source
-  private[games] def unregisterSource(source: AbstractSource): Unit = sources -= source
+  private[games] val sources: mutable.Set[Source] = mutable.Set()
+  private[games] def registerSource(source: Source): Unit = sources += source
+  private[games] def unregisterSource(source: Source): Unit = sources -= source
 
   def close(): Unit = {
     for (data <- this.datas) {
@@ -87,7 +87,7 @@ abstract class Listener extends Closeable with Spatial {
 }
 
 abstract class Data extends Closeable {
-  def attach(source: games.audio.AbstractSource): scala.concurrent.Future[games.audio.Player]
+  def attach(source: games.audio.Source): scala.concurrent.Future[games.audio.Player]
 
   private[games] val players: mutable.Set[Player] = mutable.Set()
   private[games] def registerPlayer(player: Player): Unit = players += player
@@ -103,8 +103,8 @@ abstract class Data extends Closeable {
 }
 
 abstract class BufferedData extends Data {
-  def attachNow(source: games.audio.AbstractSource): games.audio.Player
-  def attach(source: games.audio.AbstractSource): scala.concurrent.Future[games.audio.Player] = try {
+  def attachNow(source: games.audio.Source): games.audio.Player
+  def attach(source: games.audio.Source): scala.concurrent.Future[games.audio.Player] = try {
     Future.successful(this.attachNow(source))
   } catch {
     case t: Throwable => Future.failed(t)
@@ -129,7 +129,7 @@ abstract class Player extends Closeable {
   }
 }
 
-abstract class AbstractSource extends Closeable {
+abstract class Source extends Closeable {
   private[games] val players: mutable.Set[Player] = mutable.Set()
   private[games] def registerPlayer(player: Player): Unit = players += player
   private[games] def unregisterPlayer(player: Player): Unit = players -= player
@@ -142,5 +142,4 @@ abstract class AbstractSource extends Closeable {
     players.clear()
   }
 }
-abstract class Source extends AbstractSource
-abstract class Source3D extends AbstractSource with Spatial
+abstract class Source3D extends Source with Spatial
