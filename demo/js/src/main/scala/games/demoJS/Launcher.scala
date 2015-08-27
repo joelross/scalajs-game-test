@@ -23,30 +23,12 @@ object Launcher extends js.JSApp {
     val canvas = dom.document.getElementById("demo-canvas-main").asInstanceOf[dom.html.Canvas]
 
     val itf = new EngineInterface {
-      def initGL(): GLES2 = {
-        val glContext: GLES2 = new GLES2WebGL(canvas)
-        glContext
-      }
-      def initAudio(): Context = {
-        val audioContext: Context = new WebAudioContext()
-        audioContext
-      }
-      def initKeyboard(): Keyboard = {
-        val keyboard = new KeyboardJS()
-        keyboard
-      }
-      def initMouse(): Mouse = {
-        val mouse = new MouseJS(canvas)
-        mouse
-      }
-      def initTouch(): Option[Touchscreen] = {
-        val touch = new TouchscreenJS(canvas)
-        Some(touch)
-      }
-      def initAccelerometer: Option[Accelerometer] = {
-        val acc = new AccelerometerJS()
-        Some(acc)
-      }
+      def initGL(): GLES2 = new GLES2WebGL(canvas)
+      def initAudio(): Context = new WebAudioContext()
+      def initKeyboard(): Keyboard = new KeyboardJS()
+      def initMouse(): Mouse = new MouseJS(canvas)
+      def initTouch(): Option[Touchscreen] = Some(new TouchscreenJS(canvas))
+      def initAccelerometer: Option[Accelerometer] = Some(new AccelerometerJS())
       def continue(): Boolean = true
     }
 

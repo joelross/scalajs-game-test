@@ -20,27 +20,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object Launcher {
   def main(args: Array[String]): Unit = {
     val itf = new EngineInterface {
-      def initGL(): GLES2 = {
-        val glContext: GLES2 = new GLES2LWJGL()
-        glContext
-      }
-      def initAudio(): Context = {
-        val audioContext: Context = new ALContext()
-        audioContext
-      }
-      def initKeyboard(): Keyboard = {
-        val keyboard = new KeyboardLWJGL()
-        keyboard
-      }
-      def initMouse(): Mouse = {
-        val mouse = new MouseLWJGL()
-        mouse
-      }
+      def initGL(): GLES2 = new GLES2LWJGL()
+      def initAudio(): Context = new ALContext()
+      def initKeyboard(): Keyboard = new KeyboardLWJGL()
+      def initMouse(): Mouse = new MouseLWJGL()
       def initTouch(): Option[Touchscreen] = None
       def initAccelerometer: Option[Accelerometer] = None
-      def continue(): Boolean = {
-        !Display.isCloseRequested()
-      }
+      def continue(): Boolean = !Display.isCloseRequested()
     }
 
     val engine = new Engine(itf)
