@@ -22,6 +22,7 @@ The touchscreen controls are:
 * Tap the image to shoot
 * Tap the top-left corner of the image to toggle fullscreen
 * Tap the top-right corner of the image to switch the part to move and the part for orientation (may be more comfortable if you are left handed)
+![Touchscreen controls](/controls.png)
 
 Players are dispatched in room of up to 8 players.
 
