@@ -343,6 +343,8 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
             val newVolume = Math.max(0f, audioContext.volume - 0.05f)
             audioContext.volume = newVolume
             Console.println("Volume decreased to " + newVolume)
+          } else if (key == layout.renderingMode) {
+            Rendering.renderWireframe ^= true
           } else if (key == layout.changeLayout) {
             if (layout == Qwerty) {
               Console.println("Changing keyboard layout for Azerty")

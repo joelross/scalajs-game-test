@@ -13,6 +13,20 @@ case class OpenGLSubMesh(indicesBuffer: Token.Buffer, verticesCount: Int, ambien
 case class OpenGLMesh(verticesBuffer: Token.Buffer, normalsBuffer: Token.Buffer, verticesCount: Int, subMeshes: Array[OpenGLSubMesh])
 
 object Rendering {
+  var renderWireframe: Boolean = false
+
+  private def draw(renderCount: Int)(implicit gl: GLES2): Unit = {
+    if (renderWireframe) {
+      var i = 0
+      while(i < renderCount) {
+        gl.drawElements(GLES2.LINE_LOOP, 3, GLES2.UNSIGNED_SHORT, i * 2)
+        i += 3
+      }
+    } else {
+      gl.drawElements(GLES2.TRIANGLES, renderCount, GLES2.UNSIGNED_SHORT, 0)
+    }
+  }
+
   def validAttribLocation(aloc: Int): Boolean = aloc >= 0
 
   def loadAllShaders(resourceFolder: String, gl: GLES2, openglContext: ExecutionContext)(implicit ec: ExecutionContext): Future[immutable.Map[String, Token.Program]] = {
@@ -538,7 +552,7 @@ object Rendering {
         gl.uniform3f(diffuseColorUniLoc, diffuseColor)
 
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
-        gl.drawElements(GLES2.TRIANGLES, renderCount, GLES2.UNSIGNED_SHORT, 0)
+        draw(renderCount)
       }
 
       // Floors
@@ -560,7 +574,7 @@ object Rendering {
         gl.uniform3f(diffuseColorUniLoc, diffuseColor)
 
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, indicesBuffer)
-        gl.drawElements(GLES2.TRIANGLES, renderCount, GLES2.UNSIGNED_SHORT, 0)
+        draw(renderCount)
       }
     }
   }
@@ -630,7 +644,7 @@ object Rendering {
         gl.uniform3f(ambientColorUniLoc, ambientColor)
         gl.uniform3f(diffuseColorUniLoc, diffuseColor)
         gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, submesh.indicesBuffer)
-        gl.drawElements(GLES2.TRIANGLES, submesh.verticesCount, GLES2.UNSIGNED_SHORT, 0)
+        draw(submesh.verticesCount)
       }
     }
   }
@@ -760,7 +774,7 @@ object Rendering {
 
       for (transform <- this.sightTransforms) {
         gl.uniformMatrix3f(transformUniLoc, transform * extraTransform)
-        gl.drawElements(GLES2.TRIANGLES, this.sightRenderCount, GLES2.UNSIGNED_SHORT, 0)
+        draw(this.sightRenderCount)
       }
 
       // Health
@@ -780,7 +794,7 @@ object Rendering {
       gl.bindBuffer(GLES2.ELEMENT_ARRAY_BUFFER, this.healthIndicesBuffer)
 
       gl.uniformMatrix3f(transformUniLoc, healthTransform)
-      gl.drawElements(GLES2.TRIANGLES, this.healthRenderCount, GLES2.UNSIGNED_SHORT, 0)
+      draw(this.healthRenderCount)
     }
   }
 }

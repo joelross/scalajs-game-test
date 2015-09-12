@@ -12,6 +12,7 @@ The mouse-keyboard controls are the well-known WASD:
 * Press **Escape** to exit
 * Press **F** to toggle fullscreen
 * Press **L** to toggle pointer lock
+* Press **M** to change rendering mode (polygon/wireframe)
 * Press **Tab** to alternate between Qwerty and Azerty key-mapping.
 * Press **numpad +** to increase the audio volume
 * Press **numpad -** to decrease the audio volume

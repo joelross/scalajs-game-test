@@ -44,6 +44,7 @@ sealed trait KeyLayout {
 
   val mouseLock: Key
   val fullscreen: Key
+  val renderingMode: Key
   val escape: Key
   val changeLayout: Key
 
@@ -59,6 +60,7 @@ object Qwerty extends KeyLayout {
 
   final val mouseLock: Key = Key.L
   final val fullscreen: Key = Key.F
+  final val renderingMode: Key = Key.M
   final val escape: Key = Key.Escape
   final val changeLayout: Key = Key.Tab
 
@@ -74,6 +76,7 @@ object Azerty extends KeyLayout {
 
   final val mouseLock: Key = Key.L
   final val fullscreen: Key = Key.F
+  final val renderingMode: Key = Key.M
   final val escape: Key = Key.Escape
   final val changeLayout: Key = Key.Tab
 
