@@ -19,6 +19,7 @@ object Rendering {
     if (renderWireframe) {
       var i = 0
       while(i < renderCount) {
+        // Render only 3 vertices at a time, 2 bytes per UNSIGNED_SHORT
         gl.drawElements(GLES2.LINE_LOOP, 3, GLES2.UNSIGNED_SHORT, i * 2)
         i += 3
       }
