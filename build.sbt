@@ -3,7 +3,7 @@
 
 lazy val commonSettings = Seq(
         version := "0.1-SNAPSHOT",
-        scalaVersion := "2.11.6",
+        scalaVersion := "2.11.7",
         persistLauncher in Compile := true,
         persistLauncher in Test := true,
         resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
