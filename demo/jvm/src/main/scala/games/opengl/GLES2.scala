@@ -64,12 +64,41 @@ class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSett
 
   // Init
   val (windowHandle, errorCallback, keyCallback): (Long, GLFWErrorCallback, GLFWKeyCallback) = {
-    ???
+    val errorCallback = new GLFWErrorCallback() {
+      def invoke(error: Int, description: Long): Unit = {
+        // the guide says GLFWErrorCallback.createPrint(System.err)
+        println("### Error callback")
+        // TODO
+      }
+    }
+    val keyCallback = new GLFWKeyCallback() {
+      def invoke(window: Long, key: Int, scanCode: Int, action: Int, mods: Int): Unit = {
+        println("### Key callback")
+        // TODO
+      }
+    }
+    
+    GLFW.glfwSetErrorCallback(errorCallback)
+
+    GLFW.glfwWindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_OPENGL_ES_API)
+    
+    val width: Int = 640
+    val height: Int = 480
+    val title: java.lang.CharSequence = "OpenGL window"
+    val monitor: java.lang.Long = null
+    val share: java.lang.Long = null
+    
+    val windowHandle = GLFW.glfwCreateWindow(width, height, title, monitor, share)
+    
+    (windowHandle, errorCallback, keyCallback)
   }
 
   override def close(): Unit = {
     super.close()
-    ???
+    GLFW.glfwDestroyWindow(windowHandle)
+    keyCallback.release()
+    GLFW.glfwTerminate()
+    errorCallback.release()
   }
 
   def fullscreen: Boolean = ???
