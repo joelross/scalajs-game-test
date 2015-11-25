@@ -50,7 +50,9 @@ lazy val demo = crossProject
     /* Standard JVM settings */
     
     .jvmSettings(
-        LWJGLPlugin.lwjglSettings: _*
+        LWJGLPlugin.lwjglSettings ++ Seq(
+            LWJGLPlugin.lwjgl.version := "2.9.3"
+        ): _*
     )
     .jvmSettings(
         name := "demoJVM",
