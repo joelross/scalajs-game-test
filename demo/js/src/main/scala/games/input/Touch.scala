@@ -24,7 +24,7 @@ class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
     val list = e.changedTouches
     for (i <- 0 until list.length) {
       val touchJs = list(i)
-      val prvId = touchJs.identifier
+      val prvId = touchJs.identifier.toInt // TODO check identifier is Double?
       val pubId = nextId
       nextId += 1
 
@@ -43,7 +43,7 @@ class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
     val list = e.changedTouches
     for (i <- 0 until list.length) {
       val touchJs = list(i)
-      val prvId = touchJs.identifier
+      val prvId = touchJs.identifier.toInt // TODO check identifier is Double?
       val pubId = touchsMap(prvId).identifier
 
       // Is there an offsetX/offsetY for such element?
@@ -61,7 +61,7 @@ class TouchscreenJS(element: js.Dynamic) extends Touchscreen {
     val list = e.changedTouches
     for (i <- 0 until list.length) {
       val touchJs = list(i)
-      val prvId = touchJs.identifier
+      val prvId = touchJs.identifier.toInt // TODO check identifier is Double?
       val pubId = touchsMap(prvId).identifier
 
       // Is there an offsetX/offsetY for such element?

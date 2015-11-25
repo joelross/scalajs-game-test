@@ -179,7 +179,7 @@ class Player(val actor: ConnectionActor, val id: Int, val room: Room) {
   private val projectileHitsData: mutable.Queue[network.ClientProjectileHit] = mutable.Queue()
 
   def sendToClient(msg: network.ServerMessage): Unit = {
-    val data = upickle.write(msg)
+    val data = upickle.default.write(msg)
     actor.sendString(data)
   }
 
@@ -231,7 +231,7 @@ class ConnectionActor(val serverConnection: ActorRef) extends HttpServiceActor w
         val payload = tf.payload
         val text = payload.utf8String
         if (!text.isEmpty()) {
-          val clientMsg = upickle.read[network.ClientMessage](text)
+          val clientMsg = upickle.default.read[network.ClientMessage](text)
           logic.handleClientMessage(clientMsg)
         }
       case None => println("Warning: connection not yet upgraded to player; can not process client message")

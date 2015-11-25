@@ -13,7 +13,7 @@ lazy val commonSettings = Seq(
           "-feature"
         ),
         libraryDependencies ++= Seq(
-          "com.lihaoyi" %%% "upickle" % "0.2.8"
+          "com.lihaoyi" %%% "upickle" % "0.3.6"
         )
     )
 
@@ -30,7 +30,7 @@ lazy val demo = crossProject
         testFrameworks += new TestFramework("utest.runner.Framework"),
         libraryDependencies ++= Seq(
             "com.github.olivierblanvillain" %%% "transport-core" % "0.1-SNAPSHOT",
-            "com.lihaoyi" %%% "utest" % "0.3.0" % "test"
+            "com.lihaoyi" %%% "utest" % "0.3.1" % "test"
         ),
         unmanagedSourceDirectories in Compile += baseDirectory.value / ".." / "shared-server" / "src" / "main" / "scala",
         unmanagedSourceDirectories in Test += baseDirectory.value / ".." / "shared-server" / "src" / "test" / "scala"
@@ -42,7 +42,7 @@ lazy val demo = crossProject
         name := "demoJS",
         skip in packageJSDependencies := false,
         libraryDependencies ++= Seq(
-            "org.scala-js" %%% "scalajs-dom" % "0.8.0",
+            "org.scala-js" %%% "scalajs-dom" % "0.8.2",
             "com.github.olivierblanvillain" %%% "transport-javascript" % "0.1-SNAPSHOT"
         )
     )
@@ -51,7 +51,7 @@ lazy val demo = crossProject
     
     .jvmSettings(
         LWJGLPlugin.lwjglSettings ++ Seq(
-            LWJGLPlugin.lwjgl.version := "3.0.0-SNAPSHOT"
+            LWJGLPlugin.lwjgl.version := "2.9.3"
         ): _*
     )
     .jvmSettings(

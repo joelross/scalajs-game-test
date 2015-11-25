@@ -110,7 +110,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
   private def sendMsg(msg: network.ClientMessage): Unit = connection match {
     case None => throw new RuntimeException("Websocket not connected")
     case Some(conn) =>
-      val data = upickle.write(msg)
+      val data = upickle.default.write(msg)
       conn.write(data)
   }
 
@@ -215,7 +215,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
         // Wait for the Hello packet to register the connection
         conn.handlerPromise.success { msg =>
           val now = System.currentTimeMillis()
-          val serverMsg = upickle.read[network.ServerMessage](msg)
+          val serverMsg = upickle.default.read[network.ServerMessage](msg)
 
           Future { // To avoid concurrency issue, process the following in the loop thread
             serverMsg match {
