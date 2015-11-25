@@ -1,8 +1,10 @@
 package games.opengl
 
 import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer }
+
 import org.lwjgl.glfw.{ GLFW, GLFWErrorCallback, GLFWKeyCallback }
 import org.lwjgl.opengles.{ GLES20, OESPackedDepthStencil, GLES30, GLES31 }
+import org.lwjgl.system.MemoryUtil.{ NULL => LWJGL_NULL }
 
 // Auxiliary components
 
@@ -85,8 +87,8 @@ class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSett
     val width: Int = 640
     val height: Int = 480
     val title: java.lang.CharSequence = "OpenGL window"
-    val monitor: java.lang.Long = null
-    val share: java.lang.Long = null
+    val monitor: Long = LWJGL_NULL
+    val share: Long = LWJGL_NULL
     
     val windowHandle = GLFW.glfwCreateWindow(width, height, title, monitor, share)
     
