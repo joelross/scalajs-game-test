@@ -1,6 +1,6 @@
 package games.opengl
 
-import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer }
+import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer }
 import java.io.Closeable
 
 // Auxiliary components
@@ -60,13 +60,11 @@ trait GLES2 extends Closeable {
   def bufferData(target: Int, data: ShortBuffer, usage: Int): Unit
   def bufferData(target: Int, data: IntBuffer, usage: Int): Unit
   def bufferData(target: Int, data: FloatBuffer, usage: Int): Unit
-  def bufferData(target: Int, data: DoubleBuffer, usage: Int): Unit
 
   def bufferSubData(target: Int, offset: Long, data: ByteBuffer): Unit
   def bufferSubData(target: Int, offset: Long, data: ShortBuffer): Unit
   def bufferSubData(target: Int, offset: Long, data: IntBuffer): Unit
   def bufferSubData(target: Int, offset: Long, data: FloatBuffer): Unit
-  def bufferSubData(target: Int, offset: Long, data: DoubleBuffer): Unit
 
   def checkFramebufferStatus(target: Int): Int
 
@@ -74,7 +72,7 @@ trait GLES2 extends Closeable {
 
   def clearColor(red: Float, green: Float, blue: Float, alpha: Float): Unit
 
-  def clearDepth(depth: Double): Unit
+  def clearDepth(depth: Float): Unit
 
   def clearStencil(s: Int): Unit
 
@@ -126,7 +124,7 @@ trait GLES2 extends Closeable {
 
   def depthMask(flag: Boolean): Unit
 
-  def depthRange(zNear: Double, zFar: Double): Unit
+  def depthRange(zNear: Float, zFar: Float): Unit
 
   def detachShader(program: Token.Program, shader: Token.Shader): Unit
 
@@ -176,7 +174,7 @@ trait GLES2 extends Closeable {
    * This set of function is a big mess around the different systems due to the fact that the returned value can be pretty
    * much anything.
    * 
-   * On good old C, LWJGL and Android GLES20: glGet is divided between glGetBooleanv, glGetFloatv, glGetDoublev,
+   * On good old C, LWJGL and Android GLES20: glGet is divided between glGetBooleanv, glGetFloatv,
    * glGetIntegerv and glGetString.
    * Please note that it can actually store SEVERAL values in the provided pointer/buffer.
    * 
@@ -250,6 +248,8 @@ trait GLES2 extends Closeable {
 
   def getVertexAttribi(index: Int, pname: Int): Int
 
+  def getVertexAttribiv(index: Int, pname: Int, outputs: IntBuffer): Unit
+
   def getVertexAttribf(index: Int, pname: Int): Float
 
   def getVertexAttribfv(index: Int, pname: Int, outputs: FloatBuffer): Unit
@@ -291,7 +291,6 @@ trait GLES2 extends Closeable {
   def readPixels(x: Int, y: Int, width: Int, height: Int, format: Int, `type`: Int, pixels: ShortBuffer): Unit
   def readPixels(x: Int, y: Int, width: Int, height: Int, format: Int, `type`: Int, pixels: IntBuffer): Unit
   def readPixels(x: Int, y: Int, width: Int, height: Int, format: Int, `type`: Int, pixels: FloatBuffer): Unit
-  def readPixels(x: Int, y: Int, width: Int, height: Int, format: Int, `type`: Int, pixels: DoubleBuffer): Unit
 
   def renderbufferStorage(target: Int, internalformat: Int, width: Int, height: Int): Unit
 
@@ -322,8 +321,6 @@ trait GLES2 extends Closeable {
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
                  format: Int, `type`: Int, pixels: FloatBuffer): Unit
   def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-                 format: Int, `type`: Int, pixels: DoubleBuffer): Unit
-  def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
                  format: Int, `type`: Int): Unit
 
   def texParameterf(target: Int, pname: Int, param: Float): Unit
@@ -338,8 +335,6 @@ trait GLES2 extends Closeable {
                     format: Int, `type`: Int, pixels: IntBuffer): Unit
   def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
                     format: Int, `type`: Int, pixels: FloatBuffer): Unit
-  def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-                    format: Int, `type`: Int, pixels: DoubleBuffer): Unit
 
   def uniform1f(location: Token.UniformLocation, x: Float): Unit
 
@@ -416,8 +411,8 @@ trait GLES2 extends Closeable {
   protected val tmpByte = GLES2.createByteBuffer(maxResultSize)
   protected val tmpShort = GLES2.createShortBuffer(maxResultSize)
   protected val tmpInt = GLES2.createIntBuffer(maxResultSize)
+  protected val tmpInt2 = GLES2.createIntBuffer(maxResultSize)
   protected val tmpFloat = GLES2.createFloatBuffer(maxResultSize)
-  protected val tmpDouble = GLES2.createDoubleBuffer(maxResultSize)
 
   // Helper methods
 
@@ -807,7 +802,6 @@ trait GLES2CompRequirements {
   def createShortBuffer(sz: Int): ShortBuffer
   def createIntBuffer(sz: Int): IntBuffer
   def createFloatBuffer(sz: Int): FloatBuffer
-  def createDoubleBuffer(sz: Int): DoubleBuffer
 }
 
 object GLES2 extends GLES2CompImpl {}

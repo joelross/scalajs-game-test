@@ -1,6 +1,6 @@
 package games.opengl
 
-import java.nio.{ Buffer, ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer, ByteOrder }
+import java.nio.{ Buffer, ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, ByteOrder }
 
 import org.scalajs.dom
 
@@ -283,7 +283,6 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
   final def bufferData(target: Int, data: ShortBuffer, usage: Int): Unit = this._bufferData(target, if (data != null) data.slice else null, usage)
   final def bufferData(target: Int, data: IntBuffer, usage: Int): Unit = this._bufferData(target, if (data != null) data.slice else null, usage)
   final def bufferData(target: Int, data: FloatBuffer, usage: Int): Unit = this._bufferData(target, if (data != null) data.slice else null, usage)
-  final def bufferData(target: Int, data: DoubleBuffer, usage: Int): Unit = this._bufferData(target, if (data != null) data.slice else null, usage)
 
   private final def _bufferSubData(target: Int, offset: Long, data: Buffer): Unit = {
     // Not really how the Long is going to behave in JavaScript
@@ -300,7 +299,6 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
   final def bufferSubData(target: Int, offset: Long, data: ShortBuffer): Unit = this._bufferSubData(target, offset, if (data != null) data.slice else null)
   final def bufferSubData(target: Int, offset: Long, data: IntBuffer): Unit = this._bufferSubData(target, offset, if (data != null) data.slice else null)
   final def bufferSubData(target: Int, offset: Long, data: FloatBuffer): Unit = this._bufferSubData(target, offset, if (data != null) data.slice else null)
-  final def bufferSubData(target: Int, offset: Long, data: DoubleBuffer): Unit = this._bufferSubData(target, offset, if (data != null) data.slice else null)
 
   final def checkFramebufferStatus(target: Int): Int = {
     webGL.checkFramebufferStatus(target).toInt
@@ -314,7 +312,7 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
     webGL.clearColor(red, green, blue, alpha)
   }
 
-  final def clearDepth(depth: Double): Unit = {
+  final def clearDepth(depth: Float): Unit = {
     webGL.asInstanceOf[js.Dynamic].clearDepth(depth)
     //gl.clearDepth(depth) // not correct in Scala dom
   }
@@ -415,7 +413,7 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
     webGL.depthMask(flag)
   }
 
-  final def depthRange(zNear: Double, zFar: Double): Unit = {
+  final def depthRange(zNear: Float, zFar: Float): Unit = {
     webGL.depthRange(zNear, zFar)
   }
 
@@ -657,6 +655,11 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
     JSTypeHelper.toInt(ret)
   }
 
+  final def getVertexAttribiv(index: Int, pname: Int, outputs: IntBuffer): Unit = {
+    val ret = webGL.getVertexAttrib(index, pname)
+    JSTypeHelper.toInts(ret, outputs)
+  }
+
   final def getVertexAttribf(index: Int, pname: Int): Float = {
     val ret = webGL.getVertexAttrib(index, pname)
     JSTypeHelper.toFloat(ret)
@@ -743,8 +746,6 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
     this._readPixels(x, y, width, height, format, `type`, pixels.slice)
   final def readPixels(x: Int, y: Int, width: Int, height: Int, format: Int, `type`: Int, pixels: FloatBuffer): Unit =
     this._readPixels(x, y, width, height, format, `type`, pixels.slice)
-  final def readPixels(x: Int, y: Int, width: Int, height: Int, format: Int, `type`: Int, pixels: DoubleBuffer): Unit =
-    this._readPixels(x, y, width, height, format, `type`, pixels.slice)
 
   final def renderbufferStorage(target: Int, internalformat: Int, width: Int, height: Int): Unit = {
     webGL.renderbufferStorage(target, internalformat, width, height)
@@ -812,9 +813,6 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
                        format: Int, `type`: Int, pixels: FloatBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
     format, `type`, if (pixels != null) pixels.slice else null)
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-                       format: Int, `type`: Int, pixels: DoubleBuffer): Unit = this._texImage2D(target, level, internalformat, width, height, border,
-    format, `type`, if (pixels != null) pixels.slice else null)
-  final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
                        format: Int, `type`: Int): Unit = {
     webGL.texImage2D(target, level, internalformat, width, height, border, format, `type`, null)
   }
@@ -847,9 +845,6 @@ class GLES2WebGL(webGL: dom.webgl.RenderingContext) extends GLES2 {
     format, `type`, pixels.slice)
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
                           format: Int, `type`: Int, pixels: FloatBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
-    format, `type`, pixels.slice)
-  final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-                          format: Int, `type`: Int, pixels: DoubleBuffer): Unit = this._texSubImage2D(target, level, xoffset, yoffset, width, height,
     format, `type`, pixels.slice)
 
   final def uniform1f(location: Token.UniformLocation, x: Float): Unit = {
@@ -1941,10 +1936,6 @@ trait GLES2CompImpl extends GLES2CompRequirements {
 
   final def createFloatBuffer(sz: Int): FloatBuffer = {
     ByteBuffer.allocateDirect(sz * this.bytesPerFloat).order(ByteOrder.nativeOrder()).asFloatBuffer()
-  }
-
-  final def createDoubleBuffer(sz: Int): DoubleBuffer = {
-    ByteBuffer.allocateDirect(sz * this.bytesPerDouble).order(ByteOrder.nativeOrder()).asDoubleBuffer()
   }
 
   /* public API - implicits */

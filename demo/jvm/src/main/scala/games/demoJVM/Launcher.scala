@@ -26,7 +26,7 @@ object Launcher {
       def initMouse(): Mouse = new MouseLWJGL()
       def initTouch(): Option[Touchscreen] = None
       def initAccelerometer: Option[Accelerometer] = None
-      def continue(): Boolean = !Display.isCloseRequested()
+      def continue(): Boolean = ??? //!Display.isCloseRequested()
     }
 
     val engine = new Engine(itf)

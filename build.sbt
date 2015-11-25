@@ -51,7 +51,7 @@ lazy val demo = crossProject
     
     .jvmSettings(
         LWJGLPlugin.lwjglSettings ++ Seq(
-            LWJGLPlugin.lwjgl.version := "2.9.3"
+            LWJGLPlugin.lwjgl.version := "3.0.0-SNAPSHOT"
         ): _*
     )
     .jvmSettings(

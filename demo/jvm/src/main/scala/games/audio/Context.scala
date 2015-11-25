@@ -1,9 +1,5 @@
 package games.audio
 
-import org.lwjgl.openal.AL
-import org.lwjgl.openal.AL10
-import org.lwjgl.openal.Util
-
 import games.math.Vector3f
 import games.JvmUtils
 
@@ -15,6 +11,8 @@ import java.io.EOFException
 import scala.concurrent.{ Promise, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.{ mutable, immutable }
+
+import org.lwjgl.openal.AL10
 
 class ALContext extends Context {
   private val streamingThreads: mutable.Set[Thread] = mutable.Set()
@@ -30,7 +28,7 @@ class ALContext extends Context {
 
   private lazy val fakeSource = this.createSource()
 
-  AL.create()
+  ??? //AL.create()
 
   def prepareBufferedData(res: games.Resource): scala.concurrent.Future[games.audio.BufferedData] = Future {
     val alBuffer = AL10.alGenBuffers()
@@ -75,7 +73,7 @@ class ALContext extends Context {
       decoder = null
 
       val ret = new ALBufferData(this, alBuffer)
-      Util.checkALError()
+      ??? //Util.checkALError()
       ret
     } catch {
       case t: Throwable =>
@@ -84,7 +82,7 @@ class ALContext extends Context {
           decoder = null
         }
         AL10.alDeleteBuffers(alBuffer)
-        Util.checkALError()
+        ??? //Util.checkALError()
         throw t
     }
   }
@@ -121,12 +119,12 @@ class ALContext extends Context {
       AL10.alBufferData(alBuffer, channelFormat, openalData, freq)
 
       val ret = new ALBufferData(this, alBuffer)
-      Util.checkALError()
+      ??? //Util.checkALError()
       ret
     } catch {
       case t: Throwable =>
         AL10.alDeleteBuffers(alBuffer)
-        Util.checkALError()
+        ??? //Util.checkALError()
         throw t
     }
   }
@@ -176,7 +174,7 @@ class ALContext extends Context {
     // Wait for all the streaming threads to have done their work
     this.waitForStreamingThreads()
 
-    AL.destroy()
+    ??? //AL.destroy()
   }
 }
 
@@ -185,9 +183,9 @@ class ALListener private[games] () extends Listener {
   private val positionBuffer = ByteBuffer.allocateDirect(1 * 3 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
 
   // Preload buffer
-  AL10.alGetListener(AL10.AL_POSITION, positionBuffer)
-  AL10.alGetListener(AL10.AL_ORIENTATION, orientationBuffer)
-  Util.checkALError()
+  AL10.alGetListenerfv(AL10.AL_POSITION, positionBuffer)
+  AL10.alGetListenerfv(AL10.AL_ORIENTATION, orientationBuffer)
+  ??? //Util.checkALError()
 
   def position: Vector3f = {
     positionBuffer.rewind()
@@ -199,7 +197,7 @@ class ALListener private[games] () extends Listener {
     positionBuffer.rewind()
     position.store(positionBuffer)
     positionBuffer.rewind()
-    AL10.alListener(AL10.AL_POSITION, positionBuffer)
+    AL10.alListenerfv(AL10.AL_POSITION, positionBuffer)
   }
 
   def up: Vector3f = {
@@ -220,6 +218,6 @@ class ALListener private[games] () extends Listener {
     orientation.store(orientationBuffer)
     up.store(orientationBuffer)
     orientationBuffer.rewind()
-    AL10.alListener(AL10.AL_ORIENTATION, orientationBuffer)
+    AL10.alListenerfv(AL10.AL_ORIENTATION, orientationBuffer)
   }
 }

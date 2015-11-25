@@ -157,7 +157,7 @@ trait UtilsImpl extends UtilsRequirements {
           val frameEvent = FrameEvent(diff)
           continue = continue && fl.onDraw(frameEvent)
 
-          Display.update()
+          ??? //Display.update()
         } catch {
           case t: Throwable =>
             Console.err.println("Error during onDraw loop of FrameListener")

@@ -1,6 +1,6 @@
 package games.opengl
 
-import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer, DoubleBuffer }
+import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer }
 
 class GLES2Debug(ogl: GLES2) extends GLES2 {
 
@@ -107,10 +107,6 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
     ogl.bufferData(target, data, usage)
     this.checkError()
   }
-  final def bufferData(target: Int, data: DoubleBuffer, usage: Int): Unit = {
-    ogl.bufferData(target, data, usage)
-    this.checkError()
-  }
 
   final def bufferSubData(target: Int, offset: Long, data: ByteBuffer): Unit = {
     ogl.bufferSubData(target, offset, data)
@@ -125,10 +121,6 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
     this.checkError()
   }
   final def bufferSubData(target: Int, offset: Long, data: FloatBuffer): Unit = {
-    ogl.bufferSubData(target, offset, data)
-    this.checkError()
-  }
-  final def bufferSubData(target: Int, offset: Long, data: DoubleBuffer): Unit = {
     ogl.bufferSubData(target, offset, data)
     this.checkError()
   }
@@ -149,7 +141,7 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
     this.checkError()
   }
 
-  final def clearDepth(depth: Double): Unit = {
+  final def clearDepth(depth: Float): Unit = {
     ogl.clearDepth(depth)
     this.checkError()
   }
@@ -278,7 +270,7 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
     this.checkError()
   }
 
-  final def depthRange(zNear: Double, zFar: Double): Unit = {
+  final def depthRange(zNear: Float, zFar: Float): Unit = {
     ogl.depthRange(zNear, zFar)
     this.checkError()
   }
@@ -570,6 +562,12 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
     ret
   }
 
+  final def getVertexAttribiv(index: Int, pname: Int, outputs: IntBuffer): Unit = {
+    val ret = ogl.getVertexAttribiv(index, pname, outputs)
+    this.checkError()
+    ret
+  }
+
   final def getVertexAttribf(index: Int, pname: Int): Float = {
     val ret = ogl.getVertexAttribf(index, pname)
     this.checkError()
@@ -677,10 +675,6 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
     ogl.readPixels(x, y, width, height, format, `type`, pixels)
     this.checkError()
   }
-  final def readPixels(x: Int, y: Int, width: Int, height: Int, format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
-    ogl.readPixels(x, y, width, height, format, `type`, pixels)
-    this.checkError()
-  }
 
   final def renderbufferStorage(target: Int, internalformat: Int, width: Int, height: Int): Unit = {
     ogl.renderbufferStorage(target, internalformat, width, height)
@@ -753,11 +747,6 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
     this.checkError()
   }
   final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
-                       format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
-    ogl.texImage2D(target, level, internalformat, width, height, border, format, `type`, pixels)
-    this.checkError()
-  }
-  final def texImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int,
                        format: Int, `type`: Int): Unit = {
     ogl.texImage2D(target, level, internalformat, width, height, border, format, `type`)
     this.checkError()
@@ -790,11 +779,6 @@ class GLES2Debug(ogl: GLES2) extends GLES2 {
   }
   final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
                           format: Int, `type`: Int, pixels: FloatBuffer): Unit = {
-    ogl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
-    this.checkError()
-  }
-  final def texSubImage2D(target: Int, level: Int, xoffset: Int, yoffset: Int, width: Int, height: Int,
-                          format: Int, `type`: Int, pixels: DoubleBuffer): Unit = {
     ogl.texSubImage2D(target, level, xoffset, yoffset, width, height, format, `type`, pixels)
     this.checkError()
   }
