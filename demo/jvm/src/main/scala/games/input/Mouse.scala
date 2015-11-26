@@ -39,6 +39,7 @@ class MouseLWJGL() extends Mouse {
     ??? //Position(dx, -dy)
   }
 
+  // use glfwGetInputMode / glfwSetInputMode
   def locked: Boolean = ??? //LWJGLMouse.isGrabbed()
   def locked_=(locked: Boolean): Unit = ??? //LWJGLMouse.setGrabbed(locked)
 

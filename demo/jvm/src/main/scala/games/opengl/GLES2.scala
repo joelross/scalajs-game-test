@@ -79,37 +79,37 @@ class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSett
         // TODO
       }
     }
-    
+
     GLFW.glfwSetErrorCallback(errorCallback)
-    
+
     val initSuccess = GLFW.glfwInit()
     require(initSuccess == GLFW.GLFW_TRUE)
-    
+
     //println("Hello LWJGL " + org.lwjgl.Version.getVersion() + "!");
-    
+
     GLFW.glfwDefaultWindowHints()
     GLFW.glfwWindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_OPENGL_ES_API)
     GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 2)
     GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 0)
     GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GLFW.GLFW_FALSE)
     GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_TRUE)
-    
+
     val width: Int = 640
     val height: Int = 480
     val title: java.lang.CharSequence = "OpenGL window"
     val monitorPointer: Long = LWJGL_NULL
     val sharedContextPointer: Long = LWJGL_NULL
-    
+
     val windowPointer = GLFW.glfwCreateWindow(width, height, title, monitorPointer, sharedContextPointer)
     require(windowPointer != LWJGL_NULL)
 
     GLFW.glfwSetKeyCallback(windowPointer, keyCallback)
-    
+
     GLFW.glfwMakeContextCurrent(windowPointer)
-    
+
     val vsync = false
-    if(vsync) GLFW.glfwSwapInterval(1)
-    
+    if (vsync) GLFW.glfwSwapInterval(1)
+
     (windowPointer, errorCallback, keyCallback)
   }
 
@@ -402,7 +402,7 @@ class GLES2LWJGL(glMajor: Int = 3, glMinor: Int = 0, displaySettings: Option[Dis
 
   final def getAttachedShaders(program: Token.Program): Array[Token.Shader] = {
     val maxCount = this.getProgramParameteri(program, GLES20.GL_ATTACHED_SHADERS)
-    val shadersBuffer = if(maxCount > this.tmpInt.capacity()) GLES2.createIntBuffer(maxCount) else this.tmpInt; shadersBuffer.clear()
+    val shadersBuffer = if (maxCount > this.tmpInt.capacity()) GLES2.createIntBuffer(maxCount) else this.tmpInt; shadersBuffer.clear()
     val countBuffer = this.tmpInt2; countBuffer.clear()
     GLES20.glGetAttachedShaders(program, countBuffer, shadersBuffer)
     val count = countBuffer.get(0)
