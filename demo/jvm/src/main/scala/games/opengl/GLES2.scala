@@ -65,14 +65,14 @@ case class DisplayLWJGLSettings(width: Int, height: Int, fullscreen: Boolean, vs
 class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSettings]) extends Display {
 
   // Init
-  val (windowHandle, errorCallback, keyCallback): (Long, GLFWErrorCallback, GLFWKeyCallback) = {
-    val errorCallback = new GLFWErrorCallback() {
+  val (windowPointer, errorCallback, keyCallback): (Long, GLFWErrorCallback, GLFWKeyCallback) = {
+    /*val errorCallback = new GLFWErrorCallback() {
       def invoke(error: Int, description: Long): Unit = {
-        // the guide says GLFWErrorCallback.createPrint(System.err)
         println("### Error callback")
         // TODO
       }
-    }
+    }*/
+    val errorCallback = GLFWErrorCallback.createPrint(System.err)
     val keyCallback = new GLFWKeyCallback() {
       def invoke(window: Long, key: Int, scanCode: Int, action: Int, mods: Int): Unit = {
         println("### Key callback")
@@ -81,23 +81,41 @@ class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSett
     }
     
     GLFW.glfwSetErrorCallback(errorCallback)
-
+    
+    val initSuccess = GLFW.glfwInit()
+    require(initSuccess == GLFW.GLFW_TRUE)
+    
+    //println("Hello LWJGL " + org.lwjgl.Version.getVersion() + "!");
+    
+    GLFW.glfwDefaultWindowHints()
     GLFW.glfwWindowHint(GLFW.GLFW_CLIENT_API, GLFW.GLFW_OPENGL_ES_API)
+    GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MAJOR, 2)
+    GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_VERSION_MINOR, 0)
+    GLFW.glfwWindowHint(GLFW.GLFW_RESIZABLE, GLFW.GLFW_FALSE)
+    GLFW.glfwWindowHint(GLFW.GLFW_VISIBLE, GLFW.GLFW_TRUE)
     
     val width: Int = 640
     val height: Int = 480
     val title: java.lang.CharSequence = "OpenGL window"
-    val monitor: Long = LWJGL_NULL
-    val share: Long = LWJGL_NULL
+    val monitorPointer: Long = LWJGL_NULL
+    val sharedContextPointer: Long = LWJGL_NULL
     
-    val windowHandle = GLFW.glfwCreateWindow(width, height, title, monitor, share)
+    val windowPointer = GLFW.glfwCreateWindow(width, height, title, monitorPointer, sharedContextPointer)
+    require(windowPointer != LWJGL_NULL)
+
+    GLFW.glfwSetKeyCallback(windowPointer, keyCallback)
     
-    (windowHandle, errorCallback, keyCallback)
+    GLFW.glfwMakeContextCurrent(windowPointer)
+    
+    val vsync = false
+    if(vsync) GLFW.glfwSwapInterval(1)
+    
+    (windowPointer, errorCallback, keyCallback)
   }
 
   override def close(): Unit = {
     super.close()
-    GLFW.glfwDestroyWindow(windowHandle)
+    GLFW.glfwDestroyWindow(windowPointer)
     keyCallback.release()
     GLFW.glfwTerminate()
     errorCallback.release()
