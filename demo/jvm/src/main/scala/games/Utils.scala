@@ -45,6 +45,26 @@ object JvmUtils {
     if (stream == null) throw new RuntimeException("Could not retrieve resource " + res.name)
     stream
   }
+
+  private val glfwManagerLock = new Object
+  private var optGLFWManager: Option[GLFWManager] = None
+  
+  def getGLFWManager(): GLFWManager = glfwManagerLock.synchronized {
+    optGLFWManager match {
+      case Some(manager) => manager
+      case None => throw new RuntimeException("GLFWManager has not yet been initiated (initGLFWManager may only be called from the main thread)")
+    }
+  }
+  // May only be called from the main thread
+  def initGLFWManager(): GLFWManager = glfwManagerLock.synchronized {
+    optGLFWManager match {
+      case None =>
+        val manager = new GLFWManager()
+        optGLFWManager = Some(manager)
+        manager
+      case Some(manager) => manager
+    }
+  }
 }
 
 trait UtilsImpl extends UtilsRequirements {
