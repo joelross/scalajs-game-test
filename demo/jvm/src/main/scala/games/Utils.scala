@@ -62,7 +62,9 @@ object JvmUtils {
         val manager = new GLFWManager()
         optGLFWManager = Some(manager)
         manager
-      case Some(manager) => manager
+      case Some(manager) =>
+        // TODO warn the user that the manager already exists?
+        manager
     }
   }
 }

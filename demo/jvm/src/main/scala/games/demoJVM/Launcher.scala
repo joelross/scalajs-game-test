@@ -19,6 +19,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object Launcher {
   def main(args: Array[String]): Unit = {
+    val manager = games.JvmUtils.initGLFWManager()
+  
     val itf = new EngineInterface {
       def initGL(): GLES2 = new GLES2LWJGL()
       def initAudio(): Context = new ALContext()
@@ -32,5 +34,7 @@ object Launcher {
     val engine = new Engine(itf)
 
     Utils.startFrameListener(engine)
+    
+    manager.loop()
   }
 }

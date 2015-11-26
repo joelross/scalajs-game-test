@@ -60,9 +60,9 @@ object Token {
 
 // Main componenents
 
-class GLES2LWJGL(glMajor: Int = 3, glMinor: Int = 0, displaySettings: Option[GLFWWindowSettings] = None) extends GLES2 {
+class GLES2LWJGL(displaySettings: Option[GLFWWindowSettings] = None) extends GLES2 {
 
-  final val display: Display = new GLFWWindow(glMajor, glMinor, displaySettings)
+  final val display: Display = new GLFWWindow(displaySettings)
   GLES.createCapabilities()
 
   override def close(): Unit = {
