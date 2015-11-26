@@ -3,7 +3,7 @@ package games.opengl
 import java.nio.{ ByteBuffer, ShortBuffer, IntBuffer, FloatBuffer }
 
 import org.lwjgl.glfw.{ GLFW, GLFWErrorCallback, GLFWKeyCallback }
-import org.lwjgl.opengles.{ GLES20, OESPackedDepthStencil, GLES30, GLES31 }
+import org.lwjgl.opengles.{ GLES, GLES20, OESPackedDepthStencil, GLES30, GLES31 }
 import org.lwjgl.system.MemoryUtil.{ NULL => LWJGL_NULL }
 
 // Auxiliary components
@@ -109,6 +109,8 @@ class DisplayLWJGL(glMajor: Int, glMinor: Int, settings: Option[DisplayLWJGLSett
 
     val vsync = false
     if (vsync) GLFW.glfwSwapInterval(1)
+    
+    GLES.createCapabilities()
 
     (windowPointer, errorCallback, keyCallback)
   }
