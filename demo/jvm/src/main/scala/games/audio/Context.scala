@@ -12,6 +12,7 @@ import scala.concurrent.{ Promise, Future }
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.{ mutable, immutable }
 
+import org.lwjgl.openal
 import org.lwjgl.openal.AL10
 
 class ALContext extends Context {
@@ -28,7 +29,15 @@ class ALContext extends Context {
 
   private lazy val fakeSource = this.createSource()
 
-  ??? //AL.create()
+  // Init
+  private val (alDevice, alContext) = {
+    val alDevice = openal.ALDevice.create()
+    val alContext = openal.ALContext.create(alDevice)
+    
+    openal.ALUtil.checkALError()
+    
+    (alDevice, alContext)
+  }
 
   def prepareBufferedData(res: games.Resource): scala.concurrent.Future[games.audio.BufferedData] = Future {
     val alBuffer = AL10.alGenBuffers()
@@ -73,7 +82,7 @@ class ALContext extends Context {
       decoder = null
 
       val ret = new ALBufferData(this, alBuffer)
-      ??? //Util.checkALError()
+      openal.ALUtil.checkALError()
       ret
     } catch {
       case t: Throwable =>
@@ -82,7 +91,7 @@ class ALContext extends Context {
           decoder = null
         }
         AL10.alDeleteBuffers(alBuffer)
-        ??? //Util.checkALError()
+        openal.ALUtil.checkALError()
         throw t
     }
   }
@@ -119,12 +128,12 @@ class ALContext extends Context {
       AL10.alBufferData(alBuffer, channelFormat, openalData, freq)
 
       val ret = new ALBufferData(this, alBuffer)
-      ??? //Util.checkALError()
+      openal.ALUtil.checkALError()
       ret
     } catch {
       case t: Throwable =>
         AL10.alDeleteBuffers(alBuffer)
-        ??? //Util.checkALError()
+        openal.ALUtil.checkALError()
         throw t
     }
   }
@@ -174,7 +183,10 @@ class ALContext extends Context {
     // Wait for all the streaming threads to have done their work
     this.waitForStreamingThreads()
 
-    ??? //AL.destroy()
+    alContext.destroy()
+    alDevice.destroy()
+    
+    openal.ALUtil.checkALError()
   }
 }
 
@@ -185,7 +197,7 @@ class ALListener private[games] () extends Listener {
   // Preload buffer
   AL10.alGetListenerfv(AL10.AL_POSITION, positionBuffer)
   AL10.alGetListenerfv(AL10.AL_ORIENTATION, orientationBuffer)
-  ??? //Util.checkALError()
+  openal.ALUtil.checkALError()
 
   def position: Vector3f = {
     positionBuffer.rewind()

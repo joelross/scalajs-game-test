@@ -12,6 +12,7 @@ import scala.collection.{ mutable, immutable }
 import java.nio.{ ByteBuffer, ByteOrder }
 import java.io.EOFException
 
+import org.lwjgl.openal
 import org.lwjgl.openal.AL10
 
 sealed trait ALAbstractSource extends Source {
@@ -32,7 +33,7 @@ class ALSource(val ctx: ALContext) extends Source with ALAbstractSource {
     AL10.alSource3f(alSource, AL10.AL_POSITION, 0f, 0f, 0f)
     AL10.alSource3f(alSource, AL10.AL_VELOCITY, 0f, 0f, 0f)
 
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   }
 
   override def close(): Unit = {
@@ -57,7 +58,7 @@ class ALSource3D(val ctx: ALContext) extends Source3D with ALAbstractSource {
       val alSource = player.asInstanceOf[ALPlayer].alSource
       AL10.alSourcefv(alSource, AL10.AL_POSITION, positionBuffer)
     }
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   }
 
   override private[games] def registerPlayer(player: Player): Unit = {
@@ -67,7 +68,7 @@ class ALSource3D(val ctx: ALContext) extends Source3D with ALAbstractSource {
     val alSource = player.asInstanceOf[ALPlayer].alSource
     AL10.alSourcefv(alSource, AL10.AL_POSITION, positionBuffer)
     AL10.alGetSourcefv(alSource, AL10.AL_POSITION, positionBuffer)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   }
 
   private val positionBuffer = ByteBuffer.allocateDirect(3 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer()
@@ -99,12 +100,12 @@ class ALBufferData(val ctx: ALContext, alBuffer: Int) extends BufferedData with 
 
       val alAudioSource = source.asInstanceOf[ALAbstractSource]
       val ret = new ALBufferPlayer(this, alAudioSource, alSource)
-      ??? //Util.checkALError()
+      openal.ALUtil.checkALError()
       ret
     } catch {
       case t: Throwable =>
         AL10.alDeleteSources(alSource)
-        ??? //Util.checkALError()
+        openal.ALUtil.checkALError()
         throw t
     }
   }
@@ -115,7 +116,7 @@ class ALBufferData(val ctx: ALContext, alBuffer: Int) extends BufferedData with 
     ctx.unregisterData(this)
 
     AL10.alDeleteBuffers(alBuffer)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   }
 }
 
@@ -128,13 +129,13 @@ class ALStreamingData(val ctx: ALContext, res: Resource) extends Data with ALDat
     val alSource = AL10.alGenSources()
     val alAudioSource = source.asInstanceOf[ALAbstractSource]
     val player = new ALStreamingPlayer(this, alAudioSource, alSource, res)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
 
     player.ready.onSuccess { case _ => promise.success(player) }
     player.ready.onFailure {
       case t: Throwable =>
         promise.failure(t)
-        ??? //Util.checkALError()
+        openal.ALUtil.checkALError()
     }
 
     promise.future
@@ -162,7 +163,7 @@ abstract class ALBasicPlayer(val data: ALData, val source: ALAbstractSource, val
   private[games] def applyChangedVolume(): Unit = {
     val curVolume = data.ctx.masterVolume * thisVolume
     AL10.alSourcef(alSource, AL10.AL_GAIN, curVolume)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   }
 
   // Init
@@ -185,42 +186,42 @@ abstract class ALBasicPlayer(val data: ALData, val source: ALAbstractSource, val
 class ALBufferPlayer(override val data: ALBufferData, override val source: ALAbstractSource, override val alSource: Int) extends ALBasicPlayer(data, source, alSource) {
   def loop: Boolean = {
     val ret = AL10.alGetSourcei(alSource, AL10.AL_LOOPING) == AL10.AL_TRUE
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
     ret
   }
   def loop_=(loop: Boolean): Unit = {
     AL10.alSourcei(alSource, AL10.AL_LOOPING, if (loop) AL10.AL_TRUE else AL10.AL_FALSE)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   }
 
   def pitch: Float = {
     val ret = AL10.alGetSourcef(alSource, AL10.AL_PITCH)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
     ret
   }
   def pitch_=(pitch: Float): Unit = {
     AL10.alSourcef(alSource, AL10.AL_PITCH, pitch)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   }
 
   def playing: Boolean = {
     val ret = AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
     ret
   }
   def playing_=(playing: Boolean): Unit = if (playing) {
     AL10.alSourcePlay(alSource)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   } else {
     AL10.alSourcePause(alSource)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   }
 
   override def close(): Unit = {
     super.close()
 
     AL10.alDeleteSources(alSource)
-    ??? //til.checkALError()
+    openal.ALUtil.checkALError()
   }
 }
 
@@ -259,7 +260,7 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
           for (i <- 0 until alBuffers.length) {
             alBuffers(i) = AL10.alGenBuffers()
           }
-          ??? //Util.checkALError()
+          openal.ALUtil.checkALError()
 
           var buffersReady: List[Int] = alBuffers.toList
 
@@ -304,7 +305,7 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
                 running = fillBuffer(tmpBufferData)
                 AL10.alBufferData(alBuffer, format, tmpBufferData, decoder.rate)
                 AL10.alSourceQueueBuffers(alSource, alBuffer)
-                ??? //Util.checkALError()
+                openal.ALUtil.checkALError()
 
                 // Check for looping
                 if (!running && looping) {
@@ -352,7 +353,7 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
             AL10.alDeleteBuffers(alBuffer)
           }
           data.ctx.unregisterStreamingThread(thisStreamingThread)
-          ??? //Util.checkALError()
+          openal.ALUtil.checkALError()
         }
       }
     }
@@ -380,27 +381,27 @@ class ALStreamingPlayer(override val data: ALStreamingData, override val source:
 
   def pitch: Float = {
     val ret = if (AL10.alIsSource(alSource)) AL10.alGetSourcef(alSource, AL10.AL_PITCH) else pitchCache
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
     ret
   }
   def pitch_=(pitch: Float): Unit = {
     pitchCache = pitch
     if (AL10.alIsSource(alSource)) AL10.alSourcef(alSource, AL10.AL_PITCH, pitch)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
     wakeUpThread() // so it can adjust to the new playback rate
   }
 
   def playing: Boolean = {
     val ret = if (AL10.alIsSource(alSource)) AL10.alGetSourcei(alSource, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING else false
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
     ret
   }
   def playing_=(playing: Boolean): Unit = if (playing) {
     if (AL10.alIsSource(alSource)) AL10.alSourcePlay(alSource)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   } else {
     if (AL10.alIsSource(alSource)) AL10.alSourcePause(alSource)
-    ??? //Util.checkALError()
+    openal.ALUtil.checkALError()
   }
 
   override def close(): Unit = {
