@@ -28,7 +28,7 @@ class GLFWManager extends Closeable {
     while(continueLoop) {
       val current = pendingRunnables.take()
       try { current.run() }
-      catch { case t: Throwable => mainThreadExecutionContext.reportFailure(t) }
+      catch { case t: Throwable => mainExecutionContext.reportFailure(t) }
     }
   }
   
@@ -45,7 +45,7 @@ class GLFWManager extends Closeable {
     var current: Runnable = null
     while ({ current = pendingRunnables.poll(); current } != null) {
       try { current.run() }
-      catch { case t: Throwable => mainThreadExecutionContext.reportFailure(t) }
+      catch { case t: Throwable => mainExecutionContext.reportFailure(t) }
     }
   }
 
@@ -54,7 +54,7 @@ class GLFWManager extends Closeable {
     errorCallback.release()
   }
   
-  val mainThreadExecutionContext = new ExecutionContext() {
+  val mainExecutionContext = new ExecutionContext() {
     def execute(runnable: Runnable): Unit = {
       pendingRunnables.put(runnable)
     }

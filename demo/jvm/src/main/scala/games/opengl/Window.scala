@@ -53,7 +53,7 @@ class GLFWWindow(optSettings: Option[GLFWWindowSettings]) extends Display {
       
       GLFW.glfwMakeContextCurrent(LWJGL_NULL)
       windowPtr
-    }(games.JvmUtils.getGLFWManager.mainThreadExecutionContext)
+    }(games.JvmUtils.getGLFWManager().mainExecutionContext)
     
     val windowPtr: Long = Await.ready(futureWindowPtr, Duration.Inf).value.get match {
       case Success(ptr) => ptr
