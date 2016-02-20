@@ -40,8 +40,7 @@ class GLFWManager(mainThread: Thread) extends Closeable {
     continueLoop = true
     while(continueLoop) {
       val current = pendingRunnables.take()
-      try { current.run() }
-      catch { case t: Throwable => mainExecutionContext.reportFailure(t) }
+      executeNow(current)
     }
   }
   

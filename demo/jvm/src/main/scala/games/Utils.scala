@@ -45,6 +45,13 @@ object JvmUtils {
     if (stream == null) throw new RuntimeException("Could not retrieve resource " + res.name)
     stream
   }
+  
+  private[games] def await[T](future: Future[T])(failureMsg: String, duration: Duration = Duration.Inf): T = {
+    Await.ready(future, duration).value.get match {
+      case Failure(t) => throw new RuntimeException(failureMsg, t)
+      case Success(value) => value
+    }
+  }
 
   private val glfwManagerLock = new Object
   private var optGLFWManager: Option[GLFWManager] = None

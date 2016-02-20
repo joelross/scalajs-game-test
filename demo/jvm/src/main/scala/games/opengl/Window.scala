@@ -3,16 +3,14 @@ package games.opengl
 import org.lwjgl.glfw.{ GLFW, GLFWKeyCallback, GLFWVidMode }
 import org.lwjgl.system.MemoryUtil.{ NULL => LWJGL_NULL }
 
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration.{ Duration }
-import scala.util.{ Success, Failure }
+import scala.concurrent.{ Future }
 
 case class GLFWWindowSettings(width: Int, height: Int, fullscreen: Boolean = false, vsync: Boolean = true, title: String = "OpenGL window")
 
 class GLFWWindow(optSettings: Option[GLFWWindowSettings]) extends Display {
   // Init
-  private[games] val windowPtr: Long = {
-    val futureWindowPtr = Future {
+  private val (windowPtr: Long) = {
+    val windowPtr = games.JvmUtils.await(Future {
       val primaryMonitorPtr = GLFW.glfwGetPrimaryMonitor()
       val primaryVidMode = GLFW.glfwGetVideoMode(primaryMonitorPtr)
       
@@ -43,17 +41,14 @@ class GLFWWindow(optSettings: Option[GLFWWindowSettings]) extends Display {
       
       GLFW.glfwMakeContextCurrent(LWJGL_NULL)
       windowPtr
-    }(games.JvmUtils.getGLFWManager().mainExecutionContext)
-    
-    val windowPtr: Long = Await.ready(futureWindowPtr, Duration.Inf).value.get match {
-      case Success(ptr) => ptr
-      case Failure(t) => throw new RuntimeException("Could not create window", t)
-    }
+    }(games.JvmUtils.getGLFWManager().mainExecutionContext))("Could not create window")
     
     GLFW.glfwMakeContextCurrent(windowPtr)
 
     windowPtr
   }
+  
+  private[games] def pointer: Long = windowPtr
 
   override def close(): Unit = {
     super.close()

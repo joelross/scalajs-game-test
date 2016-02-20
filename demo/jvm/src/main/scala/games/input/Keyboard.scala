@@ -1,10 +1,9 @@
 package games.input
 
 import org.lwjgl.glfw._
+import org.lwjgl.system.MemoryUtil.{ NULL => LWJGL_NULL }
 
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration.{ Duration }
-import scala.util.{ Success, Failure }
+import scala.concurrent.{ Future }
 
 object KeyboardLWJGL {
   val mapper = new Keyboard.KeyMapper[Int](
@@ -132,32 +131,28 @@ object KeyboardLWJGL {
 }
 
 class KeyboardLWJGL(display: games.opengl.Display) extends Keyboard {
-
   private val window: games.opengl.GLFWWindow = display.asInstanceOf[games.opengl.GLFWWindow]
   
-  private val keyCallback = new GLFWKeyCallback() {
+  private val keyCallback: GLFWKeyCallback = new GLFWKeyCallback() {
     def invoke(window: Long, key: Int, scanCode: Int, action: Int, mods: Int): Unit = {
       println("### Key callback")
       // TODO
     }
   }
   
-  
   { // Init
-    val futureRegistration = Future {
-      GLFW.glfwSetKeyCallback(window.windowPtr, keyCallback)
-    } (games.JvmUtils.getGLFWManager().mainExecutionContext)
-    
-    Await.ready(futureRegistration, Duration.Inf).value.get match {
-      case Failure(t) => throw new RuntimeException("Could not register key callback", t)
-      case _ =>
-    }
+    games.JvmUtils.await(Future {
+      GLFW.glfwSetKeyCallback(window.pointer, keyCallback)
+    } (games.JvmUtils.getGLFWManager().mainExecutionContext))("Could not register key callback")
   }
 
   override def close(): Unit = {
     super.close()
-    keyCallback.release()
-    // ??? // LWJGLKeyboard.destroy()
+    
+    games.JvmUtils.await(Future {
+      GLFW.glfwSetKeyCallback(window.pointer, null) // TODO ok, is this really null, LWJGL_NULL, or something else ?
+      keyCallback.release()
+    } (games.JvmUtils.getGLFWManager().mainExecutionContext))("Could not register key callback")
   }
 
   def isKeyDown(key: games.input.Key): Boolean = {
