@@ -184,7 +184,7 @@ class ALContext extends Context {
     this.waitForStreamingThreads()
 
     alContext.destroy()
-    alDevice.destroy()
+    alDevice.close()
     
     openal.ALUtil.checkALError()
   }
