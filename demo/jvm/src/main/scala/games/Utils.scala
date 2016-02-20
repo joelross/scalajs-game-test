@@ -56,10 +56,10 @@ object JvmUtils {
     }
   }
   // May only be called from the main thread
-  def initGLFWManager(): GLFWManager = glfwManagerLock.synchronized {
+  def initGLFWManager(mainThread: Thread): GLFWManager = glfwManagerLock.synchronized {
     optGLFWManager match {
       case None =>
-        val manager = new GLFWManager()
+        val manager = new GLFWManager(mainThread)
         optGLFWManager = Some(manager)
         manager
       case Some(manager) =>

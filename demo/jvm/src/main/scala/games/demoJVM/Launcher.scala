@@ -19,15 +19,17 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 object Launcher {
   def main(args: Array[String]): Unit = {
-    val manager = games.JvmUtils.initGLFWManager()
+    val mainThread = Thread.currentThread()
+    
+    val manager = games.JvmUtils.initGLFWManager(mainThread)
   
     val itf = new EngineInterface {
-      def initGL(): GLES2 = new GLES2LWJGL()
-      def initAudio(): Context = new ALContext()
-      def initKeyboard(): Keyboard = new KeyboardLWJGL()
-      def initMouse(): Mouse = new MouseLWJGL()
-      def initTouch(): Option[Touchscreen] = None
-      def initAccelerometer: Option[Accelerometer] = None
+      lazy val initGL: GLES2 = new GLES2LWJGL()
+      lazy val initAudio: Context = new ALContext()
+      lazy val initKeyboard: Keyboard = new KeyboardLWJGL(initGL.display)
+      lazy val initMouse: Mouse = new MouseLWJGL()
+      lazy val initTouch: Option[Touchscreen] = None
+      lazy val initAccelerometer: Option[Accelerometer] = None
       def continue(): Boolean = ??? //!Display.isCloseRequested()
     }
 

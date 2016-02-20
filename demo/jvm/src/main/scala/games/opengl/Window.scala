@@ -10,16 +10,8 @@ import scala.util.{ Success, Failure }
 case class GLFWWindowSettings(width: Int, height: Int, fullscreen: Boolean = false, vsync: Boolean = true, title: String = "OpenGL window")
 
 class GLFWWindow(optSettings: Option[GLFWWindowSettings]) extends Display {
-
-  private val keyCallback: GLFWKeyCallback = new GLFWKeyCallback() {
-    def invoke(window: Long, key: Int, scanCode: Int, action: Int, mods: Int): Unit = {
-      println("### Key callback")
-      // TODO
-    }
-  }
-
   // Init
-  private val windowPtr: Long = {
+  private[games] val windowPtr: Long = {
     val futureWindowPtr = Future {
       val primaryMonitorPtr = GLFW.glfwGetPrimaryMonitor()
       val primaryVidMode = GLFW.glfwGetVideoMode(primaryMonitorPtr)
@@ -48,8 +40,6 @@ class GLFWWindow(optSettings: Option[GLFWWindowSettings]) extends Display {
       val posx = (primaryVidMode.width() - width) / 2
       val posy = (primaryVidMode.height() - height) / 2
       GLFW.glfwSetWindowPos(windowPtr, posx, posy)
-
-      GLFW.glfwSetKeyCallback(windowPtr, keyCallback)
       
       GLFW.glfwMakeContextCurrent(LWJGL_NULL)
       windowPtr
@@ -57,7 +47,7 @@ class GLFWWindow(optSettings: Option[GLFWWindowSettings]) extends Display {
     
     val windowPtr: Long = Await.ready(futureWindowPtr, Duration.Inf).value.get match {
       case Success(ptr) => ptr
-      case Failure(exc) => throw new RuntimeException("Could not create window", exc)
+      case Failure(t) => throw new RuntimeException("Could not create window", t)
     }
     
     GLFW.glfwMakeContextCurrent(windowPtr)
@@ -68,7 +58,6 @@ class GLFWWindow(optSettings: Option[GLFWWindowSettings]) extends Display {
   override def close(): Unit = {
     super.close()
     GLFW.glfwDestroyWindow(windowPtr)
-    keyCallback.release()
   }
 
   def fullscreen: Boolean = ???

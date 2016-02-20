@@ -2,6 +2,10 @@ package games.input
 
 import org.lwjgl.glfw._
 
+import scala.concurrent.{ Future, Await }
+import scala.concurrent.duration.{ Duration }
+import scala.util.{ Success, Failure }
+
 object KeyboardLWJGL {
   val mapper = new Keyboard.KeyMapper[Int](
     (Key.Space, GLFW.GLFW_KEY_SPACE),
@@ -127,12 +131,33 @@ object KeyboardLWJGL {
     )
 }
 
-class KeyboardLWJGL() extends Keyboard {
-  ??? //LWJGLKeyboard.create()
+class KeyboardLWJGL(display: games.opengl.Display) extends Keyboard {
+
+  private val window: games.opengl.GLFWWindow = display.asInstanceOf[games.opengl.GLFWWindow]
+  
+  private val keyCallback = new GLFWKeyCallback() {
+    def invoke(window: Long, key: Int, scanCode: Int, action: Int, mods: Int): Unit = {
+      println("### Key callback")
+      // TODO
+    }
+  }
+  
+  
+  { // Init
+    val futureRegistration = Future {
+      GLFW.glfwSetKeyCallback(window.windowPtr, keyCallback)
+    } (games.JvmUtils.getGLFWManager().mainExecutionContext)
+    
+    Await.ready(futureRegistration, Duration.Inf).value.get match {
+      case Failure(t) => throw new RuntimeException("Could not register key callback", t)
+      case _ =>
+    }
+  }
 
   override def close(): Unit = {
     super.close()
-    ??? //LWJGLKeyboard.destroy()
+    keyCallback.release()
+    // ??? // LWJGLKeyboard.destroy()
   }
 
   def isKeyDown(key: games.input.Key): Boolean = {
