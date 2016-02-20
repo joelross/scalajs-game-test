@@ -33,10 +33,10 @@ class GLFWManager extends Closeable {
   }
   
   def stopLoop(): Unit = {
-    continueLoop = false
-    // Put an empty Runnable to awake the blocking list
     pendingRunnables.put(new Runnable() {
-      def run(): Unit = {}
+      def run(): Unit = {
+        continueLoop = false
+      }
     })
   }
   
