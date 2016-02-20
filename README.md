@@ -47,7 +47,7 @@ Run ```sbt demoJVM/run```.
 Scalajs-games code itself is under the BSD license
 
 The dependencies for the JVM code are:
-* [LWJGL](https://github.com/LWJGL/lwjgl)
+* [LWJGL 3](https://github.com/LWJGL/lwjgl3)
 * [JOrbis](http://www.jcraft.com/jorbis/)
 
 The dependencies for the Scala.js code are:
