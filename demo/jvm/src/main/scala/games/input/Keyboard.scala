@@ -151,7 +151,7 @@ class KeyboardLWJGL(display: games.opengl.Display) extends Keyboard {
     
     games.JvmUtils.await(Future {
       GLFW.glfwSetKeyCallback(window.pointer, null) // TODO ok, is this really null, LWJGL_NULL, or something else ?
-      keyCallback.release()
+      keyCallback.free()
     } (games.JvmUtils.getGLFWManager().mainExecutionContext))("Could not register key callback")
   }
 

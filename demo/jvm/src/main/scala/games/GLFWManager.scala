@@ -64,7 +64,7 @@ class GLFWManager(mainThread: Thread) extends Closeable {
 
   def close(): Unit = {
     GLFW.glfwTerminate()
-    errorCallback.release()
+    errorCallback.free()
   }
   
   val mainExecutionContext = new ExecutionContext() {

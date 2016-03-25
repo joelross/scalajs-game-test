@@ -399,7 +399,7 @@ class GLES2LWJGL(displaySettings: Option[GLFWWindowSettings] = None) extends GLE
   }
 
   final def getParameterb(pname: Int): Boolean = {
-    GLES20.glGetBoolean(pname)
+    GLES20.glGetBoolean(pname) == GLES2.TRUE
   }
 
   final def getParameterbv(pname: Int, outputs: ByteBuffer): Unit = {

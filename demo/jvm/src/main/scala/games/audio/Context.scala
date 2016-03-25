@@ -13,7 +13,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.{ mutable, immutable }
 
 import org.lwjgl.openal
-import org.lwjgl.openal.AL10
+import org.lwjgl.openal.{ AL10, ALC10 }
+import org.lwjgl.system.MemoryUtil.{ NULL => LWJGL_NULL }
 
 class ALContext extends Context {
   private val streamingThreads: mutable.Set[Thread] = mutable.Set()
@@ -30,13 +31,15 @@ class ALContext extends Context {
   private lazy val fakeSource = this.createSource()
 
   // Init
-  private val (alDevice, alContext) = {
-    val alDevice = openal.ALDevice.create()
-    val alContext = openal.ALContext.create(alDevice)
+  private val (alDevicePtr, alContextPtr) = {
+    val alDevicePtr = ALC10.alcOpenDevice(null:ByteBuffer)
+    require(alDevicePtr != LWJGL_NULL)
+    val alContextPtr = ALC10.alcCreateContext(alDevicePtr, null:ByteBuffer)
+    require(alContextPtr != LWJGL_NULL)
     
     openal.ALUtil.checkALError()
     
-    (alDevice, alContext)
+    (alDevicePtr, alContextPtr)
   }
 
   def prepareBufferedData(res: games.Resource): scala.concurrent.Future[games.audio.BufferedData] = Future {
@@ -183,8 +186,8 @@ class ALContext extends Context {
     // Wait for all the streaming threads to have done their work
     this.waitForStreamingThreads()
 
-    alContext.destroy()
-    alDevice.close()
+    ALC10.alcDestroyContext(alContextPtr)
+    ALC10.alcCloseDevice(alDevicePtr)
     
     openal.ALUtil.checkALError()
   }
