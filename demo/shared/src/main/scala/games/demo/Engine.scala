@@ -180,7 +180,7 @@ class Engine(itf: EngineInterface)(implicit ec: ExecutionContext) extends games.
 
     // Retrieve useful data from shaders (require access to OpenGL context)
     val retrieveInfoFromDataFuture = dataFuture.map {
-      case Seq(models: immutable.Map[String, OpenGLMesh], wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String, Token.Program], map: Map, audioShotData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
+      case Seq(models: immutable.Map[String @unchecked, OpenGLMesh @unchecked], wallMesh: games.utils.SimpleOBJParser.TriMesh, floorMesh: games.utils.SimpleOBJParser.TriMesh, shaders: immutable.Map[String @unchecked, Token.Program @unchecked], map: Map, audioShotData: audio.BufferedData, audioDamageData: audio.BufferedData) =>
         Console.println("All data loaded successfully: " + models.size + " model(s), " + shaders.size + " shader(s), audio ready")
         Console.println("Map size: " + map.width + " by " + map.height)
 
